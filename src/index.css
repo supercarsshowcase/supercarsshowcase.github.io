@@ -42,6 +42,21 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/* Apex Motors — dark luxury / racing theme */
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: "Archivo", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --color-apex-red: #ff2e00;
+  --color-apex-red-bright: #ff4d26;
+  --color-apex-red-deep: #b91c00;
+  --color-apex-ink: #050505;
+  --color-apex-panel: #0b0b0c;
+  --color-apex-panel-2: #111113;
+  --color-apex-line: rgba(255, 255, 255, 0.08);
+  --color-apex-line-strong: rgba(255, 255, 255, 0.14);
+  --color-apex-muted: #8a8a92;
+}
+
 /* CHANGE VALUES FOR THEME */
 :root {
   --radius: 0.625rem;
@@ -116,9 +131,20 @@
   * {
     @apply border-border outline-ring/50;
   }
-  body {
-    @apply bg-background text-foreground;
+  html {
+    color-scheme: dark;
   }
+  body {
+    @apply bg-apex-ink text-foreground;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  ::selection {
+    background: var(--color-apex-red);
+    color: white;
+  }
+}
   button:not([disabled]),
   [role="button"]:not([disabled]) {
     cursor: pointer;
