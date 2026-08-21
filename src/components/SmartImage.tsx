@@ -16,6 +16,8 @@ interface SmartImageProps {
   viewLabel?: string;
   /** Wikipedia article title used to resolve a real lead image when `src` is missing or fails. */
   resolveTitle?: string;
+  /** Width bucket (in px) requested from Wikimedia when resolving the lead image. */
+  resolveWidth?: number;
 }
 
 function CarSilhouette({ className }: { className?: string }) {
@@ -134,8 +136,12 @@ function GeneratedScene({
  */
 const wikiImageCache = new Map<string, Promise<string | null>>();
 
-function fetchWikiLeadImage(title: string): Promise<string | null> {
-  if (!wikiImageCache.has(title)) {
+function fetchWikiLeadImage(
+  title: string,
+  width: number,
+): Promise<string | null> {
+  const cacheKey = `${width}::${title}`;
+  if (!wikiImageCache.has(cacheKey)) {
     const request = fetch(
       `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(
         title,
@@ -146,8 +152,9 @@ function fetchWikiLeadImage(title: string): Promise<string | null> {
         const thumb: unknown = data?.thumbnail?.source;
         if (typeof thumb === "string" && thumb.startsWith("https://")) {
           // Wikimedia only serves its standard thumbnail buckets, so step the
-          // default ~330px preview up to a 960px bucket for sharper cards.
-          return thumb.replace(/\/(\d+)px-/, "/960px-");
+          // ~330px preview up to the requested bucket (e.g. 960px for cards,
+          // 1920px for the detail hero).
+          return thumb.replace(/\/(\d+)px-/, `/${width}px-`);
         }
         const original: unknown = data?.originalimage?.source;
         return typeof original === "string" && original.startsWith("https://")
@@ -155,9 +162,9 @@ function fetchWikiLeadImage(title: string): Promise<string | null> {
           : null;
       })
       .catch(() => null);
-    wikiImageCache.set(title, request);
+    wikiImageCache.set(cacheKey, request);
   }
-  return wikiImageCache.get(title) ?? Promise.resolve(null);
+  return wikiImageCache.get(cacheKey) ?? Promise.resolve(null);
 }
 
 /**
@@ -176,6 +183,7 @@ export function SmartImage({
   seed,
   viewLabel,
   resolveTitle,
+  resolveWidth = 960,
 }: SmartImageProps) {
   const [srcErrored, setSrcErrored] = useState(false);
   const [wikiSrc, setWikiSrc] = useState<string | null>(null);
@@ -187,20 +195,20 @@ export function SmartImage({
     setSrcErrored(false);
     setWikiSrc(null);
     setWikiErrored(false);
-  }, [src, resolveTitle]);
+  }, [src, resolveTitle, resolveWidth]);
 
   const needWiki = (!src || srcErrored) && Boolean(resolveTitle);
 
   useEffect(() => {
     if (!needWiki || !resolveTitle) return;
     let cancelled = false;
-    fetchWikiLeadImage(resolveTitle).then((url) => {
+    fetchWikiLeadImage(resolveTitle, resolveWidth).then((url) => {
       if (!cancelled) setWikiSrc(url);
     });
     return () => {
       cancelled = true;
     };
-  }, [needWiki, resolveTitle]);
+  }, [needWiki, resolveTitle, resolveWidth]);
 
   const scene = (
     <div className={cn("overflow-hidden bg-apex-ink", className)}>

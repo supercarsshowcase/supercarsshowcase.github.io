@@ -171,6 +171,7 @@ export default function CarDetail() {
               seed={gallery[activeView]?.seed ?? car.slug}
               viewLabel={gallery[activeView]?.label}
               resolveTitle={activeView === 0 ? carWikiTitle(car) : undefined}
+              resolveWidth={1920}
               className="aspect-[16/10] w-full"
             />
           </div>
