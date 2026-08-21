@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import {
   ArrowLeft,
@@ -75,10 +75,14 @@ export default function CarDetail() {
   const [copied, setCopied] = useState(false);
   const [activeView, setActiveView] = useState(0);
 
-  useEffect(() => {
+  // Reset view/status when navigating between cars. Adjusting state during
+  // render avoids the setState-in-effect cascade flagged by the linter.
+  const [prevSlug, setPrevSlug] = useState(slug);
+  if (prevSlug !== slug) {
+    setPrevSlug(slug);
     setActiveView(0);
     setCopied(false);
-  }, [slug]);
+  }
 
   const car = slug ? carBySlug(slug) : undefined;
   const brand = car ? brandByName(car.brand) : undefined;
