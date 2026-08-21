@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { carBySlug, carsByBrand } from "@/data/cars";
 import { brandByName } from "@/data/brands";
-import { getCarGallery, carWikiTitle } from "@/data/images";
+import { getCarGallery, getCarImageHiRes, carWikiTitle } from "@/data/images";
 import { useApp } from "@/context/app-context";
 import {
   formatPriceFull,
@@ -163,7 +163,11 @@ export default function CarDetail() {
         <div className="flex flex-col gap-3">
           <div className="overflow-hidden rounded-lg border border-apex-line bg-apex-panel">
             <SmartImage
-              src={gallery[activeView]?.src ?? ""}
+              src={
+                activeView === 0
+                  ? getCarImageHiRes(car)
+                  : (gallery[activeView]?.src ?? "")
+              }
               alt={`${car.brand} ${car.model} — ${gallery[activeView]?.label ?? ""}`}
               label={car.brand}
               sublabel={`${car.model} · ${car.year}`}
