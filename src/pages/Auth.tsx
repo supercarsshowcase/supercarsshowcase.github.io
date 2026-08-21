@@ -1,24 +1,14 @@
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   InputOTP,
   InputOTPGroup,
   InputOTPSlot,
 } from "@/components/ui/input-otp";
-
 import { useAuth } from "@/hooks/use-auth";
-import logo from "@/assets/logo.svg";
-import { ArrowRight, Loader2, Mail, UserX } from "lucide-react";
+import { ArrowRight, ArrowLeft, Loader2, Mail, UserX } from "lucide-react";
 import { Suspense, useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router";
+import { Link, useNavigate, useSearchParams } from "react-router";
 
 interface AuthProps {
   redirectAfterAuth?: string;
@@ -26,7 +16,7 @@ interface AuthProps {
 
 function resolveRedirectAfterAuth(
   returnTo: string | null,
-  fallback = "/dashboard",
+  fallback = "/favorites",
 ) {
   if (returnTo?.startsWith("/") && !returnTo.startsWith("//")) {
     return returnTo;
@@ -52,6 +42,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
       navigate(redirect);
     }
   }, [authLoading, isAuthenticated, navigate, redirect]);
+
   const handleEmailSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsLoading(true);
@@ -61,11 +52,11 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
       await signIn("email-otp", formData);
       setStep({ email: formData.get("email") as string });
       setIsLoading(false);
-    } catch (error) {
-      console.error("Email sign-in error:", error);
+    } catch (err) {
+      console.error("Email sign-in error:", err);
       setError(
-        error instanceof Error
-          ? error.message
+        err instanceof Error
+          ? err.message
           : "Failed to send verification code. Please try again.",
       );
       setIsLoading(false);
@@ -79,16 +70,11 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
     try {
       const formData = new FormData(event.currentTarget);
       await signIn("email-otp", formData);
-
-      console.log("signed in");
-
       navigate(redirect);
-    } catch (error) {
-      console.error("OTP verification error:", error);
-
+    } catch (err) {
+      console.error("OTP verification error:", err);
       setError("The verification code you entered is incorrect.");
       setIsLoading(false);
-
       setOtp("");
     }
   };
@@ -97,198 +83,228 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
     setIsLoading(true);
     setError(null);
     try {
-      console.log("Attempting anonymous sign in...");
       await signIn("anonymous");
-      console.log("Anonymous sign in successful");
       navigate(redirect);
-    } catch (error) {
-      console.error("Guest login error:", error);
-      console.error("Error details:", JSON.stringify(error, null, 2));
-      setError(`Failed to sign in as guest: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } catch (err) {
+      console.error("Guest login error:", err);
+      setError(
+        `Failed to sign in as guest: ${
+          err instanceof Error ? err.message : "Unknown error"
+        }`,
+      );
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="flex min-h-screen bg-apex-ink text-white">
+      {/* Brand panel */}
+      <div className="relative hidden w-1/2 overflow-hidden border-r border-apex-line lg:block">
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(120% 100% at 80% 15%, #2a0a04 0%, transparent 55%), radial-gradient(100% 90% at 20% 90%, #0a0d12 0%, transparent 60%), #050505",
+          }}
+        />
+        <div className="absolute inset-0 opacity-20 [background:repeating-linear-gradient(115deg,transparent_0,transparent_42px,rgba(255,255,255,0.06)_43px,transparent_44px)]" />
+        <div className="relative flex h-full flex-col justify-between p-12">
+          <Link to="/" className="flex items-center gap-1.5">
+            <span className="font-display text-lg font-black tracking-tight">
+              SUPERCARS
+            </span>
+            <span className="size-1.5 rounded-full bg-apex-red" />
+            <span className="font-display text-lg font-black tracking-tight">
+              SHOWCASE
+            </span>
+          </Link>
+          <div>
+            <p className="font-display text-[11px] font-semibold uppercase tracking-[0.28em] text-apex-red">
+              Your personal garage
+            </p>
+            <h1 className="mt-4 font-display text-5xl font-black leading-[0.95] tracking-tight">
+              SAVE THE
+              <br />
+              MACHINES
+              <br />
+              <span className="text-white/35">YOU</span>{" "}
+              <span className="text-apex-red">DREAM OF.</span>
+            </h1>
+            <p className="mt-5 max-w-sm text-sm leading-6 text-white/60">
+              Sign in to keep your favorite supercars close. Browse the archive,
+              build your collection, and compare the fastest machines on earth.
+            </p>
+          </div>
+          <p className="text-xs uppercase tracking-[0.2em] text-white/30">
+            Nothing for sale — just for the eyes
+          </p>
+        </div>
+      </div>
 
-      
-      {/* Auth Content */}
-      <div className="flex-1 flex items-center justify-center">
-        <div className="flex items-center justify-center h-full flex-col">
-        <Card className="min-w-[350px] pb-0 border shadow-md">
+      {/* Form panel */}
+      <div className="flex flex-1 items-center justify-center px-6 py-16">
+        <div className="w-full max-w-sm">
+          <div className="mb-8 flex items-center justify-between lg:hidden">
+            <Link to="/" className="flex items-center gap-1.5">
+              <span className="font-display text-base font-black tracking-tight">
+                SUPERCARS
+              </span>
+              <span className="size-1.5 rounded-full bg-apex-red" />
+              <span className="font-display text-base font-black tracking-tight">
+                SHOWCASE
+              </span>
+            </Link>
+            <Link
+              to="/"
+              className="text-xs uppercase tracking-[0.16em] text-white/50 hover:text-white"
+            >
+              Back
+            </Link>
+          </div>
+
           {step === "signIn" ? (
             <>
-              <CardHeader className="text-center">
-              <div className="flex justify-center">
-                    <img
-                      src={logo}
-                      alt="Lock Icon"
-                      width={64}
-                      height={64}
-                      className="rounded-lg mb-4 mt-4 cursor-pointer"
-                      onClick={() => navigate("/")}
+              <h2 className="font-display text-3xl font-black tracking-tight">
+                GET STARTED
+              </h2>
+              <p className="mt-2 text-sm text-apex-muted">
+                Enter your email to sign in or create your account.
+              </p>
+
+              <form onSubmit={handleEmailSubmit} className="mt-8">
+                <label
+                  htmlFor="email"
+                  className="font-display text-[11px] font-semibold uppercase tracking-[0.18em] text-white/50"
+                >
+                  Email address
+                </label>
+                <div className="relative mt-2 flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <Mail className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-white/40" />
+                    <Input
+                      id="email"
+                      name="email"
+                      placeholder="name@example.com"
+                      type="email"
+                      className="h-11 border-white/15 bg-black pl-10 text-white placeholder:text-white/30 focus:border-apex-red"
+                      disabled={isLoading}
+                      required
                     />
                   </div>
-                <CardTitle className="text-xl">Get Started</CardTitle>
-                <CardDescription>
-                  Enter your email to log in or sign up
-                </CardDescription>
-              </CardHeader>
-              <form onSubmit={handleEmailSubmit}>
-                <CardContent>
-                  
-                  <div className="relative flex items-center gap-2">
-                    <div className="relative flex-1">
-                      <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        name="email"
-                        placeholder="name@example.com"
-                        type="email"
-                        className="pl-9"
-                        disabled={isLoading}
-                        required
-                      />
-                    </div>
-                    <Button
-                      type="submit"
-                      variant="outline"
-                      size="icon"
-                      disabled={isLoading}
-                    >
-                      {isLoading ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <ArrowRight className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
-                  {error && (
-                    <p className="mt-2 text-sm text-red-500">{error}</p>
-                  )}
-                  
-                  <div className="mt-4">
-                    <div className="relative">
-                      <div className="absolute inset-0 flex items-center">
-                        <span className="w-full border-t" />
-                      </div>
-                      <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-background px-2 text-muted-foreground">
-                          Or
-                        </span>
-                      </div>
-                    </div>
-                    
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full mt-4"
-                      onClick={handleGuestLogin}
-                      disabled={isLoading}
-                    >
-                      <UserX className="mr-2 h-4 w-4" />
-                      Continue as Guest
-                    </Button>
-                  </div>
-                </CardContent>
+                  <Button
+                    type="submit"
+                    size="icon"
+                    className="h-11 w-11 shrink-0 bg-apex-red text-white hover:bg-apex-red-bright"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <ArrowRight className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+                {error && <p className="mt-3 text-sm text-apex-red">{error}</p>}
+
+                <div className="mt-8 flex items-center gap-4">
+                  <span className="h-px flex-1 bg-apex-line" />
+                  <span className="text-[11px] uppercase tracking-[0.2em] text-white/40">
+                    Or
+                  </span>
+                  <span className="h-px flex-1 bg-apex-line" />
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="mt-6 h-11 w-full border-white/15 bg-transparent text-white hover:border-apex-red hover:bg-apex-red/10"
+                  onClick={handleGuestLogin}
+                  disabled={isLoading}
+                >
+                  <UserX className="mr-2 h-4 w-4" />
+                  Continue as Guest
+                </Button>
               </form>
             </>
           ) : (
             <>
-              <CardHeader className="text-center mt-4">
-                <CardTitle>Check your email</CardTitle>
-                <CardDescription>
-                  We've sent a code to {step.email}
-                </CardDescription>
-              </CardHeader>
-              <form onSubmit={handleOtpSubmit}>
-                <CardContent className="pb-4">
-                  <input type="hidden" name="email" value={step.email} />
-                  <input type="hidden" name="code" value={otp} />
+              <h2 className="font-display text-3xl font-black tracking-tight">
+                CHECK YOUR EMAIL
+              </h2>
+              <p className="mt-2 text-sm text-apex-muted">
+                We&apos;ve sent a verification code to{" "}
+                <span className="text-white">{step.email}</span>.
+              </p>
 
-                  <div className="flex justify-center">
-                    <InputOTP
-                      value={otp}
-                      onChange={setOtp}
-                      maxLength={6}
-                      disabled={isLoading}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && otp.length === 6 && !isLoading) {
-                          // Find the closest form and submit it
-                          const form = (e.target as HTMLElement).closest("form");
-                          if (form) {
-                            form.requestSubmit();
-                          }
-                        }
-                      }}
-                    >
-                      <InputOTPGroup>
-                        {Array.from({ length: 6 }).map((_, index) => (
-                          <InputOTPSlot key={index} index={index} />
-                        ))}
-                      </InputOTPGroup>
-                    </InputOTP>
-                  </div>
-                  {error && (
-                    <p className="mt-2 text-sm text-red-500 text-center">
-                      {error}
-                    </p>
-                  )}
-                  <p className="text-sm text-muted-foreground text-center mt-4">
-                    Didn't receive a code?{" "}
-                    <Button
-                      variant="link"
-                      className="p-0 h-auto"
-                      onClick={() => setStep("signIn")}
-                    >
-                      Try again
-                    </Button>
-                  </p>
-                </CardContent>
-                <CardFooter className="flex-col gap-2">
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    disabled={isLoading || otp.length !== 6}
-                  >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Verifying...
-                      </>
-                    ) : (
-                      <>
-                        Verify code
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </>
-                    )}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => setStep("signIn")}
+              <form onSubmit={handleOtpSubmit} className="mt-8">
+                <input type="hidden" name="email" value={step.email} />
+                <input type="hidden" name="code" value={otp} />
+
+                <div className="flex justify-center">
+                  <InputOTP
+                    value={otp}
+                    onChange={setOtp}
+                    maxLength={6}
                     disabled={isLoading}
-                    className="w-full"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && otp.length === 6 && !isLoading) {
+                        const form = (e.target as HTMLElement).closest("form");
+                        if (form) form.requestSubmit();
+                      }
+                    }}
                   >
-                    Use different email
-                  </Button>
-                </CardFooter>
+                    <InputOTPGroup>
+                      {Array.from({ length: 6 }).map((_, index) => (
+                        <InputOTPSlot
+                          key={index}
+                          index={index}
+                          className="border-white/15 bg-black text-white"
+                        />
+                      ))}
+                    </InputOTPGroup>
+                  </InputOTP>
+                </div>
+                {error && (
+                  <p className="mt-3 text-center text-sm text-apex-red">
+                    {error}
+                  </p>
+                )}
+
+                <Button
+                  type="submit"
+                  className="mt-8 h-11 w-full bg-apex-red text-white hover:bg-apex-red-bright"
+                  disabled={isLoading || otp.length !== 6}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Verifying…
+                    </>
+                  ) : (
+                    <>
+                      Verify code
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </>
+                  )}
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setStep("signIn")}
+                  disabled={isLoading}
+                  className="mt-3 w-full text-white/60 hover:bg-transparent hover:text-white"
+                >
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Use a different email
+                </Button>
               </form>
             </>
           )}
 
-          <div className="py-4 px-6 text-xs text-center text-muted-foreground bg-muted border-t rounded-b-lg">
-            Secured by{" "}
-            <a
-              href="https://freebuff.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline hover:text-primary transition-colors"
-            >
-              freebuff.com
-            </a>
-          </div>
-        </Card>
+          <p className="mt-10 text-center text-xs text-white/30">
+            Secured sign-in · Supercars Showcase
+          </p>
         </div>
       </div>
     </div>

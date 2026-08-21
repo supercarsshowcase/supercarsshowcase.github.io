@@ -57,7 +57,7 @@ export default function Landing() {
   return (
     <div className="bg-apex-ink text-white">
       {/* HERO */}
-      <section className="relative flex min-h-[calc(100vh-4rem)] items-center overflow-hidden">
+      <section className="relative flex min-h-[calc(100vh_-_4rem)] items-center overflow-hidden">
         <HeroBackground />
         <div className="relative z-10 mx-auto w-full max-w-[1400px] px-4 py-20 sm:px-6">
           <motion.div
@@ -74,7 +74,7 @@ export default function Landing() {
               ENGINES
               <br />
               <span className="text-white/35">OF THE</span>{" "}
-              <span className="text-white">APEX.</span>
+              <span className="text-white">ELITE.</span>
             </h1>
             <p className="mt-7 max-w-lg text-base leading-7 text-white/70 sm:text-lg">
               A cinematic gallery of Bugatti, Mercedes-AMG, BMW M, Ferrari,
@@ -134,7 +134,7 @@ export default function Landing() {
               Featured machines
             </p>
             <h2 className="mt-3 font-display text-3xl font-black tracking-tight sm:text-4xl">
-              THE HALL OF APEX
+              THE HALL OF LEGENDS
             </h2>
           </div>
           <Link

@@ -140,13 +140,18 @@
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
+  button:not([disabled]),
+  [role="button"]:not([disabled]) {
+    cursor: pointer;
+  }
   ::selection {
     background: var(--color-apex-red);
     color: white;
   }
-}
-  button:not([disabled]),
-  [role="button"]:not([disabled]) {
-    cursor: pointer;
+  [data-slot="slider-range"] {
+    background: var(--color-apex-red);
+  }
+  [data-slot="slider-thumb"] {
+    border-color: var(--color-apex-red);
   }
 }

@@ -23,9 +23,7 @@ export function formatPriceCompact(usd: number, currency: CurrencyCode): string 
   const symbol = CURRENCIES[currency].symbol;
 
   if (value >= 1_000_000) {
-    const millions = value / 1_000_000;
-    const digits = millions >= 100 ? 0 : millions >= 10 ? 1 : 2;
-    return `${symbol}${millions.toFixed(digits)}M`;
+    return `${symbol}${(value / 1_000_000).toFixed(2)}M`;
   }
   if (value >= 1_000) {
     return `${symbol}${(value / 1_000).toFixed(0)}K`;

@@ -166,7 +166,6 @@ export default function Garage() {
               onValueChange={(val) =>
                 setPriceRange([val[0], val[1]] as [number, number])
               }
-              className="[&_[data-slot=slider-range]]:bg-apex-red [&_[data-slot=slider-thumb]]:border-apex-red"
             />
           </div>
           <span className="hidden w-44 shrink-0 text-right text-xs text-white/60 sm:block">
