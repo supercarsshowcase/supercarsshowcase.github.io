@@ -14,7 +14,7 @@ export interface Palette {
   from: string;
   to: string;
   glow: string;
-  line: string;
+  glowSoft: string;
 }
 
 /** Build a unique, stable color palette from a seed (car slug + view). */
@@ -30,6 +30,6 @@ export function paletteFromSeed(seed: string, variant = 0): Palette {
     from: `hsl(${hue} 42% 15%)`,
     to: `hsl(${hue2} 48% 6%)`,
     glow: `hsl(${accentHue} 80% 52% / 0.55)`,
-    line: `hsl(${accentHue} 80% 62% / 0.7)`,
+    glowSoft: `hsl(${accentHue} 80% 62% / 0.25)`,
   };
 }

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { paletteFromSeed } from "@/lib/seed";
 
@@ -88,7 +88,7 @@ function GeneratedScene({
       <div
         className="pointer-events-none absolute inset-0"
         style={{
-          background: `radial-gradient(120% 90% at 80% 12%, ${palette.glow} 0%, transparent 55%), radial-gradient(100% 90% at 12% 100%, ${palette.line.replace("0.7", "0.25")} 0%, transparent 55%)`,
+          background: `radial-gradient(120% 90% at 80% 12%, ${palette.glow} 0%, transparent 55%), radial-gradient(100% 90% at 12% 100%, ${palette.glowSoft} 0%, transparent 55%)`,
         }}
       />
       {/* speed lines */}
@@ -144,6 +144,12 @@ export function SmartImage({
 }: SmartImageProps) {
   const [errored, setErrored] = useState(false);
   const fallbackSeed = seed ?? alt;
+
+  // Reset the error state whenever the image source changes (e.g. switching
+  // gallery views) so a new, valid image is attempted again.
+  useEffect(() => {
+    setErrored(false);
+  }, [src]);
 
   if (!src || errored) {
     return (

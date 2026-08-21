@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import {
   ArrowLeft,
@@ -74,6 +74,11 @@ export default function CarDetail() {
   const { currency, isFavorite, toggleFavorite } = useApp();
   const [copied, setCopied] = useState(false);
   const [activeView, setActiveView] = useState(0);
+
+  useEffect(() => {
+    setActiveView(0);
+    setCopied(false);
+  }, [slug]);
 
   const car = slug ? carBySlug(slug) : undefined;
   const brand = car ? brandByName(car.brand) : undefined;
