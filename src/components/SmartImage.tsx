@@ -190,12 +190,17 @@ export function SmartImage({
   const [wikiErrored, setWikiErrored] = useState(false);
   const fallbackSeed = seed ?? alt ?? "machine";
 
-  // Reset error/resolved state whenever the source or article changes.
-  useEffect(() => {
+  // Reset resolution state when the inputs change. React's "adjust state
+  // during render" pattern avoids setState inside an effect, which would
+  // otherwise cause cascading renders.
+  const inputKey = `${src}::${resolveTitle}::${resolveWidth}`;
+  const [prevInputKey, setPrevInputKey] = useState(inputKey);
+  if (prevInputKey !== inputKey) {
+    setPrevInputKey(inputKey);
     setSrcErrored(false);
     setWikiSrc(null);
     setWikiErrored(false);
-  }, [src, resolveTitle, resolveWidth]);
+  }
 
   const needWiki = (!src || srcErrored) && Boolean(resolveTitle);
 
