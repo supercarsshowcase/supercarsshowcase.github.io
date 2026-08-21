@@ -14,6 +14,8 @@ interface SmartImageProps {
   seed?: string;
   /** Short caption shown in the corner of a generated scene. */
   viewLabel?: string;
+  /** Wikipedia article title used to resolve a real lead image when `src` is missing or fails. */
+  resolveTitle?: string;
 }
 
 function CarSilhouette({ className }: { className?: string }) {
@@ -100,30 +102,62 @@ function GeneratedScene({
       <CarSilhouette className="relative z-10 mb-2 h-[52%] w-[78%] text-white/85 drop-shadow-[0_10px_30px_rgba(0,0,0,0.5)]" />
 
       {/* labels */}
-      <div className="absolute left-3 top-3 z-10">
-        {label && (
+      {label && (
+        <div className="absolute left-3 top-3 z-10">
           <span
             className="font-display text-[11px] font-bold uppercase tracking-[0.18em]"
             style={{ color: accent ?? "#ff2e00" }}
           >
             {label}
           </span>
-        )}
-      </div>
+        </div>
+      )}
       {viewLabel && (
         <span className="absolute right-3 top-3 z-10 rounded-sm bg-black/45 px-2 py-1 font-display text-[9px] font-semibold uppercase tracking-[0.16em] text-white/75 backdrop-blur">
           {viewLabel}
         </span>
       )}
-      <div className="absolute bottom-3 left-3 z-10 max-w-[80%]">
-        {sublabel && (
+      {sublabel && (
+        <div className="absolute bottom-3 left-3 z-10 max-w-[80%]">
           <span className="font-display text-sm font-extrabold uppercase tracking-tight text-white/90">
             {sublabel}
           </span>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
+}
+
+/**
+ * In-flight cache so every card/view for the same article shares one request
+ * (and negative results are cached too, avoiding repeat network churn).
+ */
+const wikiImageCache = new Map<string, Promise<string | null>>();
+
+function fetchWikiLeadImage(title: string): Promise<string | null> {
+  if (!wikiImageCache.has(title)) {
+    const request = fetch(
+      `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(
+        title,
+      )}`,
+    )
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        const thumb: unknown = data?.thumbnail?.source;
+        if (typeof thumb === "string" && thumb.startsWith("https://")) {
+          // Wikimedia only serves its standard thumbnail buckets, so step the
+          // default ~330px preview up to a 960px bucket for sharper cards.
+          return thumb.replace(/\/(\d+)px-/, "/960px-");
+        }
+        const original: unknown = data?.originalimage?.source;
+        return typeof original === "string" && original.startsWith("https://")
+          ? original
+          : null;
+      })
+      .catch(() => null);
+    wikiImageCache.set(title, request);
+  }
+  return wikiImageCache.get(title) ?? Promise.resolve(null);
 }
 
 /**
@@ -141,28 +175,59 @@ export function SmartImage({
   imgClassName,
   seed,
   viewLabel,
+  resolveTitle,
 }: SmartImageProps) {
-  const [errored, setErrored] = useState(false);
-  const fallbackSeed = seed ?? alt;
+  const [srcErrored, setSrcErrored] = useState(false);
+  const [wikiSrc, setWikiSrc] = useState<string | null>(null);
+  const [wikiErrored, setWikiErrored] = useState(false);
+  const fallbackSeed = seed ?? alt ?? "machine";
 
-  // Reset the error state whenever the image source changes (e.g. switching
-  // gallery views) so a new, valid image is attempted again.
+  // Reset error/resolved state whenever the source or article changes.
   useEffect(() => {
-    setErrored(false);
-  }, [src]);
+    setSrcErrored(false);
+    setWikiSrc(null);
+    setWikiErrored(false);
+  }, [src, resolveTitle]);
 
-  if (!src || errored) {
-    return (
-      <div className={cn("overflow-hidden bg-apex-ink", className)}>
-        <GeneratedScene
-          label={label}
-          sublabel={sublabel}
-          accent={accent}
-          seed={fallbackSeed}
-          viewLabel={viewLabel}
+  const needWiki = (!src || srcErrored) && Boolean(resolveTitle);
+
+  useEffect(() => {
+    if (!needWiki || !resolveTitle) return;
+    let cancelled = false;
+    fetchWikiLeadImage(resolveTitle).then((url) => {
+      if (!cancelled) setWikiSrc(url);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [needWiki, resolveTitle]);
+
+  const scene = (
+    <div className={cn("overflow-hidden bg-apex-ink", className)}>
+      <GeneratedScene
+        label={label}
+        sublabel={sublabel}
+        accent={accent}
+        seed={fallbackSeed}
+        viewLabel={viewLabel}
+      />
+    </div>
+  );
+
+  if (!src || srcErrored) {
+    if (wikiSrc && !wikiErrored) {
+      return (
+        <img
+          src={wikiSrc}
+          alt={alt}
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          onError={() => setWikiErrored(true)}
+          className={cn("object-cover", className, imgClassName)}
         />
-      </div>
-    );
+      );
+    }
+    return scene;
   }
 
   return (
@@ -170,7 +235,8 @@ export function SmartImage({
       src={src}
       alt={alt}
       loading="lazy"
-      onError={() => setErrored(true)}
+      referrerPolicy="no-referrer"
+      onError={() => setSrcErrored(true)}
       className={cn("object-cover", className, imgClassName)}
     />
   );

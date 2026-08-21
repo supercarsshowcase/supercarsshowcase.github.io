@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Link } from "react-router";
 import { Gauge, Zap, Banknote, ArrowRight } from "lucide-react";
 import { CARS } from "@/data/cars";
-import { getCarImage } from "@/data/images";
+import { getCarImage, carWikiTitle } from "@/data/images";
 import { useApp } from "@/context/app-context";
 import { formatNumber, formatPriceCompact } from "@/lib/format";
 import { SmartImage } from "@/components/SmartImage";
@@ -39,6 +39,7 @@ function RankedRow({
           label={car.brand}
           sublabel=""
           seed={car.slug}
+          resolveTitle={carWikiTitle(car)}
           className="h-full w-full"
         />
       </div>

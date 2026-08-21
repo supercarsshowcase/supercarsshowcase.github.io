@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { Scale, Plus, X, ArrowRight } from "lucide-react";
 import { CARS, carBySlug } from "@/data/cars";
-import { getCarImage } from "@/data/images";
+import { getCarImage, carWikiTitle } from "@/data/images";
 import { useApp } from "@/context/app-context";
 import { formatPriceCompact, formatNumber } from "@/lib/format";
 import { SmartImage } from "@/components/SmartImage";
@@ -158,6 +158,7 @@ export default function Compare() {
                           label={car.brand}
                           sublabel=""
                           seed={car.slug}
+                          resolveTitle={carWikiTitle(car)}
                           className="aspect-[16/9] w-full transition-transform group-hover:scale-105"
                         />
                       </div>

@@ -89,6 +89,7 @@ export default function BrandDetail() {
                 sublabel={`Est. ${brand.founded}`}
                 accent={brand.accent}
                 seed={brand.name}
+                resolveTitle={brand.name}
                 className="aspect-[16/10] w-full"
               />
             </div>
