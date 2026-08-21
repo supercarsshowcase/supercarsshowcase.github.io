@@ -23,6 +23,7 @@ export function CarCard({ car }: { car: Car }) {
           label={car.brand}
           sublabel={car.model}
           accent="#ff2e00"
+          seed={car.slug}
           className="h-full w-full transition-transform duration-700 group-hover:scale-105"
         />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-apex-panel via-transparent to-transparent" />

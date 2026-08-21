@@ -157,6 +157,7 @@ export default function Compare() {
                           alt={`${car.brand} ${car.model}`}
                           label={car.brand}
                           sublabel=""
+                          seed={car.slug}
                           className="aspect-[16/9] w-full transition-transform group-hover:scale-105"
                         />
                       </div>

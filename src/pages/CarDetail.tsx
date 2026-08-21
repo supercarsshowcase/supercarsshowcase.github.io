@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { carBySlug, carsByBrand } from "@/data/cars";
 import { brandByName } from "@/data/brands";
-import { getCarImage } from "@/data/images";
+import { getCarGallery } from "@/data/images";
 import { useApp } from "@/context/app-context";
 import {
   formatPriceFull,
@@ -73,6 +73,7 @@ export default function CarDetail() {
   const navigate = useNavigate();
   const { currency, isFavorite, toggleFavorite } = useApp();
   const [copied, setCopied] = useState(false);
+  const [activeView, setActiveView] = useState(0);
 
   const car = slug ? carBySlug(slug) : undefined;
   const brand = car ? brandByName(car.brand) : undefined;
@@ -103,6 +104,7 @@ export default function CarDetail() {
     );
   }
 
+  const gallery = getCarGallery(car);
   const favorite = isFavorite(car.slug);
 
   const share = async () => {
@@ -152,16 +154,48 @@ export default function CarDetail() {
       </div>
 
       <div className="grid gap-8 lg:grid-cols-[1.4fr_1fr]">
-        {/* Image */}
-        <div className="overflow-hidden rounded-lg border border-apex-line bg-apex-panel">
-          <SmartImage
-            src={getCarImage(car)}
-            alt={`${car.brand} ${car.model}`}
-            label={car.brand}
-            sublabel={`${car.model} · ${car.year}`}
-            accent={brand?.accent ?? "#ff2e00"}
-            className="aspect-[16/10] w-full"
-          />
+        {/* Image gallery */}
+        <div className="flex flex-col gap-3">
+          <div className="overflow-hidden rounded-lg border border-apex-line bg-apex-panel">
+            <SmartImage
+              src={gallery[activeView]?.src ?? ""}
+              alt={`${car.brand} ${car.model} — ${gallery[activeView]?.label ?? ""}`}
+              label={car.brand}
+              sublabel={`${car.model} · ${car.year}`}
+              accent={brand?.accent ?? "#ff2e00"}
+              seed={gallery[activeView]?.seed ?? car.slug}
+              viewLabel={gallery[activeView]?.label}
+              className="aspect-[16/10] w-full"
+            />
+          </div>
+          <div className="grid grid-cols-5 gap-2">
+            {gallery.map((view, i) => (
+              <button
+                key={view.seed}
+                type="button"
+                onClick={() => setActiveView(i)}
+                className={cn(
+                  "relative overflow-hidden rounded-md border transition-colors",
+                  i === activeView
+                    ? "border-apex-red ring-1 ring-apex-red/50"
+                    : "border-apex-line hover:border-apex-line-strong",
+                )}
+                aria-label={`View ${view.label}`}
+              >
+                <SmartImage
+                  src={view.src}
+                  alt={`${car.brand} ${car.model} — ${view.label}`}
+                  label={car.brand}
+                  accent={brand?.accent ?? "#ff2e00"}
+                  seed={view.seed}
+                  className="aspect-[16/10] w-full"
+                />
+                <span className="absolute inset-x-0 bottom-0 truncate bg-gradient-to-t from-black/90 to-transparent px-1.5 pb-1 pt-3 text-left text-[8px] font-semibold uppercase tracking-[0.08em] text-white/75">
+                  {view.label}
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Info */}

@@ -28,17 +28,77 @@ export const BRAND_IMAGES: Record<string, string> = {
   Hennessey: wiki("Hennessey_Venom_F5.jpg"),
 };
 
-/** Curated, high-confidence images for a handful of hero cars. */
+/**
+ * Curated real photos for individual cars. Any slug not listed here gets a
+ * unique generated "studio" scene, so no two cars ever share the same photo.
+ */
 export const CAR_IMAGES: Record<string, string> = {
   "bugatti-chiron": wiki("Bugatti_Chiron_1.jpg"),
   "bugatti-veyron-16-4": wiki(
     "Bugatti_Veyron_16.4_–_Frontansicht_(1),_5._April_2012,_Düsseldorf.jpg",
   ),
+  "bugatti-tourbillon": wiki("Bugatti_Tourbillon_(2024).jpg"),
+  "bugatti-divo": wiki("Bugatti_Divo_(GIMS_2019).jpg"),
+  "bugatti-bolide": wiki("Bugatti_Bolide_(2021).jpg"),
+  "bugatti-la-voiture-noire": wiki("Bugatti_La_Voiture_Noire_(GIMS_2019).jpg"),
   "ferrari-laferrari": wiki("LaFerrari_in_Beverly_Hills_(14582579874).jpg"),
+  "ferrari-f40": wiki("Ferrari_F40_with_pop-up_headlights_up.jpg"),
+  "ferrari-sf90-stradale": wiki("Ferrari_SF90_Stradale.jpg"),
+  "lamborghini-countach": wiki("Lamborghini_Countach_LP400.jpg"),
+  "lamborghini-aventador-svj": wiki("Lamborghini_Aventador_SVJ.jpg"),
+  "porsche-911-turbo-s": wiki("Porsche_911_Turbo_S_(992)_IMG_5110.jpg"),
+  "porsche-918-spyder": wiki("Porsche_918_Spyder_(2014).jpg"),
+  "mclaren-p1": wiki("McLaren_P1_(2013).jpg"),
+  "mclaren-f1": wiki("McLaren_F1_road_car.jpg"),
+  "koenigsegg-jesko": wiki("Koenigsegg_Jesko.jpg"),
+  "koenigsegg-jesko-absolut": wiki("Koenigsegg_Jesko_Absolut.jpg"),
+  "pagani-huayra": wiki("Pagani_Huayra.jpg"),
+  "pagani-utopia": wiki("Pagani_Utopia.jpg"),
+  "aston-martin-valkyrie": wiki("Aston_Martin_Valkyrie_AMR_Pro.jpg"),
+  "rolls-royce-phantom": wiki("Rolls-Royce_Phantom_VIII_IMG_0889.jpg"),
+  "bentley-continental-gt": wiki("Bentley_Continental_GT_(2018).jpg"),
+  "rimac-nevera": wiki("Rimac_Nevera.jpg"),
+  "hennessey-venom-f5": wiki("Hennessey_Venom_F5.jpg"),
 };
 
+export interface GalleryImage {
+  src: string;
+  label: string;
+  seed: string;
+}
+
+const GALLERY_VIEWS: { key: string; label: string }[] = [
+  { key: "front", label: "Studio front" },
+  { key: "marque", label: "Marque archive" },
+  { key: "rear", label: "Rear three-quarter" },
+  { key: "side", label: "Side profile" },
+  { key: "cockpit", label: "Cockpit" },
+];
+
+/**
+ * Five distinct pictures per car. Where a real photo is known it is used;
+ * the rest are deterministic generated views so the gallery is always full
+ * and always unique to that car.
+ */
+export function getCarGallery(car: Car): GalleryImage[] {
+  const carSrc = CAR_IMAGES[car.slug] ?? "";
+  const brandSrc = BRAND_IMAGES[car.brand] ?? "";
+
+  return GALLERY_VIEWS.map((view, index) => {
+    let src = "";
+    if (index === 0) src = carSrc;
+    if (index === 1) src = brandSrc !== carSrc ? brandSrc : "";
+    return {
+      src,
+      label: view.label,
+      seed: `${car.slug}:${view.key}`,
+    };
+  });
+}
+
+/** The primary (front) image for a car — real photo or unique generated scene. */
 export function getCarImage(car: Car): string {
-  return CAR_IMAGES[car.slug] ?? BRAND_IMAGES[car.brand] ?? "";
+  return CAR_IMAGES[car.slug] ?? "";
 }
 
 export function getBrandImage(brand: string): string {

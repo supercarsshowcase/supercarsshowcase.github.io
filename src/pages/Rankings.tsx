@@ -38,6 +38,7 @@ function RankedRow({
           alt={`${car.brand} ${car.model}`}
           label={car.brand}
           sublabel=""
+          seed={car.slug}
           className="h-full w-full"
         />
       </div>
