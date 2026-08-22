@@ -1,3 +1,4 @@
+import { memo, useCallback } from "react";
 import { Link } from "react-router";
 import { Heart, Gauge, Timer, Zap } from "lucide-react";
 import type { Car } from "@/lib/types";
@@ -7,9 +8,10 @@ import { formatPriceCompact, formatNumber } from "@/lib/format";
 import { SmartImage } from "./SmartImage";
 import { cn } from "@/lib/utils";
 
-export function CarCard({ car }: { car: Car }) {
+export const CarCard = memo(function CarCard({ car }: { car: Car }) {
   const { currency, isFavorite, toggleFavorite } = useApp();
   const favorite = isFavorite(car.slug);
+  const handleFav = useCallback(() => toggleFavorite(car.slug), [toggleFavorite, car.slug]);
 
   return (
     <Link
@@ -35,7 +37,7 @@ export function CarCard({ car }: { car: Car }) {
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            toggleFavorite(car.slug);
+            handleFav();
           }}
           className="absolute right-3 top-3 flex size-8 items-center justify-center rounded-full border border-white/15 bg-black/60 text-white/80 backdrop-blur transition-colors hover:border-apex-red"
         >
@@ -87,4 +89,4 @@ export function CarCard({ car }: { car: Car }) {
       </div>
     </Link>
   );
-}
+});
