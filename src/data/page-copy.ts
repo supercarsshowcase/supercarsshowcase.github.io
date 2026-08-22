@@ -11,7 +11,7 @@ export const HOME_COPY: Record<string, string> = {
   heroSubB: "ELITE.",
   heroBody:
     "A cinematic gallery of Bugatti, Mercedes-AMG, BMW M, Ferrari, Lamborghini, Porsche, McLaren and more. Real specs. Real prices. Nothing for sale — just for the eyes.",
-  cta1Lbl: "Enter the Garage",
+  cta1Lbl: "Enter the Machines",
   cta2Lbl: "Bugatti Collection",
   featuredEyebrow: "Featured machines",
   featuredTitle: "THE HALL OF LEGENDS",
@@ -19,8 +19,8 @@ export const HOME_COPY: Record<string, string> = {
   marquesTitle: "BROWSE BY MARQUE",
   ctaHeading: "READY TO DREAM?",
   ctaBody:
-    "Open the garage and wander through the fastest, rarest and most expensive machines ever built.",
-  ctaBtn1: "Open the Garage",
+    "Step into the archive and wander through the fastest, rarest and most expensive machines ever built.",
+  ctaBtn1: "Open the Machines",
   ctaBtn2: "See Rankings",
   featuredSlugs:
     "bugatti-tourbillon,koenigsegg-jesko-absolut,ferrari-daytona-sp3,rimac-nevera-r,lamborghini-revuelto,mclaren-p1",
@@ -28,7 +28,7 @@ export const HOME_COPY: Record<string, string> = {
 
 export const NAV_COPY: Record<string, string> = {
   home: "Home",
-  garage: "Garage",
+  garage: "Machines",
   rankings: "Rankings",
   favorites: "Favorites",
   myGarage: "My Garage",
@@ -53,7 +53,7 @@ export const GARAGE_COPY: Record<string, string> = {
   rarityLbl: "Rarity",
   priceLbl: "Max Price",
   sortLbl: "Sort By",
-  eyebrow: "The Garage",
+  eyebrow: "Machines",
   heading: "{n} MACHINES ARCHIVED.",
   resultsLbl: "{n} RESULTS",
   emptyTitle: "NO MATCHES",
