@@ -5,6 +5,9 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Megaphone } from "lucide-react";
 
 const DURATION_MS = 5000;
+// A broadcast only plays if it was sent within this window — so a page reload
+// minutes later never replays an old announcement.
+const FRESH_WINDOW_MS = 10_000;
 
 /**
  * Shows the latest admin broadcast at the top-center of the page, just below
@@ -17,18 +20,20 @@ export function AnnouncementOverlay() {
   const [queue, setQueue] = useState<string[]>([]);
   const [index, setIndex] = useState(0);
   const [name, setName] = useState("");
-  const [batchId, setBatchId] = useState<string>("");
+  const [batchId, setBatchId] = useState("");
   const lastSeen = useRef<string | null>(null);
 
-  // Load a new, unseen broadcast into the queue.
+  // Load a new broadcast into the queue — but only play it when fresh. Old
+  // announcements (e.g. from a previous visit) are ignored on page reload.
   useEffect(() => {
     if (!latest) return;
     const id = String(latest._id);
     if (lastSeen.current === id) return;
     lastSeen.current = id;
+    const fresh = Date.now() - latest.createdAt <= FRESH_WINDOW_MS;
     setBatchId(id);
     setName(latest.authorName);
-    setQueue(latest.messages ?? []);
+    setQueue(fresh ? latest.messages ?? [] : []);
     setIndex(0);
   }, [latest]);
 
