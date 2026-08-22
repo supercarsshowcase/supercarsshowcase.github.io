@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { toast } from "sonner";
@@ -13,8 +13,9 @@ import {
   ShieldCheck,
   Palette,
   Megaphone,
-  Save,
   Loader2,
+  Check,
+  AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -28,6 +29,8 @@ const ACCENT_PRESETS = [
   { name: "Champagne", value: "#e8c98a" },
 ];
 
+type Settings = { bannerText: string; bannerEnabled: boolean; accent: string } | undefined;
+
 export default function Admin() {
   const stats = useQuery(api.site.getAdminStats);
   const users = useQuery(api.site.listUsers);
@@ -39,32 +42,57 @@ export default function Admin() {
   const [bannerText, setBannerText] = useState("");
   const [bannerEnabled, setBannerEnabled] = useState(false);
   const [accent, setAccent] = useState("#ff2e00");
-  const [saving, setSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saved" | "error">("idle");
+  const [hydrated, setHydrated] = useState(false);
 
-  // Sync the form when settings arrive/change (render-time pattern).
-  const [prevSettings, setPrevSettings] = useState(settings);
+  // Sync the form when settings first load (render-time pattern).
+  const [prevSettings, setPrevSettings] = useState<Settings>(settings);
   if (settings && settings !== prevSettings) {
     setPrevSettings(settings);
-    setBannerText(settings.bannerText);
-    setBannerEnabled(settings.bannerEnabled);
-    setAccent(settings.accent);
+    if (!hydrated) {
+      setHydrated(true);
+      setBannerText(settings.bannerText);
+      setBannerEnabled(settings.bannerEnabled);
+      setAccent(settings.accent);
+    }
   }
 
-  const saveSettings = async () => {
-    setSaving(true);
-    try {
-      await updateSiteSettings({
-        bannerText,
-        bannerEnabled,
-        accent: /^#[0-9a-fA-F]{6}$/.test(accent) ? accent : "#ff2e00",
-      });
-      toast.success("Site settings saved");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not save settings");
-    } finally {
-      setSaving(false);
-    }
-  };
+  const persist = useCallback(
+    async (text: string, enabled: boolean, color: string) => {
+      try {
+        await updateSiteSettings({
+          bannerText: text,
+          bannerEnabled: enabled,
+          accent: /^#[0-9a-fA-F]{6}$/.test(color) ? color : "#ff2e00",
+        });
+        setSaveStatus("saved");
+      } catch (e) {
+        setSaveStatus("error");
+        console.error("Failed to save settings", e);
+      }
+    },
+    [updateSiteSettings],
+  );
+
+  // Auto-save (debounced) whenever any setting changes.
+  useEffect(() => {
+    if (!hydrated) return;
+    const unchanged =
+      settings &&
+      bannerText === settings.bannerText &&
+      bannerEnabled === settings.bannerEnabled &&
+      accent === settings.accent;
+    if (unchanged) return;
+    const timer = setTimeout(() => void persist(bannerText, bannerEnabled, accent), 700);
+    return () => clearTimeout(timer);
+  }, [bannerText, bannerEnabled, accent, settings, hydrated, persist]);
+
+  const dirty =
+    hydrated &&
+    (!settings ||
+      bannerText !== settings.bannerText ||
+      bannerEnabled !== settings.bannerEnabled ||
+      accent !== settings.accent);
 
   const toggleRole = async (userId: string, currentRole: string) => {
     const next = currentRole === "admin" ? "user" : "admin";
@@ -191,11 +219,40 @@ export default function Admin() {
 
         {/* Site settings */}
         <section className="rounded-lg border border-apex-line bg-apex-panel">
-          <div className="flex items-center gap-2 border-b border-apex-line px-5 py-4">
-            <Palette className="size-4 text-apex-red" />
-            <h2 className="font-display text-sm font-bold uppercase tracking-[0.16em] text-white">
-              Quick UI settings
-            </h2>
+          <div className="flex items-center justify-between border-b border-apex-line px-5 py-4">
+            <div className="flex items-center gap-2">
+              <Palette className="size-4 text-apex-red" />
+              <h2 className="font-display text-sm font-bold uppercase tracking-[0.16em] text-white">
+                Quick UI settings
+              </h2>
+            </div>
+            {/* Save status */}
+            {hydrated && (
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em]",
+                  saveStatus === "error"
+                    ? "text-apex-red"
+                    : dirty
+                      ? "text-white/40"
+                      : "text-white/40",
+                )}
+              >
+                {saveStatus === "error" ? (
+                  <>
+                    <AlertTriangle className="size-3.5" /> Save failed
+                  </>
+                ) : dirty ? (
+                  <>
+                    <Loader2 className="size-3.5 animate-spin" /> Saving…
+                  </>
+                ) : (
+                  <>
+                    <Check className="size-3.5" /> Saved
+                  </>
+                )}
+              </span>
+            )}
           </div>
 
           {settings === undefined ? (
@@ -218,15 +275,16 @@ export default function Admin() {
                       onClick={() => setAccent(p.value)}
                       className={cn(
                         "size-8 rounded-full border-2 transition-transform hover:scale-110",
-                        accent === p.value
-                          ? "border-white"
-                          : "border-transparent",
+                        accent === p.value ? "border-white" : "border-transparent",
                       )}
                       style={{ backgroundColor: p.value }}
                     />
                   ))}
                   <label className="ml-1 inline-flex items-center gap-2 rounded-md border border-white/15 px-3 py-2 text-xs text-white/70">
-                    <span className="size-3 rounded-full" style={{ backgroundColor: accent }} />
+                    <span
+                      className="size-3 rounded-full"
+                      style={{ backgroundColor: accent }}
+                    />
                     <input
                       type="color"
                       value={accent}
@@ -271,25 +329,33 @@ export default function Admin() {
                   placeholder="e.g. New machines added — the Bugatti Tourbillon is in the garage."
                   className="mt-3 w-full resize-none rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3.5 py-3 text-sm text-white outline-none transition-colors placeholder:text-white/20 focus:border-apex-red"
                 />
-                <p className="mt-1.5 flex items-center gap-1.5 text-[11px] text-white/30">
-                  <Megaphone className="size-3.5" /> Shown at the top of every
-                  page when enabled.
-                </p>
               </div>
 
-              <button
-                type="button"
-                onClick={() => void saveSettings()}
-                disabled={saving}
-                className="inline-flex items-center gap-2 rounded-md bg-apex-red px-5 py-2.5 font-display text-xs font-bold uppercase tracking-[0.14em] text-white transition-colors hover:bg-apex-red-bright disabled:opacity-50"
-              >
-                {saving ? (
-                  <Loader2 className="size-4 animate-spin" />
+              {/* Live preview — same styling as the site banner */}
+              <div className="rounded-md border border-apex-line bg-white/[0.02] p-3">
+                <p className="mb-2 font-display text-[9px] font-semibold uppercase tracking-[0.18em] text-white/30">
+                  {bannerEnabled && bannerText.trim()
+                    ? "Live preview — appears at the top of every page"
+                    : "Preview — the banner is hidden while off or empty"}
+                </p>
+                {bannerEnabled && bannerText.trim() ? (
+                  <div className="flex items-center justify-center gap-2 rounded-sm bg-apex-red/10 px-3 py-2.5 text-center">
+                    <Megaphone className="size-3.5 shrink-0 text-apex-red" />
+                    <p className="text-xs font-medium leading-5 text-white/85">
+                      {bannerText}
+                    </p>
+                  </div>
                 ) : (
-                  <Save className="size-4" />
+                  <div className="flex items-center justify-center gap-2 rounded-sm border border-dashed border-apex-line px-3 py-2.5 text-center text-xs text-white/30">
+                    Turn the banner on and add text to see it here.
+                  </div>
                 )}
-                Save settings
-              </button>
+              </div>
+
+              <p className="flex items-center gap-1.5 text-[11px] text-white/30">
+                <Megaphone className="size-3.5" /> Changes save automatically as
+                you type — no button needed.
+              </p>
             </div>
           )}
         </section>
