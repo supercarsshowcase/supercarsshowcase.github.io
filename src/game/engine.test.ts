@@ -7,6 +7,8 @@ import {
   passivePerSec,
   upgradeCost,
 } from "./engine";
+import { GAME_CAR_MAP, SECRET_CAR_ID } from "./data";
+import type { GameState } from "./types";
 
 const T0 = 1_700_000_000_000;
 
@@ -43,6 +45,55 @@ describe("daily reward", () => {
     const reward2 = dailyReward({ ...s, lastTick: t1 }, t1);
     s = gameReducer({ ...s, lastTick: t1 }, { type: "CLAIM_DAILY", reward: reward2, now: t1 });
     expect(s.daily.streak).toBe(1);
+  });
+});
+
+describe("secret car is a display trophy", () => {
+  test("owning the secret car adds no passive income", () => {
+    const s = initialGameState();
+    const before = passivePerSec(s);
+    const withGhost: typeof s = {
+      ...s,
+      ownedCars: { ...s.ownedCars, [SECRET_CAR_ID]: { upgrades: {} } },
+    };
+    expect(passivePerSec(withGhost)).toBe(before);
+  });
+
+  test("driving the secret car yields no click earnings", () => {
+    const s: GameState = {
+      ...initialGameState(),
+      activeCarId: SECRET_CAR_ID,
+      ownedCars: { ...initialGameState().ownedCars, [SECRET_CAR_ID]: { upgrades: {} } },
+    };
+    expect(clickValue(s)).toBe(1); // floored, never $100K+
+  });
+
+  test("the secret car can never be sold", () => {
+    const s: GameState = {
+      ...initialGameState(),
+      cash: 0,
+      ownedCars: {
+        ["rusty-hatch-91"]: { upgrades: {} },
+        [SECRET_CAR_ID]: { upgrades: {} },
+      },
+    };
+    const next = gameReducer(s, { type: "SELL_CAR", id: SECRET_CAR_ID });
+    expect(next.ownedCars[SECRET_CAR_ID]).toBeDefined();
+    expect(next.cash).toBe(0);
+  });
+
+  test("finding the secret car does not fire the Ultimate achievement", () => {
+    expect(GAME_CAR_MAP[SECRET_CAR_ID].rarity).toBe("ultimate");
+    const s: GameState = {
+      ...initialGameState(),
+      achievements: ["first-click", "first-car"], // pre-earned, so CLICK only scans rarity goals
+      ownedCars: { ...initialGameState().ownedCars, [SECRET_CAR_ID]: { upgrades: {} } },
+      reputation: 0,
+    };
+    // CLICK runs the achievement scan (applyAchievements) on the owned cars.
+    const next = gameReducer(s, { type: "CLICK", amount: 1 });
+    expect(next.achievements).not.toContain("ultimate-owner");
+    expect(next.achievements).not.toContain("mythic-owner");
   });
 });
 

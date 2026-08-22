@@ -632,7 +632,9 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     name: "Mythic Collector",
     desc: "Own a Mythic car.",
     check: (s) =>
-      Object.keys(s.ownedCars).some((id) => GAME_CAR_MAP[id]?.rarity === "mythic"),
+      Object.keys(s.ownedCars).some(
+        (id) => GAME_CAR_MAP[id]?.rarity === "mythic" && !GAME_CAR_MAP[id]?.secret,
+      ),
     rewardRep: 4000,
   },
   {
@@ -640,7 +642,9 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     name: "One of One",
     desc: "Own an Ultimate car.",
     check: (s) =>
-      Object.keys(s.ownedCars).some((id) => GAME_CAR_MAP[id]?.rarity === "ultimate"),
+      Object.keys(s.ownedCars).some(
+        (id) => GAME_CAR_MAP[id]?.rarity === "ultimate" && !GAME_CAR_MAP[id]?.secret,
+      ),
     rewardRep: 15000,
   },
   {

@@ -406,7 +406,7 @@ function GaragePanel({ state, dispatch }: { state: GameState; dispatch: React.Di
                       type="button"
                       disabled={!canSell}
                       onClick={() => {
-                        if (window.confirm(`Sell the ${c.name} for ${fmtMoney(Math.round(carValue(state, c.id) * 0.6))}?`)) {
+                        if (window.confirm(`Sell the ${c.name} for ${fmtMoney(Math.round(carValue(state, c.id) * 0.35))}?`)) {
                           dispatch({ type: "SELL_CAR", id: c.id });
                         }
                       }}

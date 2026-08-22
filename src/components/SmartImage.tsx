@@ -115,6 +115,12 @@ export function SmartImage({ src, alt, label, sublabel, accent = "#ff2e00", clas
     setLoaded(false);
     setStarted(false);
   }
+  // A retry is a fresh request — the hang timer must apply to it too.
+  const [prevAttempt, setPrevAttempt] = useState(attempt);
+  if (prevAttempt !== attempt) {
+    setPrevAttempt(attempt);
+    setStarted(false);
+  }
 
   // Watch the container: once it nears the viewport, mount the <img> eagerly.
   useEffect(() => {

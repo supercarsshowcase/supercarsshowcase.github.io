@@ -155,9 +155,16 @@ function collectionBonus(state: GameState, kind: "click" | "passive"): number {
   return bonus;
 }
 
+/** Secret cars are trophies: they can't be sold for cash either. */
+export function isSecretCar(carId: string): boolean {
+  return Boolean(GAME_CAR_MAP[carId]?.secret);
+}
+
 export function clickValue(state: GameState): number {
   const def = GAME_CAR_MAP[state.activeCarId];
   if (!def) return 1;
+  // Secret cars are display trophies — they never earn money.
+  if (def.secret) return 1;
   const cond = conditionOf(state, state.activeCarId);
   const condMult = 0.5 + 0.5 * cond;
   const mults = carUpgradeMults(state, state.activeCarId);
@@ -169,7 +176,7 @@ export function passivePerSec(state: GameState): number {
   let base = 0;
   for (const carId of Object.keys(state.ownedCars)) {
     const def = GAME_CAR_MAP[carId];
-    if (!def) continue;
+    if (!def || def.secret) continue; // secret cars never generate income
     const cond = conditionOf(state, carId);
     const condMult = 0.5 + 0.5 * cond;
     const mults = carUpgradeMults(state, carId);
@@ -386,6 +393,7 @@ export function gameReducer(state: GameState, action: Action): GameState {
     }
     case "SELL_CAR": {
       if (!state.ownedCars[action.id]) return state;
+      if (isSecretCar(action.id)) return state; // trophies can't be cashed out
       if (Object.keys(state.ownedCars).length <= 1) return state;
       const gain = Math.round(carValue(state, action.id) * 0.35);
       const ownedCars = { ...state.ownedCars };

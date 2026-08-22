@@ -31,6 +31,8 @@ export default function Game() {
       window.clearInterval(id);
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("pagehide", onPageHide);
+      // Leaving the /game route — flush the latest state instead of losing up to 5s.
+      if (stateRef.current) saveGame(stateRef.current);
     };
   }, []);
 
