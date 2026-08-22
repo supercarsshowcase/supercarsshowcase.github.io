@@ -51,10 +51,10 @@ function timeAgo(ts: number) {
 }
 
 const QUICK_IDEAS = [
-  "Add a compare mode where I can battle three cars side by side.",
-  "Show a decade-by-decade timeline for every marque's heritage.",
-  "Give each car a cinematic trailer I can watch right on the page.",
-  "Add an owner-garage feature where I can build and name my own collection.",
+  "Add an engine-reel with real sound for every machine.",
+  "Let me generate a shareable poster card for my favorite car.",
+  "Show which cars appeared in which movies and shows.",
+  "Add a night-mode wallpaper download for each car.",
 ];
 
 export default function Feedback() {

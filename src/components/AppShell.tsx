@@ -11,6 +11,7 @@ import {
   LogIn,
   Shield,
   Megaphone,
+  Warehouse,
 } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -35,6 +36,7 @@ const NAV_LINKS = [
   { to: "/garage", label: "Garage" },
   { to: "/rankings", label: "Rankings" },
   { to: "/favorites", label: "Favorites" },
+  { to: "/my-garage", label: "My Garage" },
   { to: "/feedback", label: "Feedback" },
 ];
 
@@ -239,6 +241,13 @@ export function AppShell() {
                   >
                     <Heart className="mr-2 size-4" />
                     My favorites
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => navigate("/my-garage")}
+                    className="cursor-pointer"
+                  >
+                    <Warehouse className="mr-2 size-4" />
+                    My garage
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => navigate("/compare")}

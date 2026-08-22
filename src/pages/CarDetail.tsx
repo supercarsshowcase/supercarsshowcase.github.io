@@ -1,5 +1,7 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
+import { useMutation, useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import {
   ArrowLeft,
   Heart,
@@ -16,8 +18,11 @@ import {
   CalendarDays,
   BookOpen,
   Globe,
+  Warehouse,
+  Loader2,
 } from "lucide-react";
 import { carBySlug, carsByBrand } from "@/data/cars";
+import { useAuth } from "@/hooks/use-auth";
 import { brandByName } from "@/data/brands";
 import { getCarGallery, getCarImage } from "@/data/images";
 import { useApp } from "@/context/app-context";
@@ -72,8 +77,14 @@ export default function CarDetail() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { currency, isFavorite, toggleFavorite } = useApp();
+  const { isAuthenticated } = useAuth();
   const [copied, setCopied] = useState(false);
   const [activeView, setActiveView] = useState(0);
+  const [garageBusy, setGarageBusy] = useState(false);
+
+  const garage = useQuery(api.garage.getMyGarage);
+  const addCarToGarage = useMutation(api.garage.addCarToGarage);
+  const removeCarFromGarage = useMutation(api.garage.removeCarFromGarage);
 
   // Reset view/status when navigating between cars. Adjusting state during
   // render avoids the setState-in-effect cascade flagged by the linter.
@@ -86,16 +97,31 @@ export default function CarDetail() {
 
   const car = slug ? carBySlug(slug) : undefined;
   const brand = car ? brandByName(car.brand) : undefined;
+  const inGarage = car ? (garage?.carSlugs.includes(car.slug) ?? false) : false;
 
-  const related = useMemo(
-    () =>
-      car
-        ? carsByBrand(car.brand)
-            .filter((c) => c.slug !== car.slug)
-            .slice(0, 4)
-        : [],
-    [car],
-  );
+  const toggleGarage = async () => {
+    if (!car) return;
+    if (!isAuthenticated) {
+      navigate(`/auth?returnTo=${encodeURIComponent(window.location.pathname)}`);
+      return;
+    }
+    if (garageBusy || garage === undefined) return;
+    setGarageBusy(true);
+    try {
+      if (inGarage) await removeCarFromGarage({ slug: car.slug });
+      else await addCarToGarage({ slug: car.slug });
+    } catch {
+      /* ignore */
+    } finally {
+      setGarageBusy(false);
+    }
+  };
+
+  const related = car
+    ? carsByBrand(car.brand)
+        .filter((c) => c.slug !== car.slug)
+        .slice(0, 4)
+    : [];
 
   if (!car) {
     return (
@@ -248,6 +274,24 @@ export default function CarDetail() {
             >
               <Heart className={cn("size-4", favorite && "fill-apex-red")} />
               {favorite ? "Favorited" : "Favorite"}
+            </button>
+            <button
+              type="button"
+              onClick={() => void toggleGarage()}
+              disabled={garageBusy || (isAuthenticated && garage === undefined)}
+              className={cn(
+                "inline-flex items-center gap-2 rounded-md border px-4 py-2.5 font-display text-xs font-bold uppercase tracking-[0.12em] transition-colors disabled:opacity-50",
+                inGarage
+                  ? "border-apex-red bg-apex-red/10 text-apex-red"
+                  : "border-white/20 text-white/80 hover:border-apex-red hover:text-white",
+              )}
+            >
+              {garageBusy || (isAuthenticated && garage === undefined) ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Warehouse className={cn("size-4", inGarage && "fill-apex-red")} />
+              )}
+              {inGarage ? "In garage" : "My garage"}
             </button>
             <Link
               to={`/compare?cars=${car.slug}`}

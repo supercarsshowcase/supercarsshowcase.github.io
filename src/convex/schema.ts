@@ -72,6 +72,15 @@ const schema = defineSchema(
       status: v.string(), // "new" | "read"
       createdAt: v.number(),
     }).index("by_created", ["createdAt"]),
+
+    // Per-user named car collections ("My Garage").
+    garages: defineTable({
+      userId: v.id("users"),
+      name: v.string(),
+      carSlugs: v.array(v.string()),
+      createdAt: v.number(),
+      updatedAt: v.number(),
+    }).index("by_user", ["userId"]),
   },
   {
     schemaValidation: false,
