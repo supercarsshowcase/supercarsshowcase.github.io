@@ -35,12 +35,12 @@ import { cn } from "@/lib/utils";
 
 const NAV_LINKS: { to: string; label: string; key: keyof typeof NAV_COPY; end?: boolean }[] = [
   { to: "/", label: "Home", key: "home", end: true },
-  { to: "/garage", label: "Garage", key: "garage" },
-  { to: "/game", label: "Game", key: "game" },
-  { to: "/feedback", label: "Feedback", key: "feedback" },
+  { to: "/garage", label: "Machines", key: "garage" },
+  { to: "/my-garage", label: "Garage", key: "myGarage" },
   { to: "/rankings", label: "Rankings", key: "rankings" },
   { to: "/favorites", label: "Favorites", key: "favorites" },
-  { to: "/my-garage", label: "My Garage", key: "myGarage" },
+  { to: "/game", label: "Game", key: "game" },
+  { to: "/feedback", label: "Feedback", key: "feedback" },
 ];
 
 const REGIONS = ["GB EN", "US EN", "DE DE", "FR FR", "IT IT", "AE EN"];
