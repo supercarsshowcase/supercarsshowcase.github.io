@@ -37,6 +37,8 @@ import {
   Zap,
   Gift,
   Flame,
+  Crown,
+  BadgeCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -588,7 +590,7 @@ export default function Admin() {
                         {u.name}
                         {u.role === "owner" && (
                           <span className="ml-2 inline-flex items-center gap-1 rounded-sm bg-amber-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em] text-amber-400">
-                            <ShieldCheck className="size-3" /> Owner
+                            <Crown className="size-3" /> Owner
                           </span>
                         )}
                         {u.role === "admin" && (
@@ -598,7 +600,7 @@ export default function Admin() {
                         )}
                         {u.role === "moderator" && (
                           <span className="ml-2 inline-flex items-center gap-1 rounded-sm bg-blue-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em] text-blue-400">
-                            <ShieldCheck className="size-3" /> Moderator
+                            <BadgeCheck className="size-3" /> Moderator
                           </span>
                         )}
                       </p>
