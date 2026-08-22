@@ -556,12 +556,6 @@ export default function Admin() {
         icon={Shield}
         defaultOpen={false}
       >
-          <div className="flex items-center gap-2 border-b border-apex-line px-5 py-4">
-            <Shield className="size-4 text-apex-red" />
-            <h2 className="font-display text-sm font-bold uppercase tracking-[0.16em] text-white">
-              Users & roles
-            </h2>
-          </div>
           {users === undefined ? (
             <div className="flex items-center gap-2 px-5 py-8 text-sm text-white/50">
               <Loader2 className="size-4 animate-spin" /> Loading users…
@@ -646,13 +640,7 @@ export default function Admin() {
         icon={Palette}
         defaultOpen={false}
       >
-          <div className="flex items-center justify-between border-b border-apex-line px-5 py-4">
-            <div className="flex items-center gap-2">
-              <Palette className="size-4 text-apex-red" />
-              <h2 className="font-display text-sm font-bold uppercase tracking-[0.16em] text-white">
-                Quick UI settings
-              </h2>
-            </div>
+          <div className="flex items-center justify-end border-b border-apex-line px-5 py-4">
             {/* Save status */}
             {hydrated && (
               <span
