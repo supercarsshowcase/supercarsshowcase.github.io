@@ -685,35 +685,6 @@ export default function Admin() {
       </CollapsibleSection>
       </div>
 
-      {/* Site Updates editor */}
-      <div className="mt-12">
-        <CollapsibleSection
-          title="Site Updates"
-          icon={Newspaper}
-          defaultOpen={false}
-        >
-          <div className="px-5 py-5">
-            <p className="mb-4 text-sm text-apex-muted">
-              Write the update message that everyone sees on the landing page
-              above the Hall of Legends. It stays until you change it.
-            </p>
-          </div>
-        </CollapsibleSection>
-        <div className="mt-2">
-          <PageEditor
-            page="siteUpdates"
-            title="Site Updates — Landing Page"
-            description="The update notice shown at the top of the landing page above the Hall of Legends. Everyone sees it; only you can change it."
-            fields={[
-              { key: "updatesEyebrow", label: "Eyebrow label" },
-              { key: "updatesTitle", label: "Title" },
-              { key: "updatesBody", label: "Body text", multiline: true },
-            ]}
-            defaults={SITE_UPDATES_COPY}
-          />
-        </div>
-      </div>
-
       {/* Feedback inbox */}
       <div className="mt-12">
       <CollapsibleSection
@@ -806,6 +777,35 @@ export default function Admin() {
           </ul>
         )}
       </CollapsibleSection>
+      </div>
+
+      {/* Site Updates editor */}
+      <div className="mt-12">
+        <CollapsibleSection
+          title="Site Updates"
+          icon={Newspaper}
+          defaultOpen={false}
+        >
+          <div className="px-5 py-5">
+            <p className="mb-4 text-sm text-apex-muted">
+              Write the update message that everyone sees on the landing page
+              above the Hall of Legends. It stays until you change it.
+            </p>
+          </div>
+          <div className="px-5 pb-5">
+            <PageEditor
+              page="siteUpdates"
+              title="Site Updates — Landing Page"
+              description="The update notice shown at the top of the landing page above the Hall of Legends. Everyone sees it; only you can change it."
+              fields={[
+                { key: "updatesEyebrow", label: "Eyebrow label" },
+                { key: "updatesTitle", label: "Title" },
+                { key: "updatesBody", label: "Body text", multiline: true },
+              ]}
+              defaults={SITE_UPDATES_COPY}
+            />
+          </div>
+        </CollapsibleSection>
       </div>
 
       {/* Machines editor */}
