@@ -32,12 +32,36 @@ const schema = defineSchema(
       role: v.optional(roleValidator), // role of the user. do not remove
     }).index("email", ["email"]), // index for the email. do not remove or modify
 
-    // add other tables here
+    // ── Analytics ──
+    // Simple key/value counters (e.g. "visits", "visitors").
+    counters: defineTable({
+      key: v.string(),
+      value: v.number(),
+    }).index("by_key", ["key"]),
 
-    // tableName: defineTable({
-    //   ...
-    //   // table fields
-    // }).index("by_field", ["field"])
+    // One row per recorded page view, tagged with a per-browser device id.
+    visits: defineTable({
+      deviceId: v.string(),
+      userId: v.optional(v.id("users")),
+      path: v.string(),
+      createdAt: v.number(),
+    })
+      .index("by_device_created", ["deviceId", "createdAt"])
+      .index("by_created", ["createdAt"]),
+
+    // One row per recorded sign-in event.
+    signins: defineTable({
+      userId: v.id("users"),
+      createdAt: v.number(),
+    }).index("by_created", ["createdAt"]),
+
+    // Site-wide settings editable from the admin panel (single doc, key "site").
+    siteSettings: defineTable({
+      key: v.string(),
+      bannerText: v.string(),
+      bannerEnabled: v.boolean(),
+      accent: v.string(),
+    }).index("by_key", ["key"]),
   },
   {
     schemaValidation: false,

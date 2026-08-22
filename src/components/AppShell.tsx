@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router";
 import {
   Heart,
@@ -9,9 +9,14 @@ import {
   User,
   LogOut,
   LogIn,
+  Shield,
+  Megaphone,
 } from "lucide-react";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import { useApp } from "@/context/app-context";
 import { useAuth } from "@/hooks/use-auth";
+import { Analytics } from "./Analytics";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -55,6 +60,25 @@ export function AppShell() {
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  const isAdmin = user?.role === "admin";
+
+  // Site settings (banner + accent) from the admin panel.
+  const settings = useQuery(api.site.getSiteSettings);
+
+  useEffect(() => {
+    if (!settings) return;
+    const root = document.documentElement;
+    root.style.setProperty("--color-apex-red", settings.accent);
+    root.style.setProperty(
+      "--color-apex-red-bright",
+      `color-mix(in srgb, ${settings.accent}, white 18%)`,
+    );
+    root.style.setProperty(
+      "--color-apex-red-deep",
+      `color-mix(in srgb, ${settings.accent}, black 30%)`,
+    );
+  }, [settings]);
+
   const surpriseMe = () => {
     const car = CARS[Math.floor(Math.random() * CARS.length)];
     navigate(`/cars/${car.slug}`);
@@ -71,6 +95,7 @@ export function AppShell() {
 
   return (
     <div className="flex min-h-screen flex-col bg-apex-ink text-white">
+      <Analytics />
       <header className="sticky top-0 z-50 border-b border-apex-line bg-black/85 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between gap-3 px-4 sm:px-6">
           <div className="flex items-center gap-6">
@@ -100,6 +125,22 @@ export function AppShell() {
                   )}
                 </NavLink>
               ))}
+              {isAdmin && (
+                <NavLink
+                  to="/admin"
+                  className={({ isActive }) =>
+                    cn(
+                      "relative inline-flex items-center gap-1.5 px-3 py-2 font-display text-[13px] font-semibold uppercase tracking-[0.16em] transition-colors",
+                      isActive
+                        ? "text-apex-red"
+                        : "text-white/55 hover:text-apex-red",
+                    )
+                  }
+                >
+                  <Shield className="size-3.5" />
+                  Admin
+                </NavLink>
+              )}
             </nav>
           </div>
 
@@ -263,6 +304,15 @@ export function AppShell() {
               >
                 Compare
               </NavLink>
+              {isAdmin && (
+                <NavLink
+                  to="/admin"
+                  onClick={() => setMobileOpen(false)}
+                  className="border-b border-apex-line py-3 font-display text-sm font-semibold uppercase tracking-[0.16em] text-apex-red"
+                >
+                  <Shield className="mr-2 inline size-4" /> Admin
+                </NavLink>
+              )}
               {!isAuthenticated && (
                 <NavLink
                   to="/auth"
@@ -286,6 +336,18 @@ export function AppShell() {
           </nav>
         )}
       </header>
+
+      {/* Announcement banner (admin-editable) */}
+      {settings?.bannerEnabled && settings.bannerText && (
+        <div className="border-b border-apex-line bg-apex-red/10">
+          <div className="mx-auto flex max-w-[1400px] items-center justify-center gap-2 px-4 py-2.5 text-center sm:px-6">
+            <Megaphone className="size-3.5 shrink-0 text-apex-red" />
+            <p className="text-xs font-medium leading-5 text-white/85 sm:text-[13px]">
+              {settings.bannerText}
+            </p>
+          </div>
+        </div>
+      )}
 
       <main className="flex-1">
         <Outlet />
@@ -362,6 +424,14 @@ export function AppShell() {
                 >
                   My favorites
                 </Link>
+                {isAdmin && (
+                  <Link
+                    to="/admin"
+                    className="text-sm text-white/70 transition-colors hover:text-apex-red"
+                  >
+                    Admin panel
+                  </Link>
+                )}
               </div>
             </div>
           </div>
