@@ -4,6 +4,13 @@
  * `{ ...DEFAULT, ...overrides }` so an empty override simply keeps the default.
  */
 
+export const SITE_UPDATES_COPY: Record<string, string> = {
+  updatesEyebrow: "Site Updates",
+  updatesTitle: "WHAT'S NEW",
+  updatesBody:
+    "We are constantly adding new machines, improving the archive, and refining the experience. Check back here for the latest news and improvements to Supercars Showcase.",
+};
+
 export const HOME_COPY: Record<string, string> = {
   heroKicker: "Volume 01 — 200 Machines Archived",
   heroLine1: "ENGINES",

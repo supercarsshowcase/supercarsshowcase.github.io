@@ -32,11 +32,13 @@ import {
   RotateCcw,
   LayoutDashboard,
   Send,
+  ChevronDown,
+  Newspaper,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Id } from "@/convex/_generated/dataModel";
 import { carsList, mergedCarBySlug } from "@/data/cars";
-import { HOME_COPY, GARAGE_COPY, NAV_COPY } from "@/data/page-copy";
+import { HOME_COPY, GARAGE_COPY, NAV_COPY, SITE_UPDATES_COPY } from "@/data/page-copy";
 import { PageEditor, type PageField } from "@/components/PageEditor";
 
 const FEEDBACK_META: Record<
@@ -80,6 +82,50 @@ function timeAgo(ts: number) {
   const d = Math.floor(h / 24);
   if (d < 7) return `${d}d ago`;
   return new Date(ts).toLocaleDateString();
+}
+
+function CollapsibleSection({
+  title,
+  icon: Icon,
+  children,
+  defaultOpen = false,
+  badge,
+}: {
+  title: string;
+  icon: typeof Shield;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+  badge?: string;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <section className="rounded-lg border border-apex-line bg-apex-panel">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center justify-between border-b border-apex-line px-5 py-4 text-left transition-colors hover:bg-white/[0.02]"
+      >
+        <div className="flex items-center gap-2">
+          <Icon className="size-4 text-apex-red" />
+          <h2 className="font-display text-sm font-bold uppercase tracking-[0.16em] text-white">
+            {title}
+          </h2>
+          {badge && (
+            <span className="rounded-full bg-apex-red/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-apex-red">
+              {badge}
+            </span>
+          )}
+        </div>
+        <ChevronDown
+          className={cn(
+            "size-4 text-white/40 transition-transform duration-200",
+            open && "rotate-180",
+          )}
+        />
+      </button>
+      {open && <div>{children}</div>}
+    </section>
+  );
 }
 
 const ACCENT_PRESETS = [
@@ -407,7 +453,11 @@ export default function Admin() {
 
       <div className="mt-12 grid gap-8 lg:grid-cols-2">
         {/* Users */}
-        <section className="rounded-lg border border-apex-line bg-apex-panel">
+      <CollapsibleSection
+        title="Users & Roles"
+        icon={Shield}
+        defaultOpen={false}
+      >
           <div className="flex items-center gap-2 border-b border-apex-line px-5 py-4">
             <Shield className="size-4 text-apex-red" />
             <h2 className="font-display text-sm font-bold uppercase tracking-[0.16em] text-white">
@@ -467,10 +517,14 @@ export default function Admin() {
               ))}
             </ul>
           )}
-        </section>
+      </CollapsibleSection>
 
         {/* Site settings */}
-        <section className="rounded-lg border border-apex-line bg-apex-panel">
+      <CollapsibleSection
+        title="Quick UI Settings"
+        icon={Palette}
+        defaultOpen={false}
+      >
           <div className="flex items-center justify-between border-b border-apex-line px-5 py-4">
             <div className="flex items-center gap-2">
               <Palette className="size-4 text-apex-red" />
@@ -579,22 +633,45 @@ export default function Admin() {
               </p>
             </div>
           )}
-        </section>
+      </CollapsibleSection>
+      </div>
+
+      {/* Site Updates editor */}
+      <div className="mt-12">
+        <CollapsibleSection
+          title="Site Updates"
+          icon={Newspaper}
+          defaultOpen={false}
+        >
+          <div className="px-5 py-5">
+            <p className="mb-4 text-sm text-apex-muted">
+              Write the update message that everyone sees on the landing page
+              above the Hall of Legends. It stays until you change it.
+            </p>
+          </div>
+        </CollapsibleSection>
+        <div className="mt-2">
+          <PageEditor
+            page="siteUpdates"
+            title="Site Updates — Landing Page"
+            description="The update notice shown at the top of the landing page above the Hall of Legends. Everyone sees it; only you can change it."
+            fields={[
+              { key: "updatesEyebrow", label: "Eyebrow label" },
+              { key: "updatesTitle", label: "Title" },
+              { key: "updatesBody", label: "Body text", multiline: true },
+            ]}
+            defaults={SITE_UPDATES_COPY}
+          />
+        </div>
       </div>
 
       {/* Announcements — transient global broadcast */}
-      <section className="mt-12 rounded-lg border border-apex-line bg-apex-panel">
-        <div className="flex items-center justify-between border-b border-apex-line px-5 py-4">
-          <div className="flex items-center gap-2">
-            <Megaphone className="size-4 text-apex-red" />
-            <h2 className="font-display text-sm font-bold uppercase tracking-[0.16em] text-white">
-              Announcements
-            </h2>
-            <span className="rounded-full bg-apex-red/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-apex-red">
-              Admin power
-            </span>
-          </div>
-        </div>
+      <CollapsibleSection
+        title="Announcements"
+        icon={Megaphone}
+        badge="Admin power"
+        defaultOpen={false}
+      >
         <div className="px-5 py-5">
           <p className="text-sm text-apex-muted">
             Type a message and press Enter to send it — send another and it
@@ -632,28 +709,17 @@ export default function Admin() {
               ? `${announceCount} message${announceCount > 1 ? "s" : ""} ready — press Enter to send, or hit Broadcast. Short messages fade fast, long ones stay longer.`
               : "Press Enter to send — or hit Broadcast. Short messages fade fast, long ones stay longer."}
           </p>
-        </div>
-      </section>
+          </div>
+      </CollapsibleSection>
 
       {/* Feedback inbox */}
-      <section className="mt-12 rounded-lg border border-apex-line bg-apex-panel">
-        <div className="flex items-center justify-between border-b border-apex-line px-5 py-4">
-          <div className="flex items-center gap-2">
-            <Inbox className="size-4 text-apex-red" />
-            <h2 className="font-display text-sm font-bold uppercase tracking-[0.16em] text-white">
-              Feedback inbox
-            </h2>
-            {newFeedbackCount > 0 && (
-              <span className="rounded-full bg-apex-red px-2 py-0.5 text-[10px] font-bold text-white">
-                {newFeedbackCount} new
-              </span>
-            )}
-          </div>
-          <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/35">
-            {feedback ? `${feedback.length} total` : "…"}
-          </span>
-        </div>
-
+      <div className="mt-12">
+      <CollapsibleSection
+        title="Feedback Inbox"
+        icon={Inbox}
+        badge={newFeedbackCount > 0 ? `${newFeedbackCount} new` : undefined}
+        defaultOpen={false}
+      >
         {feedback === undefined ? (
           <div className="flex items-center gap-2 px-5 py-8 text-sm text-white/50">
             <Loader2 className="size-4 animate-spin" /> Loading feedback…
@@ -737,19 +803,17 @@ export default function Admin() {
             })}
           </ul>
         )}
-      </section>
+      </CollapsibleSection>
+      </div>
 
       {/* Machines editor */}
-      <section className="mt-12 rounded-lg border border-apex-line bg-apex-panel">
-        <div className="flex items-center gap-2 border-b border-apex-line px-5 py-4">
-          <Car className="size-4 text-apex-red" />
-          <h2 className="font-display text-sm font-bold uppercase tracking-[0.16em] text-white">
-            Machines editor
-          </h2>
-          <span className="rounded-full bg-apex-red/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-apex-red">
-            Owner only
-          </span>
-        </div>
+      <div className="mt-12">
+      <CollapsibleSection
+        title="Machines Editor"
+        icon={Car}
+        badge="Owner only"
+        defaultOpen={false}
+      >
         <div className="px-5 py-5">
           <p className="mb-4 text-sm text-apex-muted">
             Pick a machine and edit its name, price or specs — changes apply
@@ -884,24 +948,23 @@ export default function Admin() {
             </p>
           )}
         </div>
-      </section>
+      </CollapsibleSection>
+      </div>
 
       {/* Pages editor */}
       <div className="mt-12 space-y-6">
-        <div className="flex items-center gap-3">
-          <span className="flex size-10 items-center justify-center rounded-lg bg-apex-red/15">
-            <LayoutDashboard className="size-5 text-apex-red" />
-          </span>
-          <div>
-            <h2 className="font-display text-xl font-black tracking-tight text-white">
-              PAGES
-            </h2>
-            <p className="text-sm text-apex-muted">
-              Rename or rewrite the Home and Garage page copy — changes apply
-              instantly across the site.
-            </p>
-          </div>
+        <CollapsibleSection
+          title="Page Copy"
+          icon={LayoutDashboard}
+          defaultOpen={false}
+        >
+        <div className="px-5 py-5">
+          <p className="mb-4 text-sm text-apex-muted">
+            Rename or rewrite the Home and Garage page copy — changes apply
+            instantly across the site.
+          </p>
         </div>
+        <div className="px-5 pb-5 space-y-6">
         <PageEditor
           page="home"
           title="Home page"
@@ -923,6 +986,8 @@ export default function Admin() {
           fields={NAV_FIELDS}
           defaults={NAV_COPY}
         />
+        </div>
+        </CollapsibleSection>
       </div>
     </div>
   );

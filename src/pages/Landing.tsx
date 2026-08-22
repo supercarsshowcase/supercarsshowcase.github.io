@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import { motion } from "framer-motion";
-import { ArrowRight, ChevronUp } from "lucide-react";
+import { ArrowRight, ChevronUp, Newspaper } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { carsList } from "@/data/cars";
 import { BRANDS } from "@/data/brands";
 import { getBrandImage } from "@/data/images";
 import { CarCard } from "@/components/CarCard";
-import { HOME_COPY } from "@/data/page-copy";
+import { HOME_COPY, SITE_UPDATES_COPY } from "@/data/page-copy";
 
 const STATS = [
   { value: "200+", label: "Machines" },
@@ -45,6 +45,7 @@ function HeroBackground() {
 
 export default function Landing() {
   const home = useQuery(api.pages.getPageContent, { page: "home" });
+  const siteUpdates = useQuery(api.pages.getPageContent, { page: "siteUpdates" });
   const copy = { ...HOME_COPY, ...(home ?? {}) };
   const FEATURED_SLUGS = (copy.featuredSlugs || HOME_COPY.featuredSlugs)
     .split(",")
@@ -123,6 +124,41 @@ export default function Landing() {
           <ChevronUp className="size-4 text-white/30" />
         </div>
       </section>
+
+      {/* SITE UPDATES */}
+      {(() => {
+        const upd = { ...SITE_UPDATES_COPY, ...(siteUpdates ?? {}) };
+        const hasContent = (upd.updatesBody || "").trim();
+        if (!hasContent) return null;
+        return (
+          <section className="mx-auto max-w-[1400px] px-4 py-16 sm:px-6">
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+              className="rounded-2xl border border-apex-line bg-gradient-to-br from-apex-panel to-black p-8 sm:p-10"
+            >
+              <div className="flex items-start gap-4">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-apex-red/15">
+                  <Newspaper className="size-5 text-apex-red" />
+                </span>
+                <div className="min-w-0">
+                  <p className="font-display text-[11px] font-semibold uppercase tracking-[0.28em] text-apex-red">
+                    {upd.updatesEyebrow}
+                  </p>
+                  <h2 className="mt-2 font-display text-2xl font-black tracking-tight text-white sm:text-3xl">
+                    {upd.updatesTitle}
+                  </h2>
+                  <p className="mt-4 max-w-2xl text-sm leading-7 text-white/60 sm:text-base">
+                    {upd.updatesBody}
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          </section>
+        );
+      })()}
 
       {/* FEATURED */}
       <section className="mx-auto max-w-[1400px] px-4 py-20 sm:px-6">
