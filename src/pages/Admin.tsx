@@ -507,6 +507,14 @@ export default function Admin() {
                 )}
               </span>
             )}
+            <button
+              type="button"
+              onClick={() => void persist(accent, siteName)}
+              disabled={!hydrated}
+              className="inline-flex items-center gap-1.5 rounded-md bg-apex-red px-3 py-1.5 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-white transition-opacity hover:opacity-90 disabled:opacity-40"
+            >
+              <Save className="size-3.5" /> Save
+            </button>
           </div>
 
           {settings === undefined ? (

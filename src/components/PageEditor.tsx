@@ -1,8 +1,14 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { toast } from "sonner";
-import { Loader2, Check, AlertTriangle, RefreshCcw } from "lucide-react";
+import {
+  Loader2,
+  Check,
+  AlertTriangle,
+  RefreshCcw,
+  Save,
+} from "lucide-react";
 
 export interface PageField {
   key: string;
@@ -50,28 +56,48 @@ export function PageEditor({
       )
     : false;
 
+  // Build the persisted payload from the current draft. The server drops empty
+  // values so an empty field falls back to the built-in default.
+  const buildPayload = useCallback(() => {
+    const payload: Record<string, string> = {};
+    for (const f of fields) payload[f.key] = (draft[f.key] ?? "").trim();
+    return payload;
+  }, [draft, fields]);
+
+  const commit = useCallback(async () => {
+    try {
+      await save({ page, fields: buildPayload() });
+      setStatus("saved");
+    } catch (e) {
+      setStatus("error");
+      toast.error(e instanceof Error ? e.message : "Could not save");
+      throw e;
+    }
+  }, [save, page, buildPayload]);
+
+  // Debounced auto-save as a convenience.
   useEffect(() => {
     if (!hydrated || !changed) return;
     const timer = setTimeout(() => {
-      const payload: Record<string, string> = {};
-      for (const f of fields) {
-        const value = (draft[f.key] ?? "").trim();
-        // Only persist fields that differ from the default; empty = default.
-        if (value !== (defaults[f.key] ?? "")) payload[f.key] = value;
-      }
-      void (async () => {
-        try {
-          await save({ page, fields: payload });
-          setStatus("saved");
-        } catch (e) {
-          setStatus("error");
-          toast.error(e instanceof Error ? e.message : "Could not save");
-        }
-      })();
+      setStatus("idle");
+      void commit().catch(() => undefined);
     }, 700);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draft, hydrated, changed]);
+  }, [draft, changed, commit]);
+
+  const handleSaveNow = async () => {
+    if (busy || !hydrated) return;
+    setBusy(true);
+    try {
+      await commit();
+      toast.success("Saved");
+    } catch {
+      /* error toast handled in commit */
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const handleReset = async () => {
     if (busy) return;
@@ -109,7 +135,7 @@ export function PageEditor({
                 </>
               ) : changed ? (
                 <>
-                  <Loader2 className="size-3.5 animate-spin" /> Saving…
+                  <Loader2 className="size-3.5 animate-spin" /> Unsaved
                 </>
               ) : (
                 <>
@@ -118,6 +144,14 @@ export function PageEditor({
               )}
             </span>
           )}
+          <button
+            type="button"
+            onClick={() => void handleSaveNow()}
+            disabled={busy || !hydrated}
+            className="inline-flex items-center gap-1.5 rounded-md bg-apex-red px-3 py-1.5 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-white transition-opacity hover:opacity-90 disabled:opacity-40"
+          >
+            <Save className="size-3.5" /> {busy ? "Saving…" : "Save"}
+          </button>
           <button
             type="button"
             onClick={() => void handleReset()}
