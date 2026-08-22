@@ -1,7 +1,7 @@
 import { Link } from "react-router";
 import { Heart, Gauge, Timer, Zap } from "lucide-react";
 import type { Car } from "@/lib/types";
-import { getCarImage, carWikiTitle } from "@/data/images";
+import { getCarImage } from "@/data/images";
 import { useApp } from "@/context/app-context";
 import { formatPriceCompact, formatNumber } from "@/lib/format";
 import { SmartImage } from "./SmartImage";
@@ -23,7 +23,6 @@ export function CarCard({ car }: { car: Car }) {
           sublabel={car.model}
           accent="#ff2e00"
           seed={car.slug}
-          resolveTitle={carWikiTitle(car)}
           className="h-full w-full transition-transform duration-700 group-hover:scale-105"
         />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-apex-panel via-transparent to-transparent" />

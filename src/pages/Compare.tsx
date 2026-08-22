@@ -158,7 +158,6 @@ export default function Compare() {
                           label={car.brand}
                           sublabel=""
                           seed={car.slug}
-                          resolveTitle={carWikiTitle(car)}
                           className="aspect-[16/9] w-full transition-transform group-hover:scale-105"
                         />
                       </div>

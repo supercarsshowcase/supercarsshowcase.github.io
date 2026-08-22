@@ -178,8 +178,6 @@ export default function CarDetail() {
               accent={brand?.accent ?? "#ff2e00"}
               seed={gallery[activeView]?.seed ?? car.slug}
               viewLabel={gallery[activeView]?.label}
-              resolveTitle={activeView === 0 ? carWikiTitle(car) : undefined}
-              resolveWidth={1920}
               className="aspect-[16/10] w-full"
             />
           </div>
@@ -203,7 +201,6 @@ export default function CarDetail() {
                   label={car.brand}
                   accent={brand?.accent ?? "#ff2e00"}
                   seed={view.seed}
-                  resolveTitle={i === 0 ? carWikiTitle(car) : undefined}
                   className="aspect-[16/10] w-full"
                 />
                 <span className="absolute inset-x-0 bottom-0 truncate bg-gradient-to-t from-black/90 to-transparent px-1.5 pb-1 pt-3 text-left text-[8px] font-semibold uppercase tracking-[0.08em] text-white/75">

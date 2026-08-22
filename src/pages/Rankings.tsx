@@ -39,7 +39,6 @@ function RankedRow({
           label={car.brand}
           sublabel=""
           seed={car.slug}
-          resolveTitle={carWikiTitle(car)}
           className="h-full w-full"
         />
       </div>
