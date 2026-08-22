@@ -594,13 +594,20 @@ export default function Admin() {
           <p className="text-sm text-apex-muted">
             Type one or more messages — put each on its own line. Every visitor
             sees them pop up at the top-center of the page (just below the
-            header) as your name + message, one after another for 5 seconds
-            each, then they fade away. Nothing is permanent.
+            header) as your name + message, all shown at once stacked under
+            each other for 5 seconds, then they fade away. Nothing is
+            permanent.
           </p>
           <div className="mt-4 flex items-stretch gap-3">
             <textarea
               value={announce}
               onChange={(e) => setAnnounce(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  void broadcast();
+                }
+              }}
               rows={3}
               placeholder={"Message 1\nMessage 2\nMessage 3…"}
               className="flex-1 resize-none rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3.5 py-3 text-sm text-white outline-none transition-colors placeholder:text-white/20 focus:border-apex-red"
@@ -617,8 +624,8 @@ export default function Admin() {
           </div>
           <p className="mt-2.5 text-[11px] text-white/25">
             {announceCount > 0
-              ? `${announceCount} message${announceCount > 1 ? "s" : ""} ready — shown to everyone as “Your name: message” for 5 seconds each.`
-              : "Shown to everyone as your name + message for 5 seconds."}
+              ? `${announceCount} message${announceCount > 1 ? "s" : ""} ready — press Enter to send, or hit Broadcast. Shown stacked for 5 seconds.`
+              : "Press Enter to send — or hit Broadcast. Shown stacked for 5 seconds."}
           </p>
         </div>
       </section>
