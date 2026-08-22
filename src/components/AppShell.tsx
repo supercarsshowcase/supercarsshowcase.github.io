@@ -35,7 +35,7 @@ const NAV_LINKS = [
   { to: "/garage", label: "Garage" },
   { to: "/rankings", label: "Rankings" },
   { to: "/favorites", label: "Favorites" },
-  { to: "/assistant", label: "Ask" },
+  { to: "/feedback", label: "Feedback" },
 ];
 
 const REGIONS = ["GB EN", "US EN", "DE DE", "FR FR", "IT IT", "AE EN"];

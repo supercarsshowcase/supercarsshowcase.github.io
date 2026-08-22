@@ -15,7 +15,7 @@ import "./types/global.d.ts";
 import { RequireAuth } from "./components/RequireAuth";
 import { RequireAdmin } from "./components/RequireAdmin";
 import Landing from "./pages/Landing.tsx";
-import Assistant from "./pages/Assistant.tsx";
+import Feedback from "./pages/Feedback.tsx";
 import Admin from "./pages/Admin.tsx";
 import Garage from "./pages/Garage.tsx";
 import CarDetail from "./pages/CarDetail.tsx";
@@ -69,10 +69,10 @@ createRoot(document.getElementById("root")!).render(
                 <Route path="/favorites" element={<Favorites />} />
                 <Route path="/compare" element={<Compare />} />
                 <Route
-                  path="/assistant"
+                  path="/feedback"
                   element={
                     <RequireAuth>
-                      <Assistant />
+                      <Feedback />
                     </RequireAuth>
                   }
                 />

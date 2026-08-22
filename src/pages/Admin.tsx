@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { toast } from "sonner";
@@ -16,9 +17,61 @@ import {
   Loader2,
   Check,
   AlertTriangle,
+  Inbox,
+  Trash2,
+  CheckCircle2,
+  Circle,
+  Lightbulb,
+  Sparkles,
+  Bug,
+  Heart,
+  MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Id } from "@/convex/_generated/dataModel";
+
+const FEEDBACK_META: Record<
+  string,
+  { label: string; icon: typeof Lightbulb; className: string }
+> = {
+  idea: {
+    label: "Idea",
+    icon: Lightbulb,
+    className: "border-amber-300/30 bg-amber-300/10 text-amber-300",
+  },
+  suggestion: {
+    label: "Suggestion",
+    icon: Sparkles,
+    className: "border-sky-300/30 bg-sky-300/10 text-sky-300",
+  },
+  bug: {
+    label: "Bug",
+    icon: Bug,
+    className: "border-rose-300/30 bg-rose-300/10 text-rose-300",
+  },
+  praise: {
+    label: "Praise",
+    icon: Heart,
+    className: "border-emerald-300/30 bg-emerald-300/10 text-emerald-300",
+  },
+  other: {
+    label: "Other",
+    icon: MessageSquare,
+    className: "border-white/20 bg-white/5 text-white/70",
+  },
+};
+
+function timeAgo(ts: number) {
+  const diff = Date.now() - ts;
+  const m = Math.floor(diff / 60_000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  if (d < 7) return `${d}d ago`;
+  return new Date(ts).toLocaleDateString();
+}
 
 const ACCENT_PRESETS = [
   { name: "Racing Red", value: "#ff2e00" },
@@ -38,6 +91,32 @@ export default function Admin() {
 
   const setUserRole = useMutation(api.site.setUserRole);
   const updateSiteSettings = useMutation(api.site.updateSiteSettings);
+
+  const feedback = useQuery(api.feedback.listFeedback);
+  const setFeedbackStatus = useMutation(api.feedback.setFeedbackStatus);
+  const deleteFeedback = useMutation(api.feedback.deleteFeedback);
+
+  const newFeedbackCount = feedback?.filter((f) => f.status === "new").length ?? 0;
+
+  const toggleFeedbackStatus = async (id: string, status: string) => {
+    try {
+      await setFeedbackStatus({
+        feedbackId: id as unknown as Id<"feedback">,
+        status: status === "new" ? "read" : "new",
+      });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not update feedback");
+    }
+  };
+
+  const removeFeedback = async (id: string) => {
+    try {
+      await deleteFeedback({ feedbackId: id as unknown as Id<"feedback"> });
+      toast.success("Feedback deleted");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not delete feedback");
+    }
+  };
 
   const [bannerText, setBannerText] = useState("");
   const [bannerEnabled, setBannerEnabled] = useState(false);
@@ -360,6 +439,110 @@ export default function Admin() {
           )}
         </section>
       </div>
+
+      {/* Feedback inbox */}
+      <section className="mt-12 rounded-lg border border-apex-line bg-apex-panel">
+        <div className="flex items-center justify-between border-b border-apex-line px-5 py-4">
+          <div className="flex items-center gap-2">
+            <Inbox className="size-4 text-apex-red" />
+            <h2 className="font-display text-sm font-bold uppercase tracking-[0.16em] text-white">
+              Feedback inbox
+            </h2>
+            {newFeedbackCount > 0 && (
+              <span className="rounded-full bg-apex-red px-2 py-0.5 text-[10px] font-bold text-white">
+                {newFeedbackCount} new
+              </span>
+            )}
+          </div>
+          <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/35">
+            {feedback ? `${feedback.length} total` : "…"}
+          </span>
+        </div>
+
+        {feedback === undefined ? (
+          <div className="flex items-center gap-2 px-5 py-8 text-sm text-white/50">
+            <Loader2 className="size-4 animate-spin" /> Loading feedback…
+          </div>
+        ) : feedback.length === 0 ? (
+          <p className="px-5 py-10 text-center text-sm text-white/35">
+            No feedback yet. Share the site and the notes will pile up here.
+          </p>
+        ) : (
+          <ul className="divide-y divide-apex-line">
+            {feedback.map((f) => {
+              const meta = FEEDBACK_META[f.type] ?? FEEDBACK_META.other;
+              return (
+                <li
+                  key={f._id}
+                  className={cn(
+                    "px-5 py-4",
+                    f.status === "new" && "bg-apex-red/[0.04]",
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex min-w-0 items-start gap-3">
+                      <span
+                        className={cn(
+                          "mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-sm border px-2 py-1 text-[9px] font-bold uppercase tracking-[0.12em]",
+                          meta.className,
+                        )}
+                      >
+                        <meta.icon className="size-3" /> {meta.label}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="whitespace-pre-wrap text-sm leading-6 text-white/90">
+                          {f.message}
+                        </p>
+                        <p className="mt-2 text-[11px] text-white/35">
+                          {f.authorName}
+                          {f.authorEmail ? ` · ${f.authorEmail}` : ""} ·{" "}
+                          {timeAgo(f.createdAt)}
+                          {f.carSlug && (
+                            <>
+                              {" · "}
+                              <Link
+                                to={`/cars/${f.carSlug}`}
+                                className="text-apex-red hover:underline"
+                              >
+                                about a machine
+                              </Link>
+                            </>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => void toggleFeedbackStatus(f._id, f.status)}
+                        className="inline-flex items-center gap-1.5 rounded-md border border-white/15 px-2.5 py-1.5 font-display text-[9px] font-bold uppercase tracking-[0.12em] text-white/60 transition-colors hover:border-apex-red hover:text-apex-red"
+                      >
+                        {f.status === "new" ? (
+                          <>
+                            <CheckCircle2 className="size-3.5" /> Mark read
+                          </>
+                        ) : (
+                          <>
+                            <Circle className="size-3.5" /> Mark unread
+                          </>
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void removeFeedback(f._id)}
+                        aria-label="Delete feedback"
+                        className="inline-flex size-7 items-center justify-center rounded-md border border-white/15 text-white/50 transition-colors hover:border-apex-red hover:text-apex-red"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }

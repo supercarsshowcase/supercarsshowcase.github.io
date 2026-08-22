@@ -62,6 +62,16 @@ const schema = defineSchema(
       bannerEnabled: v.boolean(),
       accent: v.string(),
     }).index("by_key", ["key"]),
+
+    // Visitor feedback, ideas and suggestions, reviewed in the admin panel.
+    feedback: defineTable({
+      userId: v.id("users"),
+      type: v.string(), // "idea" | "suggestion" | "bug" | "praise" | "other"
+      message: v.string(),
+      carSlug: v.optional(v.string()),
+      status: v.string(), // "new" | "read"
+      createdAt: v.number(),
+    }).index("by_created", ["createdAt"]),
   },
   {
     schemaValidation: false,
