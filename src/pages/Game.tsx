@@ -1,14 +1,38 @@
-import { useEffect, useReducer } from "react";
+import { useEffect, useReducer, useRef } from "react";
 import { GameMain } from "@/components/game/GameMain";
 import { gameReducer, loadGame, saveGame } from "@/game/engine";
 
+const SAVE_INTERVAL_MS = 5000;
+
 export default function Game() {
   const [state, dispatch] = useReducer(gameReducer, undefined, loadGame);
+  const stateRef = useRef(state);
 
-  // Persist on every change.
+  // Keep the latest state available to the save handlers without re-creating them.
   useEffect(() => {
-    saveGame(state);
+    stateRef.current = state;
   }, [state]);
+
+  // Persist every few seconds and on tab hide/unload — never on every 1s tick,
+  // which was hammering localStorage and causing the game to lag.
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      if (stateRef.current) saveGame(stateRef.current);
+    }, SAVE_INTERVAL_MS);
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden" && stateRef.current) saveGame(stateRef.current);
+    };
+    const onPageHide = () => {
+      if (stateRef.current) saveGame(stateRef.current);
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pagehide", onPageHide);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pagehide", onPageHide);
+    };
+  }, []);
 
   // Passive income tick.
   useEffect(() => {

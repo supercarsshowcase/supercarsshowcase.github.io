@@ -15,7 +15,7 @@ interface SmartImageProps {
 
 /** Total <img> attempts before giving up to the generated scene. */
 const MAX_ATTEMPTS = 3;
-/** If a request neither loads nor errors this long, assume it stalled and retry. */
+/** If a request hasn't even started this long, assume the connection stalled and retry. */
 const HANG_TIMEOUT_MS = 8000;
 /** Load images this far outside the viewport so scrolling feels instant. */
 const VIEW_MARGIN = "400px 0px";
@@ -105,6 +105,7 @@ export function SmartImage({ src, alt, label, sublabel, accent = "#ff2e00", clas
   const [inView, setInView] = useState(() => typeof IntersectionObserver === "undefined");
   const [attempt, setAttempt] = useState(0);
   const [loaded, setLoaded] = useState(false);
+  const [started, setStarted] = useState(false);
 
   // Reset when the requested image changes (render-time adjust, not an effect).
   const [prevSrc, setPrevSrc] = useState(src);
@@ -112,6 +113,7 @@ export function SmartImage({ src, alt, label, sublabel, accent = "#ff2e00", clas
     setPrevSrc(src);
     setAttempt(0);
     setLoaded(false);
+    setStarted(false);
   }
 
   // Watch the container: once it nears the viewport, mount the <img> eagerly.
@@ -135,11 +137,13 @@ export function SmartImage({ src, alt, label, sublabel, accent = "#ff2e00", clas
 
   const giveUp = attempt >= MAX_ATTEMPTS;
   const showImg = inView && src.length > 0 && !giveUp;
-  const hanging = showImg && !loaded;
+  // Only consider the request stuck if it never even started. Once the
+  // browser is actively downloading (loadstart), a slow-but-progressing
+  // photo is left alone — remounting it would kill the request and restart.
+  const hanging = showImg && !loaded && !started;
 
-  // If a mounted request neither loads nor errors (stalled connection,
-  // throttled request), retry it so the photo can't stay stuck behind the
-  // placeholder.
+  // If a mounted request never starts (stalled connection, throttled request),
+  // retry it so the photo can't stay stuck behind the placeholder.
   useEffect(() => {
     if (!hanging) return;
     const t = setTimeout(() => setAttempt((a) => a + 1), HANG_TIMEOUT_MS);
@@ -159,6 +163,7 @@ export function SmartImage({ src, alt, label, sublabel, accent = "#ff2e00", clas
           referrerPolicy="no-referrer"
           decoding="async"
           className="absolute inset-0 z-10 h-full w-full object-cover"
+          onLoadStart={() => setStarted(true)}
           onLoad={() => setLoaded(true)}
           onError={() => setAttempt((a) => a + 1)}
         />

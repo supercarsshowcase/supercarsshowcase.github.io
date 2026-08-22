@@ -144,7 +144,26 @@ const rawCars: CarSpec[] = [
   ["infinity-one-27", "One-off", "Infinity One", 2027, "", 3000, 560, 1.5, 900000000, "ultimate", 330, "vault", 10],
 ];
 
-export const GAME_CARS: GameCarDef[] = rawCars.map(car);
+export const GAME_CARS: GameCarDef[] = [
+  ...rawCars.map(car),
+  // Secret car — granted after 300 starter clicks, never sold or crated.
+  {
+    id: SECRET_CAR_ID,
+    brand: "Ghost Division",
+    name: "The Ghost Prototype",
+    year: 2026,
+    gallerySlug: "",
+    hp: 2400,
+    topSpeed: 520,
+    accel: 1.7,
+    value: 250000000,
+    rarity: "ultimate",
+    unlockLevel: 1,
+    dealer: "vault",
+    crateTier: 0,
+    secret: true,
+  },
+];
 
 export const GAME_CAR_MAP: Record<string, GameCarDef> = Object.fromEntries(
   GAME_CARS.map((c) => [c.id, c]),
@@ -697,6 +716,15 @@ const GAME_CAR_IMAGES: Record<string, string> = {
   "mustang-gt-15": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/2019_Ford_Mustang_GT_5.0_facelift.jpg/960px-2019_Ford_Mustang_GT_5.0_facelift.jpg",
   "camaro-ss-16": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/2019_Chevrolet_Camaro_2SS_6.2L_front_3.16.19.jpg/960px-2019_Chevrolet_Camaro_2SS_6.2L_front_3.16.19.jpg",
   "corvette-c6-08": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4f/Chevrolet_Corvette_Z06_-_Flickr_-_Alexandre_Pr%C3%A9vot_%287%29_%28cropped%29.jpg/960px-Chevrolet_Corvette_Z06_-_Flickr_-_Alexandre_Pr%C3%A9vot_%287%29_%28cropped%29.jpg",
+  // Rust City beaters — real rusty cars for the early game.
+  "rusty-hatch-91": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/35/Moscow%2C_Mitsubishi_Lancer_CY0_hatchback_rusty%2C_Aug_2025_01.jpg/960px-Moscow%2C_Mitsubishi_Lancer_CY0_hatchback_rusty%2C_Aug_2025_01.jpg",
+  "beater-sedan-87": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ed/Rusty_FSO_125p_1.5_L_krk.JPG/960px-Rusty_FSO_125p_1.5_L_krk.JPG",
+  "farm-pickup-80": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/Rusty_Ford_Truck%2C_Old_Metal%2C_NB_7-25-13_%2810784237423%29.jpg/960px-Rusty_Ford_Truck%2C_Old_Metal%2C_NB_7-25-13_%2810784237423%29.jpg",
+  // Secret car — the mysterious black one-off.
+  "ghost-prototype": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Bugatti_La_Voiture_Noire_%2850263623691%29.jpg/960px-Bugatti_La_Voiture_Noire_%2850263623691%29.jpg",
+  // Endgame one-offs — real exotic photos for the fictional ultimates.
+  "crystal-one-24": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/2017_Pagani_Zonda_HP_Barchetta_USG26.jpg/960px-2017_Pagani_Zonda_HP_Barchetta_USG26.jpg",
+  "infinity-one-27": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/Mercedes-AMG_One_IAA_2023_1X7A0454.jpg/960px-Mercedes-AMG_One_IAA_2023_1X7A0454.jpg",
 };
 
 /** Manual image overrides for game cars whose archive twin uses a different slug. */

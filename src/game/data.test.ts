@@ -52,10 +52,11 @@ describe("game car images", () => {
     expect(gameCarImage(GAME_CAR_MAP["ferrari-458-12"])).toContain("488_GTB");
   });
 
-  test("returns the generated scene for fictional cars with no photo", () => {
-    const cases = ["rusty-hatch-91", "beater-sedan-87", "crystal-one-24"];
+  test("Rust City beaters, the secret car and one-offs now resolve real photos", () => {
+    const cases = ["rusty-hatch-91", "beater-sedan-87", "farm-pickup-80", "ghost-prototype", "crystal-one-24", "infinity-one-27"];
     for (const id of cases) {
-      expect(gameCarImage(GAME_CAR_MAP[id]), `${id} should stay on the scene`).toBe("");
+      const img = gameCarImage(GAME_CAR_MAP[id]);
+      expect(img, `${id} should resolve a real photo`).toContain("upload.wikimedia.org");
     }
   });
 });
