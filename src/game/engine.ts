@@ -270,18 +270,32 @@ export function spinSupercarPool() {
   );
 }
 
+const HOUR_MS = 3_600_000;
+
 /**
- * Roll the wheel: 1% supercar (random legendary+ non-secret), otherwise one of
- * the 11 cash slices. The winning slice index is returned so the animation can
- * land the pointer exactly on the prize.
+ * The supercar up for grabs right now — fixed per hour, rotating on its own.
+ * Deterministic, so everyone sees the same car and it swaps every hour.
  */
-export function rollSpin(state: GameState): SpinResult {
+export function hourlySupercar(now: number) {
+  const pool = spinSupercarPool();
+  if (pool.length === 0) return undefined;
+  return pool[Math.floor(now / HOUR_MS) % pool.length];
+}
+
+/** Next hour boundary — when the jackpot car rotates. */
+export function nextSupercarSwapAt(now: number): number {
+  return (Math.floor(now / HOUR_MS) + 1) * HOUR_MS;
+}
+
+/**
+ * Roll the wheel: 1% for the hourly supercar, otherwise one of the 11 cash
+ * slices. The winning slice index is returned so the animation can land the
+ * pointer exactly on the prize.
+ */
+export function rollSpin(state: GameState, now = Date.now()): SpinResult {
   if (Math.random() < SPIN_CAR_CHANCE) {
-    const pool = spinSupercarPool();
-    if (pool.length > 0) {
-      const pick = pool[Math.floor(Math.random() * pool.length)];
-      return { kind: "car", carId: pick.id, slice: 0 };
-    }
+    const car = hourlySupercar(now);
+    if (car) return { kind: "car", carId: car.id, slice: 0 };
   }
   const slices = spinCashSlices(state);
   const idx = Math.floor(Math.random() * slices.length);

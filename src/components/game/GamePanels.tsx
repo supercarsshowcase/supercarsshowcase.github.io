@@ -45,12 +45,13 @@ import {
   buyPrice,
   carPower,
   carValue,
+  hourlySupercar,
+  nextSupercarSwapAt,
   rollCrate,
   rollDealerStock,
   rollSpin,
   spinCashSlices,
   spinReadyAt,
-  spinSupercarPool,
   upgradeCost,
   type Action,
 } from "@/game/engine";
@@ -156,13 +157,12 @@ function SpinPanel({ state, dispatch }: { state: GameState; dispatch: React.Disp
   const [rotation, setRotation] = useState(0);
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState<SpinResult | null>(null);
-  const supercarPool = spinSupercarPool();
-  const [previewIdx, setPreviewIdx] = useState(() =>
-    Math.floor(Math.random() * Math.max(1, supercarPool.length)),
-  );
-  const previewCar = supercarPool[previewIdx % supercarPool.length];
 
   const now = state.lastTick;
+  const previewCar = hourlySupercar(now);
+  const swapAt = nextSupercarSwapAt(now);
+  const swapMin = Math.max(1, Math.ceil((swapAt - now) / 60000));
+  const swapLabel = swapMin >= 60 ? `${Math.floor(swapMin / 60)}h ${swapMin % 60}m` : `${swapMin}m`;
   const readyAt = spinReadyAt(state);
   const canSpin = now >= readyAt && !spinning;
   const waitMin = Math.max(1, Math.ceil((readyAt - now) / 60000));
@@ -194,7 +194,7 @@ function SpinPanel({ state, dispatch }: { state: GameState; dispatch: React.Disp
       <PanelHeader
         eyebrow="Lucky Spin"
         title="SPIN THE WHEEL"
-        hint="Free every 15 minutes. Cash on 99% of the wheel — and a supercar on 1%."
+        hint="Free every 15 minutes. Cash on 99% of the wheel — and this hour's supercar on 1%. The jackpot rotates every hour."
       />
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1.15fr_1fr]">
         <div className="relative mx-auto aspect-square w-full max-w-[600px]">
@@ -282,7 +282,7 @@ function SpinPanel({ state, dispatch }: { state: GameState; dispatch: React.Disp
             1% chance of a supercar · free every 15 minutes
           </p>
 
-          {/* Jackpot preview — the supercar on the wheel */}
+          {/* Jackpot preview — this hour's supercar, fixed until it rotates */}
           {previewCar && (
             <div className="mt-6 overflow-hidden rounded-xl border border-amber-300/30 bg-apex-panel">
               <div className="relative h-40 bg-[#0a0a0b]">
@@ -293,7 +293,7 @@ function SpinPanel({ state, dispatch }: { state: GameState; dispatch: React.Disp
                   className="h-full w-full object-cover"
                 />
                 <span className="absolute left-2 top-2 rounded-sm border border-amber-300 bg-black/50 px-2 py-0.5 font-display text-[9px] font-bold uppercase tracking-[0.16em] text-amber-300 backdrop-blur">
-                  1% Jackpot
+                  Hourly Jackpot
                 </span>
               </div>
               <div className="flex items-center justify-between gap-3 p-4">
@@ -303,14 +303,10 @@ function SpinPanel({ state, dispatch }: { state: GameState; dispatch: React.Disp
                     {previewCar.brand} · {fmtNum(previewCar.hp)} hp · {fmtMoney(previewCar.value)}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setPreviewIdx((i) => (i + 1) % supercarPool.length)}
-                  className="shrink-0 rounded-md border border-amber-300/40 px-3 py-2 font-display text-[10px] font-bold uppercase tracking-[0.14em] text-amber-300 transition-colors hover:bg-amber-300/10"
-                >
+                <span className="shrink-0 rounded-md border border-amber-300/30 bg-amber-300/5 px-3 py-2 font-display text-[10px] font-bold uppercase tracking-[0.14em] text-amber-300">
                   <RefreshCw className="mr-1 inline size-3.5" />
-                  Next
-                </button>
+                  New in {swapLabel}
+                </span>
               </div>
             </div>
           )}

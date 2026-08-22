@@ -3,7 +3,9 @@ import { DEALERS, GAME_CAR_MAP } from "./data";
 import {
   carValue,
   gameReducer,
+  hourlySupercar,
   initialGameState,
+  nextSupercarSwapAt,
   rollDealerStock,
   rollSpin,
   SPIN_COOLDOWN_MS,
@@ -240,6 +242,26 @@ describe("reducer: lucky spin", () => {
       expect(c.secret).not.toBe(true);
       expect(["legendary", "exotic", "hyper", "mythic", "ultimate"]).toContain(c.rarity);
     }
+  });
+
+  test("the hourly jackpot is fixed within an hour and rotates afterwards", () => {
+    const hour = Math.floor(T0 / 3_600_000) * 3_600_000;
+    // Same car for the whole hour…
+    expect(hourlySupercar(hour)?.id).toBe(hourlySupercar(hour + 3_599_000)?.id);
+    // …and (almost always) a different one next hour.
+    const pool = spinSupercarPool();
+    expect(pool.length).toBeGreaterThan(1);
+    const ids = new Set([hourlySupercar(hour)?.id, hourlySupercar(hour + 3_600_000)?.id]);
+    expect(ids.size).toBeGreaterThan(1);
+    // Always from the pool.
+    const car = hourlySupercar(hour);
+    expect(pool.some((c) => c.id === car?.id)).toBe(true);
+  });
+
+  test("nextSupercarSwapAt returns the next hour boundary", () => {
+    const hour = Math.floor(T0 / 3_600_000) * 3_600_000;
+    expect(nextSupercarSwapAt(hour)).toBe(hour + 3_600_000);
+    expect(nextSupercarSwapAt(hour + 1)).toBe(hour + 3_600_000);
   });
 });
 
