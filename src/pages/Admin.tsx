@@ -204,18 +204,31 @@ export default function Admin() {
   };
 
   // ── Announcements (transient global broadcast) ──
-  const postAnnouncement = useMutation(api.site.postAnnouncement);
+  const postAnnouncements = useMutation(api.site.postAnnouncements);
   const [announce, setAnnounce] = useState("");
   const [announceBusy, setAnnounceBusy] = useState(false);
 
+  const announceCount = announce
+    .split(/\n+/)
+    .map((m) => m.trim())
+    .filter(Boolean).length;
+
   const broadcast = async () => {
-    const msg = announce.trim();
-    if (!msg || announceBusy) return;
+    const messages = announce
+      .split(/\n+/)
+      .map((m) => m.trim())
+      .filter(Boolean)
+      .slice(0, 8);
+    if (messages.length === 0 || announceBusy) return;
     setAnnounceBusy(true);
     try {
-      await postAnnouncement({ message: msg });
+      await postAnnouncements({ messages });
       setAnnounce("");
-      toast.success("Broadcast sent — everyone can see it now");
+      toast.success(
+        messages.length > 1
+          ? `Broadcast sent — ${messages.length} messages on the way`
+          : "Broadcast sent — everyone can see it now",
+      );
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not broadcast");
     } finally {
@@ -578,33 +591,33 @@ export default function Admin() {
         </div>
         <div className="px-5 py-5">
           <p className="text-sm text-apex-muted">
-            Type a message and broadcast it. Every visitor sees it pop up at the
-            top-center of the page as your name + message for 5 seconds, then it
-            fades away. Nothing is permanent.
+            Type one or more messages — put each on its own line. Every visitor
+            sees them pop up at the top-center of the page (just below the
+            header) as your name + message, one after another for 5 seconds
+            each, then they fade away. Nothing is permanent.
           </p>
           <div className="mt-4 flex items-stretch gap-3">
-            <input
+            <textarea
               value={announce}
               onChange={(e) => setAnnounce(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") void broadcast();
-              }}
-              maxLength={280}
-              placeholder="Type a message to broadcast…"
-              className="flex-1 rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3.5 py-3 text-sm text-white outline-none transition-colors placeholder:text-white/20 focus:border-apex-red"
+              rows={3}
+              placeholder={"Message 1\nMessage 2\nMessage 3…"}
+              className="flex-1 resize-none rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3.5 py-3 text-sm text-white outline-none transition-colors placeholder:text-white/20 focus:border-apex-red"
             />
             <button
               type="button"
               onClick={() => void broadcast()}
-              disabled={announceBusy || !announce.trim()}
-              className="inline-flex shrink-0 items-center gap-2 rounded-md bg-apex-red px-5 py-3 font-display text-[11px] font-bold uppercase tracking-[0.12em] text-white transition-opacity hover:opacity-90 disabled:opacity-40"
+              disabled={announceBusy || announceCount === 0}
+              className="inline-flex shrink-0 items-center gap-2 self-end rounded-md bg-apex-red px-5 py-3 font-display text-[11px] font-bold uppercase tracking-[0.12em] text-white transition-opacity hover:opacity-90 disabled:opacity-40"
             >
               <Send className="size-3.5" />
               {announceBusy ? "Broadcasting…" : "Broadcast"}
             </button>
           </div>
           <p className="mt-2.5 text-[11px] text-white/25">
-            Shown to everyone as “Your name: message” for 5 seconds.
+            {announceCount > 0
+              ? `${announceCount} message${announceCount > 1 ? "s" : ""} ready — shown to everyone as “Your name: message” for 5 seconds each.`
+              : "Shown to everyone as your name + message for 5 seconds."}
           </p>
         </div>
       </section>

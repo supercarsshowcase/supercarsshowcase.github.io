@@ -86,7 +86,7 @@ export const updateSiteSettings = mutation({
 
 // ── Announcements (transient global broadcasts) ─────────────────────────────
 
-/** Public — every visitor reads the latest broadcast, shown for a few seconds. */
+/** Public — every visitor reads the latest single broadcast message. */
 export const getLatestAnnouncement = query({
   args: {},
   handler: async (ctx) => {
@@ -105,7 +105,26 @@ export const getLatestAnnouncement = query({
   },
 });
 
-/** Admin — broadcast a message that everyone sees for a few seconds. */
+/** Public — the latest broadcast batch (may hold several messages). */
+export const getAnnouncementBatch = query({
+  args: {},
+  handler: async (ctx) => {
+    const latest = await ctx.db
+      .query("announcements")
+      .order("desc")
+      .first();
+    return latest
+      ? {
+          _id: latest._id,
+          authorName: latest.authorName,
+          messages: latest.messages?.length ? latest.messages : [latest.message],
+          createdAt: latest.createdAt,
+        }
+      : null;
+  },
+});
+
+/** Admin — broadcast a single message that everyone sees for a few seconds. */
 export const postAnnouncement = mutation({
   args: { message: v.string() },
   handler: async (ctx, args) => {
@@ -118,6 +137,31 @@ export const postAnnouncement = mutation({
     await ctx.db.insert("announcements", {
       authorName: admin.name?.trim() ? admin.name.trim() : "Admin",
       message,
+      createdAt: Date.now(),
+    });
+  },
+});
+
+/**
+ * Admin — broadcast one or more messages as a single batch; every visitor sees
+ * each message pop up for a few seconds, in order, then they fade.
+ */
+export const postAnnouncements = mutation({
+  args: { messages: v.array(v.string()) },
+  handler: async (ctx, args) => {
+    const admin = await getAdmin(ctx);
+    if (!admin) throw new Error("Admin access required.");
+
+    const messages = args.messages
+      .map((m) => m.trim().slice(0, 280))
+      .filter(Boolean)
+      .slice(0, 8);
+    if (messages.length === 0) throw new Error("Message cannot be empty.");
+
+    await ctx.db.insert("announcements", {
+      authorName: admin.name?.trim() ? admin.name.trim() : "Admin",
+      message: messages[0],
+      messages,
       createdAt: Date.now(),
     });
   },

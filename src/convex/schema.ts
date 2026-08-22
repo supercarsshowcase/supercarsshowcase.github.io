@@ -115,11 +115,15 @@ const schema = defineSchema(
       updatedAt: v.number(),
     }).index("by_key", ["key"]),
 
-    // Transient global announcements. An admin broadcasts a message; every
-    // visitor sees it pop up (top-center) for a few seconds, then it fades.
+    // Transient global announcements. An admin broadcasts one or more messages
+    // in a single batch; every visitor sees them pop up (top-center) one after
+    // another a few seconds each, then they fade.
     announcements: defineTable({
       authorName: v.string(),
+      // First/primary message — kept for the single-message API.
       message: v.string(),
+      // Full batch (may hold more than one) — used by the multi-message API.
+      messages: v.optional(v.array(v.string())),
       createdAt: v.number(),
     }).index("by_created", ["createdAt"]),
   },
