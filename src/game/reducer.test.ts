@@ -102,7 +102,7 @@ describe("reducer: crates", () => {
     expect(next.cratesOpened).toBe(1);
   });
 
-  test("a duplicate car drop pays 30% of its value", () => {
+  test("a duplicate car drop pays 20% of its value", () => {
     const s: GameState = {
       ...rich(),
       cash: 1_000_000,
@@ -113,7 +113,7 @@ describe("reducer: crates", () => {
       crateId: "scrapyard",
       result: { kind: "car", carId: "civic-lx-95" },
     });
-    expect(next.cash).toBe(1_000_000 - 250 + Math.round(2_600 * 0.3));
+    expect(next.cash).toBe(1_000_000 - 250 + Math.round(2_600 * 0.2));
   });
 });
 

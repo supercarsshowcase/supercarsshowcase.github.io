@@ -213,12 +213,12 @@ function weightedPick<T>(entries: { value: T; weight: number }[]): T | undefined
 }
 
 const CRATE_CAR_CHANCE: Record<string, number> = {
-  scrapyard: 0.05,
-  import: 0.09,
-  dealer: 0.12,
-  exotic: 0.16,
-  mythic: 0.2,
-  vault: 0.28,
+  scrapyard: 0.03,
+  import: 0.06,
+  dealer: 0.08,
+  exotic: 0.10,
+  mythic: 0.12,
+  vault: 0.18,
 };
 
 export function rollCrate(state: GameState, crateId: string): CrateResult {
@@ -454,7 +454,7 @@ export function gameReducer(state: GameState, action: Action): GameState {
       if (r.kind === "car" && r.carId) {
         const def = GAME_CAR_MAP[r.carId];
         if (def && ownedCars[r.carId]) {
-          cash += Math.round(def.value * 0.3);
+          cash += Math.round(def.value * 0.2);
         } else if (def) {
           ownedCars = { ...ownedCars, [r.carId]: { upgrades: {} } };
         }
@@ -506,7 +506,7 @@ export function gameReducer(state: GameState, action: Action): GameState {
         if (state.ownedCars[r.carId]) {
           return applyAchievements({
             ...state,
-            cash: state.cash + Math.round(def.value * 0.3),
+            cash: state.cash + Math.round(def.value * 0.2),
             lastSpinAt: action.now,
           });
         }
