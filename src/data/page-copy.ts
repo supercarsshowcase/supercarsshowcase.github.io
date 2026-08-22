@@ -39,7 +39,7 @@ export const NAV_COPY: Record<string, string> = {
   game: "Game",
   rankings: "Rankings",
   favorites: "Favorites",
-  myGarage: "My Garage",
+  myGarage: "Garage",
   feedback: "Feedback",
   admin: "Admin",
   compare: "Compare",
