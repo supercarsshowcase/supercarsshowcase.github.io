@@ -221,64 +221,112 @@ const GALLERY_VIEWS: { key: string; label: string }[] = [
   { key: "cockpit", label: "Cockpit" },
 ];
 
-/** Per-brand gallery photos for views 2-4 (rear, side, cockpit). */
-const BRAND_GALLERY: Record<string, { rear: string; side: string; cockpit: string }> = {
-  Bugatti: {
-    rear: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/Bugatti_Chiron%2C_IAA_2017%2C_Frankfurt_%281Y7A2857%29.jpg/960px-Bugatti_Chiron%2C_IAA_2017%2C_Frankfurt_%281Y7A2857%29.jpg",
-    side: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Bugatti_La_Voiture_Noire_%2850263623691%29.jpg/960px-Bugatti_La_Voiture_Noire_%2850263623691%29.jpg",
-    cockpit: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9d/2018_Bugatti_Chiron_in_Exposed_Blue_Carbon%2C_front_right.jpg/960px-2018_Bugatti_Chiron_in_Exposed_Blue_Carbon%2C_front_right.jpg",
-  },
-  Ferrari: {
-    rear: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f7/Ferrari-Monaco-4071021.jpg/960px-Ferrari-Monaco-4071021.jpg",
-    side: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/LaFerrari_in_Beverly_Hills_%2814563979888%29.jpg/960px-LaFerrari_in_Beverly_Hills_%2814563979888%29.jpg",
-    cockpit: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/Ferrari_488_3.9_Pista_Spider_interior.jpg/960px-Ferrari_488_3.9_Pista_Spider_interior.jpg",
-  },
-  Lamborghini: {
-    rear: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Lamborghini_Hurac%C3%A1n_Tecnica_1X7A7432.jpg/960px-Lamborghini_Hurac%C3%A1n_Tecnica_1X7A7432.jpg",
-    side: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/da/Lamborghini_Aventador_SVJ_Roadster_IMG_9580.jpg/960px-Lamborghini_Aventador_SVJ_Roadster_IMG_9580.jpg",
-    cockpit: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/81/Lamborghini_Superleggera-20180708.jpg/960px-Lamborghini_Superleggera-20180708.jpg",
-  },
-  Porsche: {
-    rear: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Porsche_911_Carrera_RS%2C_Bj._1972-73_%282016-07-02_01_Sp%29.JPG/960px-Porsche_911_Carrera_RS%2C_Bj._1972-73_%282016-07-02_01_Sp%29.JPG",
-    side: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dc/2020_Porsche_Taycan_4S_79kWh_Front.jpg/960px-2020_Porsche_Taycan_4S_79kWh_Front.jpg",
-    cockpit: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/df/Porsche_%22911%22_GT3_interior_cockpit_%286268302441%29.jpg/960px-Porsche_%22911%22_GT3_interior_cockpit_%286268302441%29.jpg",
-  },
-  McLaren: {
-    rear: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/McLaren_720S_Orange_Rear_SCD_24.jpg/960px-McLaren_720S_Orange_Rear_SCD_24.jpg",
-    side: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/79/McLaren_720S_%271001HP_Super_Hyper%27_%282018%29_%2855311108634%29.jpg/960px-McLaren_720S_%271001HP_Super_Hyper%27_%282018%29_%2855311108634%29.jpg",
-    cockpit: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/63/2021_McLaren_Artura_%281%29.jpg/960px-2021_McLaren_Artura_%281%29.jpg",
-  },
-  "Mercedes-AMG": {
-    rear: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/Mercedes-AMG_GT_Black_Series_IMG_0331.jpg/960px-Mercedes-AMG_GT_Black_Series_IMG_0331.jpg",
-    side: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2e/Mercedes-Benz_SLS_AMG_%28C_197%29_%E2%80%93_Frontansicht_ge%C3%B6ffnet%2C_10._August_2011%2C_D%C3%BCsseldorf.jpg/960px-Mercedes-Benz_SLS_AMG_%28C_197%29_%E2%80%93_Frontansicht_ge%C3%B6ffnet%2C_10._August_2011%2C_D%C3%BCsseldorf.jpg",
-    cockpit: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/52/Mercedes-Benz_C_200_Avantgarde_%28W_205%29_%E2%80%93_Frontansicht%2C_26._April_2014%2C_D%C3%BCsseldorf.jpg/960px-Mercedes-Benz_C_200_Avantgarde_%28W_205%29_%E2%80%93_Frontansicht%2C_26._April_2014%2C_D%C3%BCsseldorf.jpg",
-  },
+/**
+ * Per-car gallery: 4 additional Wikimedia photos of the SAME car model
+ * (different angles / shots), sourced from Commons searches.
+ * Keyed by car slug; each entry is an array of 4 thumb URLs.
+ */
+const CAR_GALLERY: Record<string, string[]> = {
+  // Mercedes-AMG GT
+  "amg-gt-15": [
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c7/Mercedes-AMG_GT_43_%28C192%29_IMG_2893.jpg/960px-Mercedes-AMG_GT_43_%28C192%29_IMG_2893.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/Mercedes-AMG_GT_Black_Series_IMG_0324.jpg/960px-Mercedes-AMG_GT_Black_Series_IMG_0324.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/Mercedes-AMG_GT_Black_Series_IMG_0331.jpg/960px-Mercedes-AMG_GT_Black_Series_IMG_0331.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fe/Mercedes-AMG_GT_63_S_%28Facelift%29_1X7A7353.jpg/960px-Mercedes-AMG_GT_63_S_%28Facelift%29_1X7A7353.jpg",
+  ],
+  // Ferrari 488 GTB
+  "ferrari-488-gtb": [
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f2/Ferrari-Monaco-4071008.jpg/960px-Ferrari-Monaco-4071008.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f7/Ferrari_488_GTB_1X7A7210.jpg/960px-Ferrari_488_GTB_1X7A7210.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/Ferrari_488_GTB_1X7A7211.jpg/960px-Ferrari_488_GTB_1X7A7211.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Ferrari_480%2C_Mexico_2019p1.jpg/960px-Ferrari_480%2C_Mexico_2019p1.jpg",
+  ],
+  // Porsche 911 GT3 RS
+  "porsche-911-gt3": [
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d3/Porsche_911_GT3_RS_%282022%29_1X7A7164.jpg/960px-Porsche_911_GT3_RS_%282022%29_1X7A7164.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/d/df/Porsche_911_GT3_Touring%2C_IAA_2017%2C_Frankfurt_%281Y7A2766%29.jpg/960px-Porsche_911_GT3_Touring%2C_IAA_2017%2C_Frankfurt_%281Y7A2766%29.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/Porsche_992_GT3_with_touring_package_1X7A6511.jpg/960px-Porsche_992_GT3_with_touring_package_1X7A6511.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c6/2013_Porsche_911_Carrera_4S_%28991%29_%289626546987%29.jpg/960px-2013_Porsche_911_Carrera_4S_%28991%29_%289626546987%29.jpg",
+  ],
+  // Lamborghini Huracan
+  "huracan-15": [
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/Lamborghini_Huracan_Performante%2C_IAA_2017%2C_Frankfurt_%281Y7A2827%29.jpg/960px-Lamborghini_Huracan_Performante%2C_IAA_2017%2C_Frankfurt_%281Y7A2827%29.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/6/68/Lamborghini_Huracan_STO_1X7A0297.jpg/960px-Lamborghini_Huracan_STO_1X7A0297.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/6/61/Lamborghini_Hurac%C3%A1n_Tecnica_1X7A7430.jpg/960px-Lamborghini_Hurac%C3%A1n_Tecnica_1X7A7430.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Lamborghini_Hurac%C3%A1n_Tecnica_1X7A7432.jpg/960px-Lamborghini_Hurac%C3%A1n_Tecnica_1X7A7432.jpg",
+  ],
+  // McLaren 720S
+  "mclaren-720s-17": [
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/4/42/Maclaren_720S_PA280972-PSD.jpg/960px-Maclaren_720S_PA280972-PSD.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/McLaren_720S%2C_IAA_2017%2C_%281Y7A3405%29.jpg/960px-McLaren_720S%2C_IAA_2017%2C_%281Y7A3405%29.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/9/94/McLaren_720S%2C_IAA_2017%2C_%281Y7A3406%29.jpg/960px-McLaren_720S%2C_IAA_2017%2C_%281Y7A3406%29.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/5/50/McLaren_720S%2C_IAA_2017%2C_%281Y7A3409%29.jpg/960px-McLaren_720S%2C_IAA_2017%2C_%281Y7A3409%29.jpg",
+  ],
+  // Bugatti Chiron
+  "bugatti-chiron": [
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b4/Bugatti_Chiron_Sport_gfos25_1.jpg/960px-Bugatti_Chiron_Sport_gfos25_1.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/2022_Bugatti_Chiron_Super_Sport_WRE.jpg/960px-2022_Bugatti_Chiron_Super_Sport_WRE.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Bugatti_La_Voiture_Noire_%2850263623691%29.jpg/960px-Bugatti_La_Voiture_Noire_%2850263623691%29.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/Bugatti_Chiron%2C_IAA_2017%2C_Frankfurt_%281Y7A2857%29.jpg/960px-Bugatti_Chiron%2C_IAA_2017%2C_Frankfurt_%281Y7A2857%29.jpg",
+  ],
+  // Bugatti Chiron Sport
+  "bugatti-chiron-sport": [
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/Bugatti_Chiron_1.jpg/960px-Bugatti_Chiron_1.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/2022_Bugatti_Chiron_Super_Sport_WRE.jpg/960px-2022_Bugatti_Chiron_Super_Sport_WRE.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/Bugatti_Chiron%2C_IAA_2017%2C_Frankfurt_%281Y7A2857%29.jpg/960px-Bugatti_Chiron%2C_IAA_2017%2C_Frankfurt_%281Y7A2857%29.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Bugatti_La_Voiture_Noire_%2850263623691%29.jpg/960px-Bugatti_La_Voiture_Noire_%2850263623691%29.jpg",
+  ],
+  // Bugatti Chiron Super Sport 300+
+  "bugatti-chiron-super-sport-300": [
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/Bugatti_Chiron_1.jpg/960px-Bugatti_Chiron_1.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b4/Bugatti_Chiron_Sport_gfos25_1.jpg/960px-Bugatti_Chiron_Sport_gfos25_1.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/Bugatti_Chiron%2C_IAA_2017%2C_Frankfurt_%281Y7A2857%29.jpg/960px-Bugatti_Chiron%2C_IAA_2017%2C_Frankfurt_%281Y7A2857%29.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Bugatti_La_Voiture_Noire_%2850263623691%29.jpg/960px-Bugatti_La_Voiture_Noire_%2850263623691%29.jpg",
+  ],
+  // Ferrari F8 Tributo
+  "ferrari-f8-19": [
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f2/Ferrari-Monaco-4071008.jpg/960px-Ferrari-Monaco-4071008.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f7/Ferrari-Monaco-4071021.jpg/960px-Ferrari-Monaco-4071021.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f7/Ferrari_488_GTB_1X7A7210.jpg/960px-Ferrari_488_GTB_1X7A7210.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/Ferrari_488_GTB_1X7A7211.jpg/960px-Ferrari_488_GTB_1X7A7211.jpg",
+  ],
+  // Lamborghini Aventador SVJ
+  "aventador-17": [
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/d/da/Lamborghini_Aventador_SVJ_Roadster_IMG_9580.jpg/960px-Lamborghini_Aventador_SVJ_Roadster_IMG_9580.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ed/Lamborghini_Aventador_S_%2844554%29.jpg/960px-Lamborghini_Aventador_S_%2844554%29.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Lamborghini_Hurac%C3%A1n_Tecnica_1X7A7432.jpg/960px-Lamborghini_Hurac%C3%A1n_Tecnica_1X7A7432.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/8/81/Lamborghini_Superleggera-20180708.jpg/960px-Lamborghini_Superleggera-20180708.jpg",
+  ],
+  // Porsche 911 Turbo S
+  "911-turbo-s-19": [
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d3/Porsche_911_GT3_RS_%282022%29_1X7A7164.jpg/960px-Porsche_911_GT3_RS_%282022%29_1X7A7164.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Porsche_911_Carrera_RS%2C_Bj._1972-73_%282016-07-02_01_Sp%29.JPG/960px-Porsche_911_Carrera_RS%2C_Bj._1972-73_%282016-07-02_01_Sp%29.JPG",
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/Porsche_992_GT3_with_touring_package_1X7A6511.jpg/960px-Porsche_992_GT3_with_touring_package_1X7A6511.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dc/2020_Porsche_Taycan_4S_79kWh_Front.jpg/960px-2020_Porsche_Taycan_4S_79kWh_Front.jpg",
+  ],
+  // McLaren P1
+  "mclaren-p1-14": [
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/McLaren_P1.jpg/960px-McLaren_P1.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b6/Regera_%28light_gradient%29.png/960px-Regera_%28light_gradient%29.png",
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/1/16/1996_McLaren_F1_Chassis_No_63_6.1_Front.jpg/960px-1996_McLaren_F1_Chassis_No_63_6.1_Front.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b6/McLaren_Senna_IMG_3279.jpg/960px-McLaren_Senna_IMG_3279.jpg",
+  ],
 };
 
 /**
- * Five distinct pictures per car. The primary view uses the car's own real photo,
- * the second uses the marque archive photo, and the remaining three pull
- * real rear / side / cockpit photos for the brand.
+ * Five distinct pictures per car. View 0 uses the car's own primary photo;
+ * views 1-4 use per-car gallery photos (same model, different angles) when
+ * available. If the car has no gallery data, only the primary photo is shown
+ * — no misleading thumbnails of other cars.
  */
 export function getCarGallery(car: Car): GalleryImage[] {
   const carSrc = CAR_IMAGES[car.slug] ?? "";
-  const brandSrc = BRAND_IMAGES[car.brand] ?? "";
-  const gallery = BRAND_GALLERY[car.brand];
+  const extra = CAR_GALLERY[car.slug];
 
   return GALLERY_VIEWS.map((view, index) => {
-    let src = "";
-    if (index === 0) src = carSrc;
-    if (index === 1) src = brandSrc !== carSrc ? brandSrc : "";
-    if (gallery) {
-      if (index === 2) src = gallery.rear;
-      if (index === 3) src = gallery.side;
-      if (index === 4) src = gallery.cockpit;
-    }
-    return {
-      src,
-      label: view.label,
-      seed: `${car.slug}:${view.key}`,
-    };
+    if (index === 0) return { src: carSrc, label: view.label, seed: `${car.slug}:${view.key}` };
+    const src = extra?.[index - 1] ?? "";
+    return { src, label: view.label, seed: `${car.slug}:${view.key}` };
   });
 }
 
