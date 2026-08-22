@@ -151,8 +151,6 @@ export default function Admin() {
   // ── UI Settings state ──
   const [accent, setAccent] = useState("#ff2e00");
   const [siteName, setSiteName] = useState("Supercars Showcase");
-  const [bannerText, setBannerText] = useState("");
-  const [bannerEnabled, setBannerEnabled] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "error">("idle");
 
@@ -160,26 +158,29 @@ export default function Admin() {
     if (settings && !hydrated) {
       setAccent(settings.accent ?? "#ff2e00");
       setSiteName(settings.siteName ?? "Supercars Showcase");
-      setBannerText(settings.bannerText ?? "");
-      setBannerEnabled(settings.bannerEnabled ?? false);
       setHydrated(true);
     }
   }, [settings, hydrated]);
 
   const dirty =
-    hydrated && (accent !== (settings?.accent ?? "#ff2e00") || siteName !== (settings?.siteName ?? "Supercars Showcase") || bannerText !== (settings?.bannerText ?? "") || bannerEnabled !== (settings?.bannerEnabled ?? false));
+    hydrated && (accent !== (settings?.accent ?? "#ff2e00") || siteName !== (settings?.siteName ?? "Supercars Showcase"));
 
   const persist = useCallback(
     async (a: string, n: string) => {
       setSaveStatus("saving");
       try {
-        await updateSettings({ accent: a, siteName: n, bannerText, bannerEnabled });
+        await updateSettings({
+          accent: a,
+          siteName: n,
+          bannerText: settings?.bannerText ?? "",
+          bannerEnabled: settings?.bannerEnabled ?? false,
+        });
         setSaveStatus("idle");
       } catch {
         setSaveStatus("error");
       }
     },
-    [updateSettings],
+    [updateSettings, settings?.bannerText, settings?.bannerEnabled],
   );
 
   // Auto-save on change after hydration
