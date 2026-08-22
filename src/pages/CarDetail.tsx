@@ -320,7 +320,6 @@ export default function CarDetail() {
               onClick={() => {
                 const raw = getCarImage(car);
                 if (!raw) return;
-                // Route through wsrv proxy for CORS canvas access
                 const src = raw.startsWith("http")
                   ? `https://wsrv.nl/?url=${encodeURIComponent(raw)}`
                   : raw;
@@ -328,51 +327,111 @@ export default function CarDetail() {
                 img.crossOrigin = "anonymous";
                 img.onload = () => {
                   try {
-                    const W = 1920;
-                    const H = 1080;
+                    const W = 1080;
+                    const H = 1920;
                     const canvas = document.createElement("canvas");
                     canvas.width = W;
                     canvas.height = H;
                     const ctx = canvas.getContext("2d");
                     if (!ctx) return;
-                    // Dark gradient background
-                    const grad = ctx.createLinearGradient(0, 0, W, H);
-                    grad.addColorStop(0, "#0a0a0a");
-                    grad.addColorStop(0.5, "#111111");
-                    grad.addColorStop(1, "#050505");
-                    ctx.fillStyle = grad;
+                    // ── Dark background ──
+                    ctx.fillStyle = "#050505";
                     ctx.fillRect(0, 0, W, H);
-                    // Subtle red glow at bottom
-                    const glow = ctx.createRadialGradient(W / 2, H * 0.85, 0, W / 2, H * 0.85, W * 0.5);
-                    glow.addColorStop(0, "rgba(255,46,0,0.08)");
-                    glow.addColorStop(1, "transparent");
-                    ctx.fillStyle = glow;
+                    // Top red glow
+                    const topGlow = ctx.createRadialGradient(W / 2, 0, 0, W / 2, 0, W * 0.8);
+                    topGlow.addColorStop(0, "rgba(255,46,0,0.12)");
+                    topGlow.addColorStop(1, "transparent");
+                    ctx.fillStyle = topGlow;
                     ctx.fillRect(0, 0, W, H);
-                    // Draw car image centered
-                    const pad = 80;
-                    const maxW = W - pad * 2;
-                    const maxH = H - 200;
-                    const scale = Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight);
+                    // ── Top accent bar ──
+                    const barGrad = ctx.createLinearGradient(0, 0, W, 0);
+                    barGrad.addColorStop(0, "transparent");
+                    barGrad.addColorStop(0.3, "rgba(255,46,0,0.6)");
+                    barGrad.addColorStop(0.7, "rgba(255,46,0,0.6)");
+                    barGrad.addColorStop(1, "transparent");
+                    ctx.fillStyle = barGrad;
+                    ctx.fillRect(0, 60, W, 2);
+                    // ── Brand + Year ──
+                    ctx.fillStyle = "rgba(255,46,0,0.8)";
+                    ctx.font = "600 28px Archivo, sans-serif";
+                    ctx.textAlign = "center";
+                    ctx.fillText(car.brand.toUpperCase(), W / 2, 110);
+                    ctx.fillStyle = "rgba(255,255,255,0.35)";
+                    ctx.font = "400 22px Archivo, sans-serif";
+                    ctx.fillText(`${car.year}`, W / 2, 145);
+                    // ── Car image ──
+                    const imgPad = 40;
+                    const imgAreaH = H * 0.42;
+                    const imgY = 180;
+                    const maxW = W - imgPad * 2;
+                    const scale = Math.min(maxW / img.naturalWidth, imgAreaH / img.naturalHeight);
                     const w = img.naturalWidth * scale;
                     const h = img.naturalHeight * scale;
-                    ctx.drawImage(img, (W - w) / 2, (H - h) / 2 - 40, w, h);
-                    // Car name text
+                    ctx.drawImage(img, (W - w) / 2, imgY + (imgAreaH - h) / 2, w, h);
+                    // ── Model name ──
+                    const textY = imgY + imgAreaH + 60;
                     ctx.fillStyle = "#ffffff";
-                    ctx.font = "bold 42px Archivo, sans-serif";
+                    ctx.font = "900 52px Archivo, sans-serif";
                     ctx.textAlign = "center";
-                    ctx.fillText(`${car.year} ${car.brand} ${car.model}`, W / 2, H - 80);
-                    // Subtle brand line
-                    ctx.fillStyle = "rgba(255,46,0,0.7)";
-                    ctx.font = "600 16px Archivo, sans-serif";
-                    ctx.letterSpacing = "4px";
-                    ctx.fillText("SUPERCARS SHOWCASE", W / 2, H - 40);
-                    // Trigger download
+                    ctx.fillText(car.model, W / 2, textY);
+                    // ── Price ──
+                    const priceStr = car.priceUSD >= 1_000_000
+                      ? `$${(car.priceUSD / 1_000_000).toFixed(car.priceUSD % 1_000_000 === 0 ? 0 : 1)}M`
+                      : `$${Math.round(car.priceUSD).toLocaleString()}`;
+                    ctx.fillStyle = "rgba(255,46,0,0.9)";
+                    ctx.font = "700 36px Archivo, sans-serif";
+                    ctx.fillText(priceStr, W / 2, textY + 50);
+                    // ── Divider ──
+                    const divY = textY + 80;
+                    ctx.strokeStyle = "rgba(255,255,255,0.1)";
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(100, divY);
+                    ctx.lineTo(W - 100, divY);
+                    ctx.stroke();
+                    // ── Stats grid ──
+                    const stats = [
+                      { label: "HORSEPOWER", value: `${car.horsepower} HP` },
+                      { label: "TOP SPEED", value: `${car.topSpeedKmh} KM/H` },
+                      { label: "0–100 KM/H", value: `${car.zeroToHundredKmh}s` },
+                      { label: "ENGINE", value: car.engine },
+                    ];
+                    const statY = divY + 40;
+                    const colW = W / 2;
+                    ctx.textAlign = "center";
+                    stats.forEach((s, i) => {
+                      const col = i % 2;
+                      const row = Math.floor(i / 2);
+                      const sx = colW * col + colW / 2;
+                      const sy = statY + row * 90;
+                      ctx.fillStyle = "rgba(255,255,255,0.35)";
+                      ctx.font = "600 16px Archivo, sans-serif";
+                      ctx.fillText(s.label, sx, sy);
+                      ctx.fillStyle = "#ffffff";
+                      ctx.font = "800 30px Archivo, sans-serif";
+                      ctx.fillText(s.value, sx, sy + 36);
+                    });
+                    // ── Bottom bar ──
+                    const bottomBarGrad = ctx.createLinearGradient(0, 0, W, 0);
+                    bottomBarGrad.addColorStop(0, "transparent");
+                    bottomBarGrad.addColorStop(0.3, "rgba(255,46,0,0.4)");
+                    bottomBarGrad.addColorStop(0.7, "rgba(255,46,0,0.4)");
+                    bottomBarGrad.addColorStop(1, "transparent");
+                    ctx.fillStyle = bottomBarGrad;
+                    ctx.fillRect(0, H - 120, W, 2);
+                    // ── Footer ──
+                    ctx.fillStyle = "rgba(255,255,255,0.2)";
+                    ctx.font = "600 14px Archivo, sans-serif";
+                    ctx.fillText("SUPERCARS SHOWCASE", W / 2, H - 80);
+                    ctx.fillStyle = "rgba(255,255,255,0.12)";
+                    ctx.font = "400 12px Archivo, sans-serif";
+                    ctx.fillText("supercarsshowcase.com", W / 2, H - 55);
+                    // ── Download ──
                     const link = document.createElement("a");
-                    link.download = `${car.brand}-${car.model}-wallpaper.png`;
+                    link.download = `${car.brand}-${car.model}-poster.png`;
                     link.href = canvas.toDataURL("image/png");
                     link.click();
                   } catch {
-                    // Canvas tainted — fallback: open image in new tab
                     window.open(src, "_blank");
                   }
                 };
@@ -381,7 +440,7 @@ export default function CarDetail() {
               }}
               className="inline-flex items-center gap-2 rounded-md border border-white/20 px-4 py-2.5 font-display text-xs font-bold uppercase tracking-[0.12em] text-white/80 transition-colors hover:border-apex-red hover:text-white"
             >
-              <Download className="size-4" /> Wallpaper
+              <Download className="size-4" /> Poster Card
             </button>
           </div>
 
