@@ -1,5 +1,5 @@
 import { useEffect, useReducer, useRef } from "react";
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { GameMain } from "@/components/game/GameMain";
 import { gameReducer, loadGame, saveGame } from "@/game/engine";
@@ -8,23 +8,48 @@ const SAVE_INTERVAL_MS = 5000;
 
 export default function Game() {
   const activeEvent = useQuery(api.adminAbuse.getActiveEvent);
+  const gifts = useQuery(api.adminAbuse.getMyGifts);
+  const claimGift = useMutation(api.adminAbuse.claimGift);
+
   const [state, dispatch] = useReducer(gameReducer, undefined, loadGame);
   const stateRef = useRef(state);
   const globalMultiplier = activeEvent?.multiplier ?? 1;
+  const globalMultiplierRef = useRef(globalMultiplier);
 
-  // Keep the latest state available to the save handlers without re-creating them.
+  // Keep the latest state and multiplier available to handlers.
   useEffect(() => {
     stateRef.current = state;
   }, [state]);
 
-  // Persist every few seconds and on tab hide/unload — never on every 1s tick,
-  // which was hammering localStorage and causing the game to lag.
+  useEffect(() => {
+    globalMultiplierRef.current = globalMultiplier;
+  }, [globalMultiplier]);
+
+  // Consume admin gifts (money / cars) on mount and when new gifts arrive.
+  const claimedGiftsRef = useRef(new Set<string>());
+  useEffect(() => {
+    if (!gifts || gifts.length === 0) return;
+    for (const gift of gifts) {
+      if (claimedGiftsRef.current.has(gift._id)) continue;
+      claimedGiftsRef.current.add(gift._id);
+      if (gift.kind === "money" && gift.amount) {
+        dispatch({ type: "ADD_CASH", amount: gift.amount });
+      } else if (gift.kind === "car" && gift.carId) {
+        dispatch({ type: "ADD_CAR", carId: gift.carId });
+      }
+      // Mark as claimed in the backend (fire-and-forget).
+      void claimGift({ giftId: gift._id });
+    }
+  }, [gifts, claimGift]);
+
+  // Persist every few seconds and on tab hide/unload.
   useEffect(() => {
     const id = window.setInterval(() => {
       if (stateRef.current) saveGame(stateRef.current);
     }, SAVE_INTERVAL_MS);
     const onVisibility = () => {
-      if (document.visibilityState === "hidden" && stateRef.current) saveGame(stateRef.current);
+      if (document.visibilityState === "hidden" && stateRef.current)
+        saveGame(stateRef.current);
     };
     const onPageHide = () => {
       if (stateRef.current) saveGame(stateRef.current);
@@ -35,18 +60,28 @@ export default function Game() {
       window.clearInterval(id);
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("pagehide", onPageHide);
-      // Leaving the /game route — flush the latest state instead of losing up to 5s.
       if (stateRef.current) saveGame(stateRef.current);
     };
   }, []);
 
-  // Passive income tick.
+  // Passive income tick — reads multiplier from ref so it stays current.
   useEffect(() => {
     const id = window.setInterval(() => {
-      dispatch({ type: "TICK", now: Date.now(), globalMultiplier });
+      dispatch({
+        type: "TICK",
+        now: Date.now(),
+        globalMultiplier: globalMultiplierRef.current,
+      });
     }, 1000);
     return () => window.clearInterval(id);
   }, []);
 
-  return <GameMain state={state} dispatch={dispatch} globalMultiplier={globalMultiplier} activeEvent={activeEvent} />;
+  return (
+    <GameMain
+      state={state}
+      dispatch={dispatch}
+      globalMultiplier={globalMultiplier}
+      activeEvent={activeEvent}
+    />
+  );
 }

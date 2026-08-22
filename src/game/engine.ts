@@ -330,6 +330,8 @@ export type Action =
   | { type: "CLICK"; amount: number; globalMultiplier?: number }
   | { type: "TICK"; now: number; globalMultiplier?: number }
   | { type: "BUY_CAR"; id: string }
+  | { type: "ADD_CASH"; amount: number }
+  | { type: "ADD_CAR"; carId: string }
   | { type: "SELL_CAR"; id: string }
   | { type: "SET_ACTIVE"; id: string }
   | { type: "BUY_UPGRADE"; upgradeId: string }
@@ -544,6 +546,23 @@ export function gameReducer(state: GameState, action: Action): GameState {
     }
     case "HARD_RESET":
       return initialGameState();
+    case "ADD_CASH": {
+      const amount = Math.max(0, Math.round(action.amount));
+      if (amount <= 0) return state;
+      return applyAchievements({
+        ...state,
+        cash: state.cash + amount,
+        totalEarned: state.totalEarned + amount,
+      });
+    }
+    case "ADD_CAR": {
+      if (state.ownedCars[action.carId]) return state;
+      if (!GAME_CAR_MAP[action.carId]) return state;
+      return applyAchievements({
+        ...state,
+        ownedCars: { ...state.ownedCars, [action.carId]: { upgrades: {} } },
+      });
+    }
     case "LOAD":
       return normalize(state, action.state);
     default:
