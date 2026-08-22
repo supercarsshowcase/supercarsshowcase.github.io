@@ -297,9 +297,10 @@ export default function Admin() {
         ))}
       </div>
 
-      {/* ── Users & Roles ────────────────────────────────────────────── */}
-      <div className="mt-12">
-        <CollapsibleSection title="Users & Roles" icon={Shield} defaultOpen={false}>
+      {/* ── Users & Roles + Quick UI Settings ───────────────────────────── */}
+      <div className="mt-12 grid gap-8 lg:grid-cols-2">
+        {/* Users */}
+        <CollapsibleSection title="Users & Roles" icon={Shield} defaultOpen={true}>
           {users === undefined ? (
             <div className="flex items-center gap-2 px-5 py-8 text-sm text-white/50">
               <Loader2 className="size-4 animate-spin" /> Loading users…
@@ -370,10 +371,8 @@ export default function Admin() {
             </ul>
           )}
         </CollapsibleSection>
-      </div>
 
-      {/* ── Quick UI Settings ──────────────────────────────────────────── */}
-      <div className="mt-6">
+        {/* Site settings */}
         <CollapsibleSection title="Quick UI Settings" icon={Palette} defaultOpen={true}>
           <div className="flex items-center justify-end border-b border-apex-line px-5 py-4">
             {hydrated && (
