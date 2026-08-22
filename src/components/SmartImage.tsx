@@ -17,8 +17,39 @@ interface SmartImageProps {
 const MAX_ATTEMPTS = 3;
 /** If a request hasn't even started this long, assume the connection stalled and retry. */
 const HANG_TIMEOUT_MS = 8000;
+/**
+ * Backoff before each retry (indexed by attempt). Retrying instantly after a
+ * rate-limit (429) just gets rate-limited again — spacing retries out lets the
+ * limit cool down, so burst-loaded grids eventually fill in.
+ */
+const RETRY_DELAYS_MS = [800, 4000, 15000];
+/** After giving up, wait this long before trying the image again automatically. */
+const RECOVERY_MS = 60000;
 /** Load images this far outside the viewport so scrolling feels instant. */
 const VIEW_MARGIN = "400px 0px";
+/** Minimum gap between the start of each image request, to avoid tripping the host's rate limiter. */
+const REQUEST_GAP_MS = 100;
+
+let lastRequestAt = 0;
+function scheduleRequest(): Promise<void> {
+  const now = Date.now();
+  const wait = Math.max(0, lastRequestAt + REQUEST_GAP_MS - now);
+  lastRequestAt = Math.max(now, lastRequestAt + REQUEST_GAP_MS);
+  return new Promise((resolve) => setTimeout(resolve, wait));
+}
+
+/**
+ * Wikimedia rate-limits bursts (429) on shared IPs, which is why whole grids
+ * of photos can fail to load. wsrv.nl is a free image proxy that serves the
+ * same files from its own cache — used as the retry path, and remembered per
+ * URL so later views go straight to it.
+ */
+const PROXY_BASE = "https://wsrv.nl/";
+const PROXY_PREFERRED = new Set<string>();
+
+function proxiedSrc(src: string): string {
+  return `${PROXY_BASE}?url=${encodeURIComponent(src)}&w=960`;
+}
 
 function CarSilhouette({ className }: { className?: string }) {
   return (
@@ -95,8 +126,9 @@ function GeneratedScene({
  * Reliable photo-with-placeholder. The generated scene always renders behind;
  * the real photo mounts only once the container is near the viewport (no
  * `loading="lazy"`, which can defer requests indefinitely inside embedded
- * previews). Failures are retried a few times — a transient rate-limit or
- * dropped connection recovers instead of leaving a permanent silhouette.
+ * previews). Failures retry with backoff — a transient rate-limit (429) or
+ * dropped connection recovers instead of leaving a permanent silhouette, and
+ * after a full give-up the image re-tries itself a minute later.
  */
 export function SmartImage({ src, alt, label, sublabel, accent = "#ff2e00", className, seed, viewLabel }: SmartImageProps) {
   const fallbackSeed = seed ?? alt ?? "machine";
@@ -106,6 +138,8 @@ export function SmartImage({ src, alt, label, sublabel, accent = "#ff2e00", clas
   const [attempt, setAttempt] = useState(0);
   const [loaded, setLoaded] = useState(false);
   const [started, setStarted] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [imgReady, setImgReady] = useState(false);
 
   // Reset when the requested image changes (render-time adjust, not an effect).
   const [prevSrc, setPrevSrc] = useState(src);
@@ -114,6 +148,8 @@ export function SmartImage({ src, alt, label, sublabel, accent = "#ff2e00", clas
     setAttempt(0);
     setLoaded(false);
     setStarted(false);
+    setFailed(false);
+    setImgReady(false);
   }
   // A retry is a fresh request — the hang timer must apply to it too.
   const [prevAttempt, setPrevAttempt] = useState(attempt);
@@ -141,12 +177,30 @@ export function SmartImage({ src, alt, label, sublabel, accent = "#ff2e00", clas
     return () => io.disconnect();
   }, []);
 
+  // Direct first; retries go through the proxy (and once a URL proves it
+  // needs the proxy, every later view of it uses the proxy straight away).
+  const useProxy = PROXY_PREFERRED.has(src) || attempt >= 1;
+  const effectiveSrc = useProxy ? proxiedSrc(src) : src;
+
   const giveUp = attempt >= MAX_ATTEMPTS;
-  const showImg = inView && src.length > 0 && !giveUp;
+  const showImg = inView && src.length > 0 && !giveUp && !failed && imgReady;
   // Only consider the request stuck if it never even started. Once the
   // browser is actively downloading (loadstart), a slow-but-progressing
   // photo is left alone — remounting it would kill the request and restart.
   const hanging = showImg && !loaded && !started;
+
+  // Stagger the first request of each image so whole grids don't burst the
+  // host with 30+ simultaneous connections (which gets rate-limited).
+  useEffect(() => {
+    if (!inView || giveUp || failed || imgReady || src.length === 0) return;
+    let alive = true;
+    scheduleRequest().then(() => {
+      if (alive) setImgReady(true);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [inView, giveUp, failed, imgReady, src]);
 
   // If a mounted request never starts (stalled connection, throttled request),
   // retry it so the photo can't stay stuck behind the placeholder.
@@ -156,6 +210,24 @@ export function SmartImage({ src, alt, label, sublabel, accent = "#ff2e00", clas
     return () => clearTimeout(t);
   }, [hanging, attempt, src]);
 
+  // Retry with backoff after a failure — instant retries just get rate-limited again.
+  useEffect(() => {
+    if (!failed) return;
+    const delay = RETRY_DELAYS_MS[Math.min(attempt, RETRY_DELAYS_MS.length - 1)];
+    const t = setTimeout(() => {
+      setFailed(false);
+      setAttempt((a) => a + 1);
+    }, delay);
+    return () => clearTimeout(t);
+  }, [failed, attempt, src]);
+
+  // After giving up entirely, try again later instead of staying dead forever.
+  useEffect(() => {
+    if (!giveUp) return;
+    const t = setTimeout(() => setAttempt(0), RECOVERY_MS);
+    return () => clearTimeout(t);
+  }, [giveUp, src]);
+
   return (
     <div ref={wrapRef} className={cn("relative overflow-hidden bg-apex-ink", className)}>
       {/* Placeholder layer — always present, covered by the photo when it loads */}
@@ -163,15 +235,18 @@ export function SmartImage({ src, alt, label, sublabel, accent = "#ff2e00", clas
 
       {showImg ? (
         <img
-          key={`${src}:${attempt}`}
-          src={src}
+          key={`${effectiveSrc}:${attempt}`}
+          src={effectiveSrc}
           alt={alt}
           referrerPolicy="no-referrer"
           decoding="async"
           className="absolute inset-0 z-10 h-full w-full object-cover"
           onLoadStart={() => setStarted(true)}
-          onLoad={() => setLoaded(true)}
-          onError={() => setAttempt((a) => a + 1)}
+          onLoad={() => {
+            if (useProxy) PROXY_PREFERRED.add(src);
+            setLoaded(true);
+          }}
+          onError={() => setFailed(true)}
         />
       ) : null}
     </div>
