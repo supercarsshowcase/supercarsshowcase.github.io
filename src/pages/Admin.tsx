@@ -846,11 +846,28 @@ export default function Admin() {
               {/* Give money */}
               <div className="rounded-lg border border-white/[0.08] bg-[#0b0b0c] p-4">
                 <p className="text-xs font-semibold text-white/60 mb-3">Give Cash</p>
+                <div className="flex flex-wrap gap-1.5 mb-3">
+                  {["1000", "10000", "100000", "1000000", "10000000", "100000000", "1000000000"].map((v) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => setAbuseAmount(v)}
+                      className={cn(
+                        "rounded-md border px-2 py-1 text-[10px] font-bold transition-colors",
+                        abuseAmount === v
+                          ? "border-emerald-500 bg-emerald-500/20 text-emerald-400"
+                          : "border-white/15 text-white/50 hover:border-white/30",
+                      )}
+                    >
+                      {Number(v) >= 1_000_000_000 ? "$1B" : Number(v) >= 1_000_000 ? `$${Number(v) / 1_000_000}M` : `$${Number(v) / 1_000}K`}
+                    </button>
+                  ))}
+                </div>
                 <input
                   type="number"
                   value={abuseAmount}
                   onChange={(e) => setAbuseAmount(e.target.value)}
-                  placeholder="1000000"
+                  placeholder="Or type any amount…"
                   className="w-full rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3 py-2 text-sm text-white outline-none focus:border-apex-red"
                 />
                 <button

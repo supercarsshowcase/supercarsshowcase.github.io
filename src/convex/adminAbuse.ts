@@ -21,8 +21,8 @@ export const giveMoney = mutation({
     await requireAdmin(ctx);
     const target = await ctx.db.get(args.userId);
     if (!target) throw new Error("User not found.");
-    if (args.amount <= 0 || args.amount > 1_000_000_000) {
-      throw new Error("Amount must be between $1 and $1B.");
+    if (args.amount <= 0) {
+      throw new Error("Amount must be at least $1.");
     }
     // Store the grant in a new table or just log it. For the game, we'll
     // use a Convex "adminGrants" table. But since the game saves locally,
