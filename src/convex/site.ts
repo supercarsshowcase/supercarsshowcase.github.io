@@ -84,6 +84,45 @@ export const updateSiteSettings = mutation({
   },
 });
 
+// ── Announcements (transient global broadcasts) ─────────────────────────────
+
+/** Public — every visitor reads the latest broadcast, shown for a few seconds. */
+export const getLatestAnnouncement = query({
+  args: {},
+  handler: async (ctx) => {
+    const latest = await ctx.db
+      .query("announcements")
+      .order("desc")
+      .first();
+    return latest
+      ? {
+          _id: latest._id,
+          authorName: latest.authorName,
+          message: latest.message,
+          createdAt: latest.createdAt,
+        }
+      : null;
+  },
+});
+
+/** Admin — broadcast a message that everyone sees for a few seconds. */
+export const postAnnouncement = mutation({
+  args: { message: v.string() },
+  handler: async (ctx, args) => {
+    const admin = await getAdmin(ctx);
+    if (!admin) throw new Error("Admin access required.");
+
+    const message = args.message.trim().slice(0, 280);
+    if (!message) throw new Error("Message cannot be empty.");
+
+    await ctx.db.insert("announcements", {
+      authorName: admin.name?.trim() ? admin.name.trim() : "Admin",
+      message,
+      createdAt: Date.now(),
+    });
+  },
+});
+
 // ── Roles ────────────────────────────────────────────────────────────────────
 
 /**

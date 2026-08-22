@@ -114,6 +114,14 @@ const schema = defineSchema(
       fields: v.record(v.string(), v.string()),
       updatedAt: v.number(),
     }).index("by_key", ["key"]),
+
+    // Transient global announcements. An admin broadcasts a message; every
+    // visitor sees it pop up (top-center) for a few seconds, then it fades.
+    announcements: defineTable({
+      authorName: v.string(),
+      message: v.string(),
+      createdAt: v.number(),
+    }).index("by_created", ["createdAt"]),
   },
   {
     schemaValidation: false,

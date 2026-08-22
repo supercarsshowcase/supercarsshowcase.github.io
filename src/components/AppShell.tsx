@@ -10,7 +10,6 @@ import {
   LogOut,
   LogIn,
   Shield,
-  Megaphone,
   Warehouse,
   UserRound,
 } from "lucide-react";
@@ -19,6 +18,7 @@ import { api } from "@/convex/_generated/api";
 import { useApp } from "@/context/app-context";
 import { useAuth } from "@/hooks/use-auth";
 import { Analytics } from "./Analytics";
+import { AnnouncementOverlay } from "./AnnouncementOverlay";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -109,6 +109,7 @@ export function AppShell() {
   return (
     <div className="flex min-h-screen flex-col bg-apex-ink text-white">
       <Analytics />
+      <AnnouncementOverlay />
       <header className="sticky top-0 z-50 border-b border-apex-line bg-black/85 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between gap-3 px-4 sm:px-6">
           <div className="flex items-center gap-6">
@@ -378,18 +379,6 @@ export function AppShell() {
           </nav>
         )}
       </header>
-
-      {/* Announcement banner (admin-editable) */}
-      {settings?.bannerEnabled && settings.bannerText && (
-        <div className="border-b border-apex-line bg-apex-red/10">
-          <div className="mx-auto flex max-w-[1400px] items-center justify-center gap-2 px-4 py-2.5 text-center sm:px-6">
-            <Megaphone className="size-3.5 shrink-0 text-apex-red" />
-            <p className="text-xs font-medium leading-5 text-white/85 sm:text-[13px]">
-              {settings.bannerText}
-            </p>
-          </div>
-        </div>
-      )}
 
       <main className="flex-1">
         <Outlet />

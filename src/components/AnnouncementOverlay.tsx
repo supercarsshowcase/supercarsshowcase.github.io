@@ -1,0 +1,58 @@
+import { useEffect, useRef, useState } from "react";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { AnimatePresence, motion } from "framer-motion";
+import { Megaphone } from "lucide-react";
+
+const DURATION_MS = 5000;
+
+type Active = { id: string; name: string; message: string };
+
+/**
+ * Shows the latest admin broadcast at the top-center of the page. Appears once
+ * per announcement, stays for 5 seconds, then fades out. Convex reactivity
+ * means a new broadcast shows for everybody with no refresh.
+ */
+export function AnnouncementOverlay() {
+  const latest = useQuery(api.site.getLatestAnnouncement);
+  const [active, setActive] = useState<Active | null>(null);
+  const lastSeen = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!latest) return;
+    const id = String(latest._id);
+    if (lastSeen.current === id) return;
+    lastSeen.current = id;
+    setActive({ id, name: latest.authorName, message: latest.message });
+    const timer = setTimeout(() => setActive(null), DURATION_MS);
+    return () => clearTimeout(timer);
+  }, [latest]);
+
+  return (
+    <AnimatePresence>
+      {active && (
+        <motion.div
+          key={active.id}
+          initial={{ opacity: 0, y: -14, scale: 0.97 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -10, scale: 0.98 }}
+          transition={{ duration: 0.28, ease: "easeOut" }}
+          style={{ x: "-50%" }}
+          className="pointer-events-none fixed left-1/2 top-4 z-[90]"
+        >
+          <div className="flex max-w-[620px] items-start gap-3 rounded-lg border border-apex-red/50 bg-black/92 px-4 py-3 shadow-[0_0_45px_-6px_rgba(255,46,0,0.65)] backdrop-blur-md">
+            <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md bg-apex-red/15">
+              <Megaphone className="size-3.5 text-apex-red" />
+            </span>
+            <p className="text-sm leading-6 text-white/90">
+              <span className="font-display text-[13px] font-bold uppercase tracking-wide text-apex-red">
+                {active.name}:
+              </span>{" "}
+              {active.message}
+            </p>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}

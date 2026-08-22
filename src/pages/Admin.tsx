@@ -31,6 +31,7 @@ import {
   Undo2,
   RotateCcw,
   LayoutDashboard,
+  Send,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -202,8 +203,26 @@ export default function Admin() {
     }
   };
 
-  const [bannerText, setBannerText] = useState("");
-  const [bannerEnabled, setBannerEnabled] = useState(false);
+  // ── Announcements (transient global broadcast) ──
+  const postAnnouncement = useMutation(api.site.postAnnouncement);
+  const [announce, setAnnounce] = useState("");
+  const [announceBusy, setAnnounceBusy] = useState(false);
+
+  const broadcast = async () => {
+    const msg = announce.trim();
+    if (!msg || announceBusy) return;
+    setAnnounceBusy(true);
+    try {
+      await postAnnouncement({ message: msg });
+      setAnnounce("");
+      toast.success("Broadcast sent — everyone can see it now");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not broadcast");
+    } finally {
+      setAnnounceBusy(false);
+    }
+  };
+
   const [accent, setAccent] = useState("#ff2e00");
   const [siteName, setSiteName] = useState("Supercars Showcase");
   const [saveStatus, setSaveStatus] = useState<"idle" | "saved" | "error">("idle");
@@ -279,19 +298,17 @@ export default function Admin() {
     setPrevSettings(settings);
     if (!hydrated) {
       setHydrated(true);
-      setBannerText(settings.bannerText);
-      setBannerEnabled(settings.bannerEnabled);
       setAccent(settings.accent);
       setSiteName(settings.siteName);
     }
   }
 
   const persist = useCallback(
-    async (text: string, enabled: boolean, color: string, name: string) => {
+    async (color: string, name: string) => {
       try {
         await updateSiteSettings({
-          bannerText: text,
-          bannerEnabled: enabled,
+          bannerText: "",
+          bannerEnabled: false,
           accent: /^#[0-9a-fA-F]{6}$/.test(color) ? color : "#ff2e00",
           siteName: name,
         });
@@ -308,26 +325,15 @@ export default function Admin() {
   useEffect(() => {
     if (!hydrated) return;
     const unchanged =
-      settings &&
-      bannerText === settings.bannerText &&
-      bannerEnabled === settings.bannerEnabled &&
-      accent === settings.accent &&
-      siteName === settings.siteName;
+      settings && accent === settings.accent && siteName === settings.siteName;
     if (unchanged) return;
-    const timer = setTimeout(
-      () => void persist(bannerText, bannerEnabled, accent, siteName),
-      700,
-    );
+    const timer = setTimeout(() => void persist(accent, siteName), 700);
     return () => clearTimeout(timer);
-  }, [bannerText, bannerEnabled, accent, siteName, settings, hydrated, persist]);
+  }, [accent, siteName, settings, hydrated, persist]);
 
   const dirty =
     hydrated &&
-    (!settings ||
-      bannerText !== settings.bannerText ||
-      bannerEnabled !== settings.bannerEnabled ||
-      accent !== settings.accent ||
-      siteName !== settings.siteName);
+    (!settings || accent !== settings.accent || siteName !== settings.siteName);
 
   const toggleRole = async (userId: string, currentRole: string) => {
     const next = currentRole === "admin" ? "user" : "admin";
@@ -548,69 +554,60 @@ export default function Admin() {
                 </div>
               </div>
 
-              {/* Announcement banner */}
-              <div>
-                <div className="flex items-center justify-between">
-                  <label className="font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">
-                    Announcement banner
-                  </label>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={bannerEnabled}
-                    onClick={() => setBannerEnabled((v) => !v)}
-                    className={cn(
-                      "relative h-6 w-11 rounded-full transition-colors",
-                      bannerEnabled ? "bg-apex-red" : "bg-white/15",
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "absolute top-0.5 size-5 rounded-full bg-white transition-transform",
-                        bannerEnabled ? "translate-x-[22px]" : "translate-x-0.5",
-                      )}
-                    />
-                  </button>
-                </div>
-                <textarea
-                  value={bannerText}
-                  onChange={(e) => setBannerText(e.target.value)}
-                  rows={2}
-                  maxLength={200}
-                  placeholder="e.g. New machines added — the Bugatti Tourbillon is in the garage."
-                  className="mt-3 w-full resize-none rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3.5 py-3 text-sm text-white outline-none transition-colors placeholder:text-white/20 focus:border-apex-red"
-                />
-              </div>
-
-              {/* Live preview — same styling as the site banner */}
-              <div className="rounded-md border border-apex-line bg-white/[0.02] p-3">
-                <p className="mb-2 font-display text-[9px] font-semibold uppercase tracking-[0.18em] text-white/30">
-                  {bannerEnabled && bannerText.trim()
-                    ? "Live preview — appears at the top of every page"
-                    : "Preview — the banner is hidden while off or empty"}
-                </p>
-                {bannerEnabled && bannerText.trim() ? (
-                  <div className="flex items-center justify-center gap-2 rounded-sm bg-apex-red/10 px-3 py-2.5 text-center">
-                    <Megaphone className="size-3.5 shrink-0 text-apex-red" />
-                    <p className="text-xs font-medium leading-5 text-white/85">
-                      {bannerText}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center gap-2 rounded-sm border border-dashed border-apex-line px-3 py-2.5 text-center text-xs text-white/30">
-                    Turn the banner on and add text to see it here.
-                  </div>
-                )}
-              </div>
-
               <p className="flex items-center gap-1.5 text-[11px] text-white/30">
-                <Megaphone className="size-3.5" /> Changes save automatically as
-                you type — no button needed.
+                Change the site name, accent color and page copy below — all
+                saved automatically.
               </p>
             </div>
           )}
         </section>
       </div>
+
+      {/* Announcements — transient global broadcast */}
+      <section className="mt-12 rounded-lg border border-apex-line bg-apex-panel">
+        <div className="flex items-center justify-between border-b border-apex-line px-5 py-4">
+          <div className="flex items-center gap-2">
+            <Megaphone className="size-4 text-apex-red" />
+            <h2 className="font-display text-sm font-bold uppercase tracking-[0.16em] text-white">
+              Announcements
+            </h2>
+            <span className="rounded-full bg-apex-red/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-apex-red">
+              Admin power
+            </span>
+          </div>
+        </div>
+        <div className="px-5 py-5">
+          <p className="text-sm text-apex-muted">
+            Type a message and broadcast it. Every visitor sees it pop up at the
+            top-center of the page as your name + message for 5 seconds, then it
+            fades away. Nothing is permanent.
+          </p>
+          <div className="mt-4 flex items-stretch gap-3">
+            <input
+              value={announce}
+              onChange={(e) => setAnnounce(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void broadcast();
+              }}
+              maxLength={280}
+              placeholder="Type a message to broadcast…"
+              className="flex-1 rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3.5 py-3 text-sm text-white outline-none transition-colors placeholder:text-white/20 focus:border-apex-red"
+            />
+            <button
+              type="button"
+              onClick={() => void broadcast()}
+              disabled={announceBusy || !announce.trim()}
+              className="inline-flex shrink-0 items-center gap-2 rounded-md bg-apex-red px-5 py-3 font-display text-[11px] font-bold uppercase tracking-[0.12em] text-white transition-opacity hover:opacity-90 disabled:opacity-40"
+            >
+              <Send className="size-3.5" />
+              {announceBusy ? "Broadcasting…" : "Broadcast"}
+            </button>
+          </div>
+          <p className="mt-2.5 text-[11px] text-white/25">
+            Shown to everyone as “Your name: message” for 5 seconds.
+          </p>
+        </div>
+      </section>
 
       {/* Feedback inbox */}
       <section className="mt-12 rounded-lg border border-apex-line bg-apex-panel">
