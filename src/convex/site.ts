@@ -310,11 +310,10 @@ export const getAdminStats = query({
     const admin = await getAdmin(ctx);
     if (!admin) throw new Error("Admin access required.");
 
-    const [users, signins, visits, sessions] = await Promise.all([
+    const [users, signins, visits] = await Promise.all([
       ctx.db.query("users").collect(),
       ctx.db.query("signins").collect(),
       ctx.db.query("visits").collect(),
-      ctx.db.query("authSessions").collect(),
     ]);
 
     const counters = await ctx.db.query("counters").collect();
@@ -329,7 +328,6 @@ export const getAdminStats = query({
       signIns: signins.length,
       visits: visits.length,
       visitors: valueOf("visitors"),
-      currentSessions: sessions.length,
       visitorsToday,
     };
   },

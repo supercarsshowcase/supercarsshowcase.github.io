@@ -1,95 +1,50 @@
-import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router";
-import { useMutation, useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useState, useEffect, useCallback } from "react";
+import { useQuery, useMutation } from "convex/react";
 import { toast } from "sonner";
+import { api } from "@/convex/_generated/api";
+import { cn } from "@/lib/utils";
 import {
-  Users,
-  UserPlus,
-  Eye,
-  Activity,
-  Radio,
-  CalendarDays,
   Shield,
   ShieldCheck,
-  Palette,
-  Megaphone,
-  Loader2,
-  Check,
-  AlertTriangle,
-  Inbox,
-  Trash2,
-  CheckCircle2,
-  Circle,
-  Lightbulb,
-  Sparkles,
-  Bug,
-  Heart,
-  MessageSquare,
-  Car,
-  Save,
-  Undo2,
-  RotateCcw,
-  LayoutDashboard,
-  Send,
-  ChevronDown,
-  Newspaper,
-  Zap,
-  Gift,
-  Flame,
   Crown,
   BadgeCheck,
+  Trash2,
+  Palette,
+  Megaphone,
+  Inbox,
+  Newspaper,
+  Car,
+  UserPlus,
+  Users,
+  Eye,
+  Activity,
+  CalendarDays,
+  ChevronDown,
+  Check,
+  AlertTriangle,
+  Loader2,
+  Save,
+  Pencil,
+  X,
+  Plus,
+  Flame,
+  Gift,
+  Zap,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import type { Id } from "@/convex/_generated/dataModel";
-import { carsList, mergedCarBySlug } from "@/data/cars";
+import { carsList } from "@/data/cars";
+import { BRANDS } from "@/data/brands";
+import { getBrandImage } from "@/data/images";
+import { PageEditor } from "@/components/PageEditor";
+import {
+  HOME_COPY,
+  SITE_UPDATES_COPY,
+  NAV_COPY,
+  GARAGE_COPY,
+} from "@/data/page-copy";
 import { GAME_CAR_MAP } from "@/game/data";
-import { HOME_COPY, GARAGE_COPY, NAV_COPY, SITE_UPDATES_COPY } from "@/data/page-copy";
-import { PageEditor, type PageField } from "@/components/PageEditor";
+import type { Id } from "@/convex/_generated/dataModel";
 
-const FEEDBACK_META: Record<
-  string,
-  { label: string; icon: typeof Lightbulb; className: string }
-> = {
-  idea: {
-    label: "Idea",
-    icon: Lightbulb,
-    className: "border-amber-300/30 bg-amber-300/10 text-amber-300",
-  },
-  suggestion: {
-    label: "Suggestion",
-    icon: Sparkles,
-    className: "border-sky-300/30 bg-sky-300/10 text-sky-300",
-  },
-  bug: {
-    label: "Bug",
-    icon: Bug,
-    className: "border-rose-300/30 bg-rose-300/10 text-rose-300",
-  },
-  praise: {
-    label: "Praise",
-    icon: Heart,
-    className: "border-emerald-300/30 bg-emerald-300/10 text-emerald-300",
-  },
-  other: {
-    label: "Other",
-    icon: MessageSquare,
-    className: "border-white/20 bg-white/5 text-white/70",
-  },
-};
-
-function timeAgo(ts: number) {
-  const diff = Date.now() - ts;
-  const m = Math.floor(diff / 60_000);
-  if (m < 1) return "just now";
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  const d = Math.floor(h / 24);
-  if (d < 7) return `${d}d ago`;
-  return new Date(ts).toLocaleDateString();
-}
-
+// ── Collapsible Section ──────────────────────────────────────────────────────
 function CollapsibleSection({
   title,
   icon: Icon,
@@ -134,378 +89,180 @@ function CollapsibleSection({
   );
 }
 
+// ── Accent Presets ───────────────────────────────────────────────────────────
 const ACCENT_PRESETS = [
   { name: "Racing Red", value: "#ff2e00" },
   { name: "Amber", value: "#ff9500" },
   { name: "Lime", value: "#8bd450" },
   { name: "Cyan", value: "#2dd4bf" },
   { name: "Violet", value: "#a78bfa" },
-  { name: "Champagne", value: "#e8c98a" },
+  { name: "Gold", value: "#d4a953" },
 ];
 
-const HOME_FIELDS: PageField[] = [
-  { key: "heroKicker", label: "Hero — kicker line" },
-  { key: "heroLine1", label: "Hero — headline line 1" },
-  { key: "heroSubA", label: "Hero — headline line 2 (left)" },
-  { key: "heroSubB", label: "Hero — headline line 2 (right)" },
-  { key: "heroBody", label: "Hero — paragraph", multiline: true },
-  { key: "cta1Lbl", label: "Hero — button 1" },
-  { key: "cta2Lbl", label: "Hero — button 2" },
-  { key: "featuredEyebrow", label: "Featured — eyebrow" },
-  { key: "featuredTitle", label: "Featured — title" },
-  { key: "marquesEyebrow", label: "Marques — eyebrow" },
-  { key: "marquesTitle", label: "Marques — title" },
-  {
-    key: "ctaHeading",
-    label: "Bottom CTA — heading",
-    hint: "The last word is highlighted in the accent color.",
-  },
-  { key: "ctaBody", label: "Bottom CTA — text", multiline: true },
-  { key: "ctaBtn1", label: "Bottom CTA — button 1" },
-  { key: "ctaBtn2", label: "Bottom CTA — button 2" },
-  {
-    key: "featuredSlugs",
-    label: "Featured machines (slugs)",
-    multiline: true,
-    hint: "Comma-separated slugs, e.g. bugatti-tourbillon,mclaren-p1. They power the Hall of Legends grid.",
-  },
+// ── Car edit fields ──────────────────────────────────────────────────────────
+const CAR_EDIT_FIELDS = [
+  { key: "displayName", label: "Display name" },
+  { key: "priceUSD", label: "Price (USD)", hint: "Raw number, e.g. 3900000" },
+  { key: "horsepower", label: "Horsepower", hint: "Raw number" },
+  { key: "topSpeedKmh", label: "Top speed (km/h)", hint: "Raw number" },
+  { key: "zeroToHundredKmh", label: "0-100 km/h (s)", hint: "Seconds" },
+  { key: "engine", label: "Engine" },
+  { key: "description", label: "Description", multiline: true },
 ];
 
-const GARAGE_FIELDS: PageField[] = [
-  { key: "eyebrow", label: "Eyebrow label" },
-  {
-    key: "heading",
-    label: "Heading",
-    hint: "Use {n} for the machine count, e.g. {n} MACHINES ARCHIVED.",
-  },
-  {
-    key: "resultsLbl",
-    label: "Results label",
-    hint: "{n} = current result count.",
-  },
-  { key: "filtersLbl", label: "Sidebar — filters heading" },
-  { key: "resetLbl", label: "Sidebar — reset button" },
-  { key: "searchPlaceholder", label: "Search box — placeholder" },
-  { key: "brandLbl", label: "Filter — Brand label" },
-  { key: "categoryLbl", label: "Filter — Category label" },
-  { key: "rarityLbl", label: "Filter — Rarity label" },
-  { key: "priceLbl", label: "Filter — Max Price label" },
-  { key: "sortLbl", label: "Filter — Sort label" },
-  { key: "emptyTitle", label: "Empty state — title" },
-  { key: "emptyBody", label: "Empty state — text" },
-  { key: "clearLbl", label: "Empty state — button" },
-];
-
-const NAV_FIELDS: PageField[] = [
-  { key: "home", label: "Home link" },
-  { key: "garage", label: "Garage link" },
-  { key: "game", label: "Game link" },
-  { key: "rankings", label: "Rankings link" },
-  { key: "favorites", label: "Favorites link" },
-  { key: "myGarage", label: "My Garage link" },
-  { key: "feedback", label: "Feedback link" },
-  { key: "admin", label: "Admin link" },
-  { key: "compare", label: "Compare link" },
-  { key: "surprise", label: "Surprise button" },
-  { key: "signIn", label: "Sign-in button" },
-  { key: "signOut", label: "Sign-out button" },
-  { key: "myFavorites", label: "Dropdown — My favorites" },
-  { key: "editProfile", label: "Dropdown — Edit profile" },
-  { key: "compareMachines", label: "Dropdown — Compare machines" },
-  { key: "adminPanel", label: "Footer — Admin panel link" },
-];
-
+// ── Main Admin Component ─────────────────────────────────────────────────────
 export default function Admin() {
+  // ── Announcements ──
+  const [announce, setAnnounce] = useState("");
+  const broadcastAnnouncement = useMutation(api.site.postAnnouncement);
+  const broadcast = useCallback(async () => {
+    const msg = announce.trim();
+    if (!msg) return;
+    try {
+      await broadcastAnnouncement({ message: msg });
+      setAnnounce("");
+      toast.success("Announcement broadcast!");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Failed to broadcast");
+    }
+  }, [announce, broadcastAnnouncement]);
+
+  // ── Queries ──
   const stats = useQuery(api.site.getAdminStats);
   const users = useQuery(api.site.listUsers);
   const settings = useQuery(api.site.getSiteSettings);
+  const feedback = useQuery(api.feedback.listFeedback);
+  const carOverrides = useQuery(api.cars.getCarOverrides);
 
+  // ── Mutations ──
   const setUserRole = useMutation(api.site.setUserRole);
-  const updateSiteSettings = useMutation(api.site.updateSiteSettings);
-
-  // ── Admin Abuse ──
+  const deleteUser = useMutation(api.site.deleteUser);
+  const updateSettings = useMutation(api.site.updateSiteSettings);
   const giveMoney = useMutation(api.adminAbuse.giveMoney);
   const giveCar = useMutation(api.adminAbuse.giveCar);
   const setMultiplierEvent = useMutation(api.adminAbuse.setMultiplierEvent);
   const clearMultiplierEvent = useMutation(api.adminAbuse.clearMultiplierEvent);
-  const activeEvent = useQuery(api.adminAbuse.getActiveEvent);
-  const users_list = users; // alias to avoid shadowing
-  const deleteUser = useMutation(api.site.deleteUser);
-
-  const [abuseUserId, setAbuseUserId] = useState("");
-  const [abuseAmount, setAbuseAmount] = useState("1000000");
-  const [abuseCarId, setAbuseCarId] = useState("");
-  const [abuseBusy, setAbuseBusy] = useState(false);
-
-  const [eventMultiplier, setEventMultiplier] = useState("100");
-  const [eventLabel, setEventLabel] = useState("100x EVENT");
-  const [eventDuration, setEventDuration] = useState("60");
-  const [eventBusy, setEventBusy] = useState(false);
-
-  const handleGiveMoney = async () => {
-    if (!abuseUserId || !abuseAmount || abuseBusy) return;
-    setAbuseBusy(true);
-    try {
-      const r = await giveMoney({
-        userId: abuseUserId as unknown as Id<"users">,
-        amount: Number(abuseAmount),
-      });
-      toast.success(`Gave $${Number(abuseAmount).toLocaleString()} to ${r.userName}`);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed");
-    } finally {
-      setAbuseBusy(false);
-    }
-  };
-
-  const handleGiveCar = async () => {
-    if (!abuseUserId || !abuseCarId || abuseBusy) return;
-    setAbuseBusy(true);
-    try {
-      const r = await giveCar({
-        userId: abuseUserId as unknown as Id<"users">,
-        carId: abuseCarId,
-      });
-      toast.success(`Gave ${r.carId} to ${r.userName}`);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed");
-    } finally {
-      setAbuseBusy(false);
-    }
-  };
-
-  const handleSetEvent = async () => {
-    const mult = Number(eventMultiplier);
-    const dur = Number(eventDuration);
-    if (!mult || !dur || eventBusy) return;
-    setEventBusy(true);
-    try {
-      await setMultiplierEvent({
-        multiplier: mult,
-        label: eventLabel.trim() || `${mult}x EVENT`,
-        durationMinutes: dur,
-      });
-      toast.success(`${mult}x event active for ${dur} minutes!`);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed");
-    } finally {
-      setEventBusy(false);
-    }
-  };
-
-  const handleClearEvent = async () => {
-    setEventBusy(true);
-    try {
-      await clearMultiplierEvent();
-      toast.success("Event cleared");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed");
-    } finally {
-      setEventBusy(false);
-    }
-  };
-
-  const feedback = useQuery(api.feedback.listFeedback);
   const setFeedbackStatus = useMutation(api.feedback.setFeedbackStatus);
   const deleteFeedback = useMutation(api.feedback.deleteFeedback);
+  const saveCarEdit = useMutation(api.cars.saveCarEdit);
+  const resetCarEdit = useMutation(api.cars.resetCarEdit);
+  const resetAllCarEdits = useMutation(api.cars.resetAllCarEdits);
+
+  // ── UI Settings state ──
+  const [accent, setAccent] = useState("#ff2e00");
+  const [siteName, setSiteName] = useState("Supercars Showcase");
+  const [bannerText, setBannerText] = useState("");
+  const [bannerEnabled, setBannerEnabled] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "error">("idle");
+
+  useEffect(() => {
+    if (settings && !hydrated) {
+      setAccent(settings.accent ?? "#ff2e00");
+      setSiteName(settings.siteName ?? "Supercars Showcase");
+      setBannerText(settings.bannerText ?? "");
+      setBannerEnabled(settings.bannerEnabled ?? false);
+      setHydrated(true);
+    }
+  }, [settings, hydrated]);
+
+  const dirty =
+    hydrated && (accent !== (settings?.accent ?? "#ff2e00") || siteName !== (settings?.siteName ?? "Supercars Showcase") || bannerText !== (settings?.bannerText ?? "") || bannerEnabled !== (settings?.bannerEnabled ?? false));
+
+  const persist = useCallback(
+    async (a: string, n: string) => {
+      setSaveStatus("saving");
+      try {
+        await updateSettings({ accent: a, siteName: n, bannerText, bannerEnabled });
+        setSaveStatus("idle");
+      } catch {
+        setSaveStatus("error");
+      }
+    },
+    [updateSettings],
+  );
+
+  // Auto-save on change after hydration
+  useEffect(() => {
+    if (!hydrated || !dirty) return;
+    const t = setTimeout(() => void persist(accent, siteName), 600);
+    return () => clearTimeout(t);
+  }, [accent, siteName, hydrated, dirty, persist]);
+
+  // ── Admin Abuse state ──
+  const [abuseTarget, setAbuseTarget] = useState("");
+  const [abuseMoney, setAbuseMoney] = useState("");
+  const [abuseCarId, setAbuseCarId] = useState("");
+  const [eventMultiplier, setEventMultiplier] = useState("100");
+  const [eventDuration, setEventDuration] = useState("30");
+  const [eventLabel, setEventLabel] = useState("100x EVENT");
+
+  const sortedGameCars = Object.entries(GAME_CAR_MAP)
+    .filter(([, c]) => !c.secret)
+    .sort(([, a], [, b]) => b.value - a.value);
 
   const newFeedbackCount = feedback?.filter((f) => f.status === "new").length ?? 0;
 
-  const toggleFeedbackStatus = async (id: string, status: string) => {
-    try {
-      await setFeedbackStatus({
-        feedbackId: id as unknown as Id<"feedback">,
-        status: status === "new" ? "read" : "new",
-      });
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not update feedback");
-    }
-  };
-
-  const removeFeedback = async (id: string) => {
-    try {
-      await deleteFeedback({ feedbackId: id as unknown as Id<"feedback"> });
-      toast.success("Feedback deleted");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not delete feedback");
-    }
-  };
-
-  // ── Announcements (transient global broadcast) ──
-  const postAnnouncements = useMutation(api.site.postAnnouncements);
-  const [announce, setAnnounce] = useState("");
-  const [announceBusy, setAnnounceBusy] = useState(false);
-
-  const announceCount = announce
-    .split(/\n+/)
-    .map((m) => m.trim())
-    .filter(Boolean).length;
-
-  const broadcast = async () => {
-    const messages = announce
-      .split(/\n+/)
-      .map((m) => m.trim())
-      .filter(Boolean)
-      .slice(0, 8);
-    if (messages.length === 0 || announceBusy) return;
-    setAnnounceBusy(true);
-    try {
-      await postAnnouncements({ messages });
-      setAnnounce("");
-      toast.success(
-        messages.length > 1
-          ? `Broadcast sent — ${messages.length} messages on the way`
-          : "Broadcast sent — everyone can see it now",
-      );
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not broadcast");
-    } finally {
-      setAnnounceBusy(false);
-    }
-  };
-
-  const [accent, setAccent] = useState("#ff2e00");
-  const [siteName, setSiteName] = useState("Supercars Showcase");
-  const [saveStatus, setSaveStatus] = useState<"idle" | "saved" | "error">("idle");
-  const [hydrated, setHydrated] = useState(false);
-
-  // ── Machines editor ──
-  const saveCarEdit = useMutation(api.cars.saveCarEdit);
-  const resetCarEdit = useMutation(api.cars.resetCarEdit);
-  const allCars = carsList();
-  const [editSlug, setEditSlug] = useState("");
-  const [editModel, setEditModel] = useState("");
-  const [editYear, setEditYear] = useState("");
-  const [editPrice, setEditPrice] = useState("");
-  const [editHp, setEditHp] = useState("");
-  const [editSpeed, setEditSpeed] = useState("");
-  const [editEngine, setEditEngine] = useState("");
-  const [editDesc, setEditDesc] = useState("");
-  const [editBusy, setEditBusy] = useState(false);
-
-  const selectCar = (slug: string) => {
-    setEditSlug(slug);
-    const c = slug ? mergedCarBySlug(slug) : undefined;
-    setEditModel(c?.model ?? "");
-    setEditYear(c ? String(c.year) : "");
-    setEditPrice(c ? String(c.priceUSD) : "");
-    setEditHp(c ? String(c.horsepower) : "");
-    setEditSpeed(c ? String(c.topSpeedKmh) : "");
-    setEditEngine(c?.engine ?? "");
-    setEditDesc(c?.description ?? "");
-  };
-
-  const saveMachine = async () => {
-    if (!editSlug || editBusy) return;
-    setEditBusy(true);
-    try {
-      await saveCarEdit({
-        slug: editSlug,
-        fields: {
-          model: editModel.trim() || undefined,
-          engine: editEngine.trim() || undefined,
-          description: editDesc.trim() || undefined,
-          year: editYear.trim() ? Number(editYear) : undefined,
-          priceUSD: editPrice.trim() ? Number(editPrice) : undefined,
-          horsepower: editHp.trim() ? Number(editHp) : undefined,
-          topSpeedKmh: editSpeed.trim() ? Number(editSpeed) : undefined,
-        },
-      });
-      toast.success("Machine updated across the site");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not save machine");
-    } finally {
-      setEditBusy(false);
-    }
-  };
-
-  const resetMachine = async () => {
-    if (!editSlug || editBusy) return;
-    setEditBusy(true);
-    try {
-      await resetCarEdit({ slug: editSlug });
-      selectCar(editSlug);
-      toast.success("Reverted to stock data");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not reset machine");
-    } finally {
-      setEditBusy(false);
-    }
-  };
-
-  // Hydrate the form exactly once when settings first load. After that the
-  // fields are only changed by the user — server updates can never clobber
-  // what you're typing.
-  const [didHydrateSettings, setDidHydrateSettings] = useState(false);
-  if (settings && !didHydrateSettings) {
-    setDidHydrateSettings(true);
-    setHydrated(true);
-    setAccent(settings.accent);
-    setSiteName(settings.siteName);
-  }
-
-  const persist = useCallback(
-    async (color: string, name: string) => {
-      try {
-        await updateSiteSettings({
-          bannerText: "",
-          bannerEnabled: false,
-          accent: /^#[0-9a-fA-F]{6}$/.test(color) ? color : "#ff2e00",
-          siteName: name,
-        });
-        setSaveStatus("saved");
-      } catch (e) {
-        setSaveStatus("error");
-        console.error("Failed to save settings", e);
-      }
-    },
-    [updateSiteSettings],
-  );
-
-  // Auto-save (debounced) whenever any setting changes.
-  useEffect(() => {
-    if (!hydrated) return;
-    const unchanged =
-      settings &&
-      accent === settings.accent &&
-      siteName.trim() === settings.siteName;
-    if (unchanged) return;
-    const timer = setTimeout(() => void persist(accent, siteName), 700);
-    return () => clearTimeout(timer);
-  }, [accent, siteName, settings, hydrated, persist]);
-
-  const dirty =
-    hydrated &&
-    (!settings ||
-      accent !== settings.accent ||
-      siteName.trim() !== settings.siteName);
-
-  const toggleRole = async (userId: string, currentRole: string) => {
-    const cycle: Record<string, string> = { user: "moderator", moderator: "admin", admin: "user" };
-    const next = cycle[currentRole] ?? "user";
-    try {
-      await setUserRole({ userId: userId as unknown as Id<"users">, role: next as "owner" | "admin" | "moderator" | "user" });
-      toast.success(`Role changed to ${next}`);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not update role");
-    }
-  };
-
+  // ── User role handler ──
   const setRole = async (userId: string, role: "owner" | "admin" | "moderator" | "user") => {
     try {
       await setUserRole({ userId: userId as unknown as Id<"users">, role });
-      toast.success(`Role changed to ${role}`);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not update role");
+      toast.success(`Role updated to ${role}`);
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Failed to update role");
     }
   };
 
+  // ── Car editor state ──
+  const [editCarSlug, setEditCarSlug] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState<Record<string, string>>({});
+
+  const openCarEditor = (slug: string) => {
+    setEditCarSlug(slug);
+    const ov: Record<string, unknown> = (carOverrides as Record<string, Record<string, unknown>> | undefined)?.[slug] ?? {};
+    setEditDraft({
+      displayName: String(ov.displayName ?? ""),
+      priceUSD: ov.priceUSD != null ? String(ov.priceUSD) : "",
+      horsepower: ov.horsepower != null ? String(ov.horsepower) : "",
+      topSpeedKmh: ov.topSpeedKmh != null ? String(ov.topSpeedKmh) : "",
+      zeroToHundredKmh: ov.zeroToHundredKmh != null ? String(ov.zeroToHundredKmh) : "",
+      engine: String(ov.engine ?? ""),
+      description: String(ov.description ?? ""),
+    });
+  };
+
+  const saveCarEdits = async () => {
+    if (!editCarSlug) return;
+    const patch: Record<string, string | number | undefined> = {};
+    for (const f of CAR_EDIT_FIELDS) {
+      const raw = String(editDraft[f.key] ?? "").trim();
+      if (!raw) {
+        patch[f.key] = undefined;
+        continue;
+      }
+      if (f.key === "priceUSD" || f.key === "horsepower" || f.key === "topSpeedKmh") {
+        patch[f.key] = Number(raw) || undefined;
+      } else if (f.key === "zeroToHundredKmh") {
+        patch[f.key] = Number(raw) || undefined;
+      } else {
+        patch[f.key] = raw;
+      }
+    }
+    try {
+      await saveCarEdit({ slug: editCarSlug, fields: patch as Record<string, string> });
+      toast.success("Car edits saved");
+      setEditCarSlug(null);
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Failed to save car edits");
+    }
+  };
+
+  // ── Stat cards ──
   const statCards = [
     { label: "Accounts created", value: stats?.accounts ?? 0, icon: UserPlus },
     { label: "Sign-ins recorded", value: stats?.signIns ?? 0, icon: Users },
     { label: "Unique visitors", value: stats?.visitors ?? 0, icon: Eye },
     { label: "Page views", value: stats?.visits ?? 0, icon: Activity },
-    { label: "Active sessions", value: stats?.currentSessions ?? 0, icon: Radio },
     { label: "Visitors today", value: stats?.visitorsToday ?? 0, icon: CalendarDays },
   ];
 
@@ -517,45 +274,32 @@ export default function Admin() {
           <span className="inline-block size-1.5 rounded-full bg-apex-red" /> Control room
         </p>
         <h1 className="mt-2 font-display text-4xl font-black tracking-tight text-white sm:text-5xl">
-          ADMIN
+          Admin
         </h1>
-        <p className="mt-3 text-sm text-apex-muted">
-          Site analytics, user roles, and quick UI settings. Only admins can see
-          this page.
-        </p>
       </div>
 
       {/* Stats */}
-      {stats === undefined ? (
-        <div className="flex items-center gap-2 text-sm text-white/50">
-          <Loader2 className="size-4 animate-spin" /> Loading analytics…
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-          {statCards.map((s) => (
-            <div
-              key={s.label}
-              className="rounded-lg border border-apex-line bg-apex-panel p-4"
-            >
-              <s.icon className="size-4 text-apex-red" />
-              <p className="mt-3 font-display text-3xl font-black tracking-tight text-white">
-                {s.value.toLocaleString()}
-              </p>
-              <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40">
-                {s.label}
-              </p>
-            </div>
-          ))}
-        </div>
-      )}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+        {statCards.map((s) => (
+          <div
+            key={s.label}
+            className="rounded-lg border border-apex-line bg-apex-panel p-4"
+          >
+            <s.icon className="mb-2 size-4 text-apex-red" />
+            <p className="font-display text-2xl font-black text-white">
+              {(s.value ?? 0).toLocaleString()}
+            </p>
+            <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/40">
+              {s.label}
+            </p>
+          </div>
+        ))}
+      </div>
 
+      {/* ── Users & Roles + Quick UI Settings ───────────────────────────── */}
       <div className="mt-12 grid gap-8 md:grid-cols-2">
         {/* Users */}
-      <CollapsibleSection
-        title="Users & Roles"
-        icon={Shield}
-        defaultOpen={false}
-      >
+        <CollapsibleSection title="Users & Roles" icon={Shield} defaultOpen={false}>
           {users === undefined ? (
             <div className="flex items-center gap-2 px-5 py-8 text-sm text-white/50">
               <Loader2 className="size-4 animate-spin" /> Loading users…
@@ -563,17 +307,10 @@ export default function Admin() {
           ) : (
             <ul className="divide-y divide-apex-line">
               {users.map((u) => (
-                <li
-                  key={u._id}
-                  className="flex items-center justify-between gap-3 px-5 py-3"
-                >
+                <li key={u._id} className="flex items-center justify-between gap-3 px-5 py-3">
                   <div className="flex min-w-0 items-center gap-3">
                     {u.image ? (
-                      <img
-                        src={u.image}
-                        alt=""
-                        className="size-8 shrink-0 rounded-full object-cover"
-                      />
+                      <img src={u.image} alt="" className="size-8 shrink-0 rounded-full object-cover" />
                     ) : (
                       <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-apex-red/15 font-display text-xs font-bold text-apex-red">
                         {u.name.charAt(0).toUpperCase()}
@@ -632,16 +369,11 @@ export default function Admin() {
               ))}
             </ul>
           )}
-      </CollapsibleSection>
+        </CollapsibleSection>
 
         {/* Site settings */}
-      <CollapsibleSection
-        title="Quick UI Settings"
-        icon={Palette}
-        defaultOpen={false}
-      >
+        <CollapsibleSection title="Quick UI Settings" icon={Palette} defaultOpen={false}>
           <div className="flex items-center justify-end border-b border-apex-line px-5 py-4">
-            {/* Save status */}
             {hydrated && (
               <span
                 className={cn(
@@ -654,17 +386,11 @@ export default function Admin() {
                 )}
               >
                 {saveStatus === "error" ? (
-                  <>
-                    <AlertTriangle className="size-3.5" /> Save failed
-                  </>
+                  <><AlertTriangle className="size-3.5" /> Save failed</>
                 ) : dirty ? (
-                  <>
-                    <Loader2 className="size-3.5 animate-spin" /> Saving…
-                  </>
+                  <><Loader2 className="size-3.5 animate-spin" /> Saving…</>
                 ) : (
-                  <>
-                    <Check className="size-3.5" /> Saved
-                  </>
+                  <><Check className="size-3.5" /> Saved</>
                 )}
               </span>
             )}
@@ -720,10 +446,7 @@ export default function Admin() {
                     />
                   ))}
                   <label className="ml-1 inline-flex items-center gap-2 rounded-md border border-white/15 px-3 py-2 text-xs text-white/70">
-                    <span
-                      className="size-3 rounded-full"
-                      style={{ backgroundColor: accent }}
-                    />
+                    <span className="size-3 rounded-full" style={{ backgroundColor: accent }} />
                     <input
                       type="color"
                       value={accent}
@@ -742,369 +465,342 @@ export default function Admin() {
               </p>
             </div>
           )}
-      </CollapsibleSection>
+        </CollapsibleSection>
       </div>
 
-      {/* Announcements — transient global broadcast */}
+      {/* ── Announcements ───────────────────────────────────────────────── */}
       <div className="mt-12">
-      <CollapsibleSection
-        title="Announcements"
-        icon={Megaphone}
-        badge="Admin power"
-        defaultOpen={false}
-      >
-        <div className="px-5 py-5">
-          <p className="text-sm text-apex-muted">
-            Type a message and press Enter to send it — send another and it
-            stacks underneath. Every visitor sees them pop up at the top-center
-            of the page (just below the header) as your name + message. Each
-            one fades on its own: short messages vanish quickly, long ones
-            linger.
-          </p>
-          <div className="mt-4 flex items-stretch gap-3">
-            <textarea
-              value={announce}
-              onChange={(e) => setAnnounce(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  void broadcast();
-                }
-              }}
-              rows={3}
-              placeholder="Type a message…"
-              className="flex-1 resize-none rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3.5 py-3 text-sm text-white outline-none transition-colors placeholder:text-white/20 focus:border-apex-red"
-            />
-            <button
-              type="button"
-              onClick={() => void broadcast()}
-              disabled={announceBusy || announceCount === 0}
-              className="inline-flex shrink-0 items-center gap-2 self-end rounded-md bg-apex-red px-5 py-3 font-display text-[11px] font-bold uppercase tracking-[0.12em] text-white transition-opacity hover:opacity-90 disabled:opacity-40"
-            >
-              <Send className="size-3.5" />
-              {announceBusy ? "Broadcasting…" : "Broadcast"}
-            </button>
+        <CollapsibleSection
+          title="Announcements"
+          icon={Megaphone}
+          badge="Admin power"
+          defaultOpen={false}
+        >
+          <div className="px-5 py-5">
+            <p className="text-sm text-white/50">
+              Type a message and press Enter to send it — send another and it
+              stacks underneath. Every visitor sees them pop up at the top-center
+              of the page (just below the header) as your name + message. Each
+              one fades on its own: short messages vanish quickly, long ones
+              linger.
+            </p>
+            <div className="mt-4 flex items-stretch gap-3">
+              <textarea
+                value={announce}
+                onChange={(e) => setAnnounce(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    void broadcast();
+                  }
+                }}
+                rows={3}
+                placeholder="Type a message…"
+                className="flex-1 resize-none rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3.5 py-3 text-sm text-white outline-none transition-colors placeholder:text-white/20 focus:border-apex-red"
+              />
+              <button
+                type="button"
+                onClick={() => void broadcast()}
+                className="self-end rounded-md bg-apex-red px-4 py-2.5 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-white transition-opacity hover:opacity-90"
+              >
+                Broadcast
+              </button>
+            </div>
           </div>
-          <p className="mt-2.5 text-[11px] text-white/25">
-            {announceCount > 0
-              ? `${announceCount} message${announceCount > 1 ? "s" : ""} ready — press Enter to send, or hit Broadcast. Short messages fade fast, long ones stay longer.`
-              : "Press Enter to send — or hit Broadcast. Short messages fade fast, long ones stay longer."}
-          </p>
-        </div>
-      </CollapsibleSection>
+        </CollapsibleSection>
       </div>
 
-      {/* Admin Abuse */}
+      {/* ── Admin Abuse ─────────────────────────────────────────────────── */}
       <div className="mt-12">
-      <CollapsibleSection
-        title="Admin Abuse"
-        icon={Zap}
-        badge="Power"
-        defaultOpen={false}
-      >
-        <div className="px-5 py-5 space-y-8">
-          {/* Active event banner */}
-          {activeEvent && (
-            <div className="rounded-lg border border-apex-red/40 bg-apex-red/10 p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Flame className="size-6 text-apex-red animate-pulse" />
-                  <div>
-                    <p className="font-display text-lg font-black text-apex-red">{activeEvent.label}</p>
-                    <p className="text-xs text-white/50">
-                      Expires {new Date(activeEvent.expiresAt).toLocaleTimeString()}
-                    </p>
-                  </div>
+        <CollapsibleSection
+          title="Admin Abuse"
+          icon={Zap}
+          badge="Powers"
+          defaultOpen={false}
+        >
+          <div className="space-y-6 px-5 py-5">
+            {/* Give Money */}
+            <div>
+              <h3 className="mb-2 font-display text-xs font-bold uppercase tracking-[0.16em] text-white/60">
+                <Gift className="mr-1 inline size-3.5" /> Send Gift
+              </h3>
+              <select
+                value={abuseTarget}
+                onChange={(e) => setAbuseTarget(e.target.value)}
+                className="mb-3 w-full rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3 py-2 text-sm text-white outline-none focus:border-apex-red"
+              >
+                <option value="">Select a user…</option>
+                {users?.map((u) => (
+                  <option key={u._id} value={u._id}>
+                    {u.name} ({u.email || "no email"}) — {u.role}
+                  </option>
+                ))}
+              </select>
+
+              {/* Give Cash */}
+              <div className="flex items-end gap-2">
+                <div className="flex-1">
+                  <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40">
+                    Cash amount
+                  </label>
+                  <input
+                    type="number"
+                    value={abuseMoney}
+                    onChange={(e) => setAbuseMoney(e.target.value)}
+                    placeholder="1000000"
+                    className="w-full rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3 py-2 text-sm text-white outline-none focus:border-apex-red"
+                  />
                 </div>
                 <button
                   type="button"
-                  onClick={() => void handleClearEvent()}
-                  disabled={eventBusy}
-                  className="rounded-md border border-white/20 px-3 py-1.5 text-[10px] font-bold uppercase text-white/60 hover:border-apex-red hover:text-apex-red"
+                  onClick={async () => {
+                    if (!abuseTarget || !abuseMoney) { toast.error("Select a user and enter an amount"); return; }
+                    const amt = Number(abuseMoney);
+                    if (amt <= 0 || !isFinite(amt)) { toast.error("Enter a valid amount"); return; }
+                    try {
+                      await giveMoney({ userId: abuseTarget as Id<"users">, amount: amt });
+                      toast.success(`Sent $${amt.toLocaleString()} to user`);
+                      setAbuseMoney("");
+                    } catch (e: unknown) {
+                      toast.error(e instanceof Error ? e.message : "Failed");
+                    }
+                  }}
+                  className="rounded-md bg-apex-red px-4 py-2 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-white hover:opacity-90"
+                >
+                  Send
+                </button>
+              </div>
+              {/* Quick presets */}
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {[1000, 10000, 100000, 1_000_000, 10_000_000, 100_000_000, 1_000_000_000].map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => setAbuseMoney(String(v))}
+                    className="rounded bg-white/5 px-2 py-1 text-[10px] font-bold text-white/60 hover:bg-white/10"
+                  >
+                    {v >= 1_000_000_000 ? "$1B" : v >= 1_000_000 ? `$${v / 1_000_000}M` : v >= 1000 ? `$${v / 1000}K` : `$${v}`}
+                  </button>
+                ))}
+              </div>
+
+              {/* Give Car */}
+              <div className="mt-4 flex items-end gap-2">
+                <div className="flex-1">
+                  <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40">
+                    Car
+                  </label>
+                  <select
+                    value={abuseCarId}
+                    onChange={(e) => setAbuseCarId(e.target.value)}
+                    className="w-full rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3 py-2 text-sm text-white outline-none focus:border-apex-red"
+                  >
+                    <option value="">Select a car…</option>
+                    {sortedGameCars.map(([id, c]) => (
+                      <option key={id} value={id}>
+                        {c.brand} {c.name} ({c.year}) — ${(c.value).toLocaleString()}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!abuseTarget || !abuseCarId) { toast.error("Select a user and a car"); return; }
+                    try {
+                      await giveCar({ userId: abuseTarget as Id<"users">, carId: abuseCarId });
+                      toast.success("Car sent!");
+                      setAbuseCarId("");
+                    } catch (e: unknown) {
+                      toast.error(e instanceof Error ? e.message : "Failed");
+                    }
+                  }}
+                  className="rounded-md bg-apex-red px-4 py-2 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-white hover:opacity-90"
+                >
+                  Send Car
+                </button>
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div className="border-t border-apex-line" />
+
+            {/* Multiplier Event */}
+            <div>
+              <h3 className="mb-2 font-display text-xs font-bold uppercase tracking-[0.16em] text-white/60">
+                <Flame className="mr-1 inline size-3.5" /> Multiplier Event
+              </h3>
+
+              {/* Multiplier presets */}
+              <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40">
+                Multiplier
+              </label>
+              <div className="mb-2 flex flex-wrap gap-1.5">
+                {[10, 50, 100, 500, 1000].map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => { setEventMultiplier(String(v)); setEventLabel(`${v}x EVENT`); }}
+                    className={cn(
+                      "rounded px-3 py-1.5 text-[10px] font-bold transition-colors",
+                      eventMultiplier === String(v) ? "bg-apex-red text-white" : "bg-white/5 text-white/60 hover:bg-white/10",
+                    )}
+                  >
+                    {v}x
+                  </button>
+                ))}
+              </div>
+              <input
+                type="number"
+                value={eventMultiplier}
+                onChange={(e) => setEventMultiplier(e.target.value)}
+                max={10000}
+                className="mb-2 w-full rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3 py-2 text-sm text-white outline-none focus:border-apex-red"
+                placeholder="Multiplier (e.g. 100)"
+              />
+
+              {/* Duration presets */}
+              <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40">
+                Duration (minutes)
+              </label>
+              <div className="mb-2 flex flex-wrap gap-1.5">
+                {[5, 15, 30, 60, 120, 1440].map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => setEventDuration(String(v))}
+                    className={cn(
+                      "rounded px-3 py-1.5 text-[10px] font-bold transition-colors",
+                      eventDuration === String(v) ? "bg-apex-red text-white" : "bg-white/5 text-white/60 hover:bg-white/10",
+                    )}
+                  >
+                    {v >= 60 ? `${v / 60}h` : `${v}m`}
+                  </button>
+                ))}
+              </div>
+              <input
+                type="number"
+                value={eventDuration}
+                onChange={(e) => setEventDuration(e.target.value)}
+                max={1440}
+                className="mb-2 w-full rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3 py-2 text-sm text-white outline-none focus:border-apex-red"
+                placeholder="Duration in minutes"
+              />
+
+              {/* Event label */}
+              <input
+                type="text"
+                value={eventLabel}
+                onChange={(e) => setEventLabel(e.target.value.slice(0, 50))}
+                maxLength={50}
+                className="mb-3 w-full rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3 py-2 text-sm text-white outline-none focus:border-apex-red"
+                placeholder="Event label (e.g. 100x EVENT)"
+              />
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const mult = Number(eventMultiplier);
+                    const dur = Number(eventDuration);
+                    if (mult <= 0 || !isFinite(mult)) { toast.error("Invalid multiplier"); return; }
+                    if (dur <= 0 || !isFinite(dur)) { toast.error("Invalid duration"); return; }
+                    try {
+                      await setMultiplierEvent({
+                        multiplier: mult,
+                        durationMinutes: dur,
+                        label: eventLabel.trim().slice(0, 50) || `${mult}x EVENT`,
+                      });
+                      toast.success("Event activated!");
+                    } catch (e: unknown) {
+                      toast.error(e instanceof Error ? e.message : "Failed");
+                    }
+                  }}
+                  className="rounded-md bg-apex-red px-4 py-2 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-white hover:opacity-90"
+                >
+                  Activate
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await clearMultiplierEvent();
+                      toast.success("Event ended");
+                    } catch (e: unknown) {
+                      toast.error(e instanceof Error ? e.message : "Failed");
+                    }
+                  }}
+                  className="rounded-md border border-white/15 px-4 py-2 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-white/60 hover:border-white/30"
                 >
                   End Event
                 </button>
               </div>
             </div>
-          )}
-
-          {/* Give money / car */}
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <Gift className="size-4 text-apex-red" />
-              <h3 className="font-display text-sm font-bold uppercase tracking-[0.14em] text-white">Send Gift</h3>
-            </div>
-            <label className="font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">
-              Select user
-            </label>
-            <select
-              value={abuseUserId}
-              onChange={(e) => setAbuseUserId(e.target.value)}
-              className="mt-2 w-full cursor-pointer rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3.5 py-2.5 text-sm text-white outline-none focus:border-apex-red"
-            >
-              <option value="">Choose a user…</option>
-              {users_list?.map((u) => (
-                <option key={u._id} value={u._id}>
-                  {u.name ?? u.email ?? u._id}
-                </option>
-              ))}
-            </select>
-
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              {/* Give money */}
-              <div className="rounded-lg border border-white/[0.08] bg-[#0b0b0c] p-4">
-                <p className="text-xs font-semibold text-white/60 mb-3">Give Cash</p>
-                <div className="flex flex-wrap gap-1.5 mb-3">
-                  {["1000", "10000", "100000", "1000000", "10000000", "100000000", "1000000000"].map((v) => (
-                    <button
-                      key={v}
-                      type="button"
-                      onClick={() => setAbuseAmount(v)}
-                      className={cn(
-                        "rounded-md border px-2 py-1 text-[10px] font-bold transition-colors",
-                        abuseAmount === v
-                          ? "border-emerald-500 bg-emerald-500/20 text-emerald-400"
-                          : "border-white/15 text-white/50 hover:border-white/30",
-                      )}
-                    >
-                      {Number(v) >= 1_000_000_000 ? "$1B" : Number(v) >= 1_000_000 ? `$${Number(v) / 1_000_000}M` : `$${Number(v) / 1_000}K`}
-                    </button>
-                  ))}
-                </div>
-                <input
-                  type="number"
-                  value={abuseAmount}
-                  onChange={(e) => setAbuseAmount(e.target.value)}
-                  placeholder="Or type any amount…"
-                  className="w-full rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3 py-2 text-sm text-white outline-none focus:border-apex-red"
-                />
-                <button
-                  type="button"
-                  onClick={() => void handleGiveMoney()}
-                  disabled={!abuseUserId || !abuseAmount || abuseBusy}
-                  className="mt-3 w-full rounded-md bg-emerald-600 px-4 py-2 font-display text-[11px] font-bold uppercase tracking-[0.12em] text-white hover:bg-emerald-500 disabled:opacity-40"
-                >
-                  {abuseBusy ? "Sending…" : `Send $${Number(abuseAmount || 0).toLocaleString()}`}
-                </button>
-              </div>
-
-              {/* Give car */}
-              <div className="rounded-lg border border-white/[0.08] bg-[#0b0b0c] p-4">
-                <p className="text-xs font-semibold text-white/60 mb-3">Give Car</p>
-                <select
-                  value={abuseCarId}
-                  onChange={(e) => setAbuseCarId(e.target.value)}
-                  className="w-full cursor-pointer rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3 py-2 text-sm text-white outline-none focus:border-apex-red"
-                >
-                  <option value="">Choose a car…</option>
-                  {Object.values(GAME_CAR_MAP)
-                    .filter((c) => !c.secret)
-                    .sort((a, b) => b.value - a.value)
-                    .map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.brand} · {c.name} ({c.year}) — ${c.value.toLocaleString()}
-                      </option>
-                    ))}
-                </select>
-                <button
-                  type="button"
-                  onClick={() => void handleGiveCar()}
-                  disabled={!abuseUserId || !abuseCarId || abuseBusy}
-                  className="mt-3 w-full rounded-md bg-apex-red px-4 py-2 font-display text-[11px] font-bold uppercase tracking-[0.12em] text-white hover:bg-apex-red-bright disabled:opacity-40"
-                >
-                  {abuseBusy ? "Sending…" : "Send Car"}
-                </button>
-              </div>
-            </div>
           </div>
-
-          {/* Multiplier event */}
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <Flame className="size-4 text-apex-red" />
-              <h3 className="font-display text-sm font-bold uppercase tracking-[0.14em] text-white">Multiplier Event</h3>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div>
-                <label className="font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">
-                  Multiplier
-                </label>
-                <div className="mt-2 flex gap-2">
-                  {["10", "50", "100", "500", "1000"].map((v) => (
-                    <button
-                      key={v}
-                      type="button"
-                      onClick={() => { setEventMultiplier(v); setEventLabel(`${v}x EVENT`); }}
-                      className={cn(
-                        "rounded-md border px-3 py-1.5 text-xs font-bold transition-colors",
-                        eventMultiplier === v
-                          ? "border-apex-red bg-apex-red/20 text-apex-red"
-                          : "border-white/15 text-white/50 hover:border-white/30",
-                      )}
-                    >
-                      {v}x
-                    </button>
-                  ))}
-                </div>
-                <input
-                  type="number"
-                  value={eventMultiplier}
-                  onChange={(e) => setEventMultiplier(e.target.value)}
-                  className="mt-2 w-full rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3 py-2 text-sm text-white outline-none focus:border-apex-red"
-                />
-              </div>
-              <div>
-                <label className="font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">
-                  Event label
-                </label>
-                <input
-                  type="text"
-                  value={eventLabel}
-                  onChange={(e) => setEventLabel(e.target.value)}
-                  className="mt-2 w-full rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3 py-2 text-sm text-white outline-none focus:border-apex-red"
-                />
-              </div>
-              <div>
-                <label className="font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">
-                  Duration (minutes)
-                </label>
-                <div className="mt-2 flex gap-2">
-                  {["5", "15", "30", "60", "120", "1440"].map((v) => (
-                    <button
-                      key={v}
-                      type="button"
-                      onClick={() => setEventDuration(v)}
-                      className={cn(
-                        "rounded-md border px-2.5 py-1.5 text-[10px] font-bold transition-colors",
-                        eventDuration === v
-                          ? "border-apex-red bg-apex-red/20 text-apex-red"
-                          : "border-white/15 text-white/50 hover:border-white/30",
-                      )}
-                    >
-                      {v === "1440" ? "24h" : `${v}m`}
-                    </button>
-                  ))}
-                </div>
-                <input
-                  type="number"
-                  value={eventDuration}
-                  onChange={(e) => setEventDuration(e.target.value)}
-                  min="1"
-                  max="1440"
-                  placeholder="Custom minutes"
-                  className="mt-2 w-full rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3 py-2 text-sm text-white outline-none focus:border-apex-red"
-                />
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => void handleSetEvent()}
-              disabled={eventBusy || !eventMultiplier || !eventDuration}
-              className="mt-4 inline-flex items-center gap-2 rounded-md bg-gradient-to-r from-apex-red to-orange-600 px-6 py-3 font-display text-[11px] font-bold uppercase tracking-[0.12em] text-white hover:opacity-90 disabled:opacity-40"
-            >
-              <Flame className="size-3.5" />
-              {eventBusy ? "Activating…" : `Activate ${eventMultiplier}x Event`}
-            </button>
-          </div>
-        </div>
-      </CollapsibleSection>
+        </CollapsibleSection>
       </div>
 
-      {/* Feedback inbox */}
+      {/* ── Feedback Inbox ──────────────────────────────────────────────── */}
       <div className="mt-12">
-      <CollapsibleSection
-        title="Feedback Inbox"
-        icon={Inbox}
-        badge={newFeedbackCount > 0 ? `${newFeedbackCount} new` : undefined}
-        defaultOpen={false}
-      >
-        {feedback === undefined ? (
-          <div className="flex items-center gap-2 px-5 py-8 text-sm text-white/50">
-            <Loader2 className="size-4 animate-spin" /> Loading feedback…
-          </div>
-        ) : feedback.length === 0 ? (
-          <p className="px-5 py-10 text-center text-sm text-white/35">
-            No feedback yet. Share the site and the notes will pile up here.
-          </p>
-        ) : (
-          <ul className="divide-y divide-apex-line">
-            {feedback.map((f) => {
-              const meta = FEEDBACK_META[f.type] ?? FEEDBACK_META.other;
-              return (
-                <li
-                  key={f._id}
-                  className={cn(
-                    "px-5 py-4",
-                    f.status === "new" && "bg-apex-red/[0.04]",
-                  )}
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex min-w-0 items-start gap-3">
-                      <span
-                        className={cn(
-                          "mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-sm border px-2 py-1 text-[9px] font-bold uppercase tracking-[0.12em]",
-                          meta.className,
-                        )}
-                      >
-                        <meta.icon className="size-3" /> {meta.label}
-                      </span>
+        <CollapsibleSection
+          title="Feedback Inbox"
+          icon={Inbox}
+          badge={newFeedbackCount > 0 ? `${newFeedbackCount} new` : undefined}
+          defaultOpen={false}
+        >
+          <div className="px-5 py-5">
+            {feedback === undefined ? (
+              <div className="flex items-center gap-2 text-sm text-white/50">
+                <Loader2 className="size-4 animate-spin" /> Loading feedback…
+              </div>
+            ) : feedback.length === 0 ? (
+              <p className="text-sm text-white/40">No feedback yet.</p>
+            ) : (
+              <ul className="divide-y divide-apex-line">
+                {feedback.map((f) => (
+                  <li key={f._id} className="space-y-2 py-4">
+                    <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="whitespace-pre-wrap text-sm leading-6 text-white/90">
-                          {f.message}
-                        </p>
-                        <p className="mt-2 text-[11px] text-white/35">
-                          {f.authorName}
-                          {f.authorEmail ? ` · ${f.authorEmail}` : ""} ·{" "}
-                          {timeAgo(f.createdAt)}
-                          {f.carSlug && (
-                            <>
-                              {" · "}
-                              <Link
-                                to={`/cars/${f.carSlug}`}
-                                className="text-apex-red hover:underline"
-                              >
-                                about a machine
-                              </Link>
-                            </>
-                          )}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <span className="rounded-full bg-apex-red/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em] text-apex-red">
+                            {f.type}
+                          </span>
+                          <span className="text-[10px] text-white/30">
+                            {new Date(f.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <p className="mt-1.5 text-sm text-white/80">{f.message}</p>
+                        {f.authorName && (
+                          <p className="mt-0.5 text-[10px] text-white/30">— {f.authorName}</p>
+                        )}
+                      </div>
+                      <div className="flex shrink-0 gap-1">
+                        <select
+                          value={f.status}
+                          onChange={(e) =>                          void setFeedbackStatus({ feedbackId: f._id, status: e.target.value as "new" | "read" })}
+                          className="cursor-pointer rounded border border-white/[0.08] bg-[#0b0b0c] px-1.5 py-1 text-[10px] text-white outline-none"
+                        >
+                          <option value="new">New</option>
+                          <option value="read">Read</option>
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() =>                          void deleteFeedback({ feedbackId: f._id })}
+                          className="inline-flex size-6 items-center justify-center rounded border border-white/15 text-white/40 hover:border-apex-red hover:text-apex-red"
+                        >
+                          <Trash2 className="size-3" />
+                        </button>
                       </div>
                     </div>
-                    <div className="flex shrink-0 items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => void toggleFeedbackStatus(f._id, f.status)}
-                        className="inline-flex items-center gap-1.5 rounded-md border border-white/15 px-2.5 py-1.5 font-display text-[9px] font-bold uppercase tracking-[0.12em] text-white/60 transition-colors hover:border-apex-red hover:text-apex-red"
-                      >
-                        {f.status === "new" ? (
-                          <>
-                            <CheckCircle2 className="size-3.5" /> Mark read
-                          </>
-                        ) : (
-                          <>
-                            <Circle className="size-3.5" /> Mark unread
-                          </>
-                        )}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => void removeFeedback(f._id)}
-                        aria-label="Delete feedback"
-                        className="inline-flex size-7 items-center justify-center rounded-md border border-white/15 text-white/50 transition-colors hover:border-apex-red hover:text-apex-red"
-                      >
-                        <Trash2 className="size-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </CollapsibleSection>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </CollapsibleSection>
       </div>
 
-      {/* Site Updates editor */}
+      {/* ── Site Updates ────────────────────────────────────────────────── */}
       <div className="mt-12">
         <CollapsibleSection
           title="Site Updates"
@@ -1112,7 +808,7 @@ export default function Admin() {
           defaultOpen={false}
         >
           <div className="px-5 py-5">
-            <p className="mb-4 text-sm text-apex-muted">
+            <p className="mb-4 text-sm text-white/50">
               Write the update message that everyone sees on the landing page
               above the Hall of Legends. It stays until you change it.
             </p>
@@ -1133,187 +829,166 @@ export default function Admin() {
         </CollapsibleSection>
       </div>
 
-      {/* Machines editor */}
+      {/* ── Cars Editor ─────────────────────────────────────────────────── */}
       <div className="mt-12">
-      <CollapsibleSection
-        title="Machines Editor"
-        icon={Car}
-        badge="Owner only"
-        defaultOpen={false}
-      >
-        <div className="px-5 py-5">
-          <p className="mb-4 text-sm text-apex-muted">
-            Pick a machine and edit its name, price or specs — changes apply
-            instantly across the whole site (garage, detail pages, compare,
-            rankings). Leave a field empty to keep the original value.
-          </p>
-
-          {/* Select machine */}
-          <label className="font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">
-            Machine
-          </label>
-          <select
-            value={editSlug}
-            onChange={(e) => selectCar(e.target.value)}
-            className="mt-3 w-full cursor-pointer rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3.5 py-2.5 text-sm text-white outline-none transition-colors focus:border-apex-red"
-          >
-            <option value="">Select a machine…</option>
-            {allCars.map((c) => (
-              <option key={c.slug} value={c.slug}>
-                {c.brand} · {c.model}
-              </option>
-            ))}
-          </select>
-
-          {editSlug ? (
-            <div className="mt-6 grid gap-5 sm:grid-cols-2">
-              <div>
-                <label className="font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">
-                  Name / model
-                </label>
-                <input
-                  value={editModel}
-                  onChange={(e) => setEditModel(e.target.value)}
-                  className="mt-2 w-full rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3.5 py-2.5 text-sm text-white outline-none focus:border-apex-red"
-                />
-              </div>
-              <div>
-                <label className="font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">
-                  Year
-                </label>
-                <input
-                  value={editYear}
-                  onChange={(e) => setEditYear(e.target.value)}
-                  type="number"
-                  className="mt-2 w-full rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3.5 py-2.5 text-sm text-white outline-none focus:border-apex-red"
-                />
-              </div>
-              <div>
-                <label className="font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">
-                  Price (USD)
-                </label>
-                <input
-                  value={editPrice}
-                  onChange={(e) => setEditPrice(e.target.value)}
-                  type="number"
-                  className="mt-2 w-full rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3.5 py-2.5 text-sm text-white outline-none focus:border-apex-red"
-                />
-              </div>
-              <div>
-                <label className="font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">
-                  Horsepower
-                </label>
-                <input
-                  value={editHp}
-                  onChange={(e) => setEditHp(e.target.value)}
-                  type="number"
-                  className="mt-2 w-full rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3.5 py-2.5 text-sm text-white outline-none focus:border-apex-red"
-                />
-              </div>
-              <div>
-                <label className="font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">
-                  Top speed (km/h)
-                </label>
-                <input
-                  value={editSpeed}
-                  onChange={(e) => setEditSpeed(e.target.value)}
-                  type="number"
-                  className="mt-2 w-full rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3.5 py-2.5 text-sm text-white outline-none focus:border-apex-red"
-                />
-              </div>
-              <div>
-                <label className="font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">
-                  Engine
-                </label>
-                <input
-                  value={editEngine}
-                  onChange={(e) => setEditEngine(e.target.value)}
-                  className="mt-2 w-full rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3.5 py-2.5 text-sm text-white outline-none focus:border-apex-red"
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <label className="font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">
-                  Description
-                </label>
-                <textarea
-                  value={editDesc}
-                  onChange={(e) => setEditDesc(e.target.value)}
-                  rows={3}
-                  maxLength={600}
-                  className="mt-2 w-full resize-none rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3.5 py-2.5 text-sm text-white outline-none focus:border-apex-red"
-                />
-              </div>
-              <div className="flex items-center gap-3 sm:col-span-2">
-                <button
-                  type="button"
-                  onClick={() => void saveMachine()}
-                  disabled={editBusy}
-                  className="inline-flex items-center gap-2 rounded-md bg-apex-red px-4 py-2.5 font-display text-[11px] font-bold uppercase tracking-[0.12em] text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-                >
-                  <Save className="size-3.5" />
-                  {editBusy ? "Saving…" : "Save changes"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void resetMachine()}
-                  disabled={editBusy}
-                  className="inline-flex items-center gap-2 rounded-md border border-white/15 px-4 py-2.5 font-display text-[11px] font-bold uppercase tracking-[0.12em] text-white/60 transition-colors hover:border-apex-red hover:text-apex-red disabled:opacity-50"
-                >
-                  <Undo2 className="size-3.5" />
-                  Revert to stock
-                </button>
-                <p className="hidden text-[11px] text-white/25 sm:block">
-                  <RotateCcw className="mr-1 inline size-3" /> Editing a machine
-                  overrides, not replaces, the original record — revert any time.
-                </p>
-              </div>
-            </div>
-          ) : (
-            <p className="mt-4 rounded-md border border-dashed border-apex-line bg-white/[0.02] px-4 py-6 text-center text-sm text-white/30">
-              Select a machine above to start editing. Your changes appear
-              everywhere immediately.
-            </p>
-          )}
-        </div>
-      </CollapsibleSection>
-      </div>
-
-      {/* Pages editor */}
-      <div className="mt-12 space-y-6">
         <CollapsibleSection
-          title="Page Copy"
-          icon={LayoutDashboard}
+          title="Cars Editor"
+          icon={Car}
           defaultOpen={false}
         >
-        <div className="px-5 py-5">
-          <p className="mb-4 text-sm text-apex-muted">
-            Rename or rewrite the Home and Garage page copy — changes apply
-            instantly across the site.
-          </p>
-        </div>
-        <div className="px-5 pb-5 space-y-6">
-        <PageEditor
-          page="home"
-          title="Home page"
-          description="The landing page everyone sees first — hero, featured machines, marques and closing call to action."
-          fields={HOME_FIELDS}
-          defaults={HOME_COPY}
-        />
-        <PageEditor
-          page="garage"
-          title="Garage page"
-          description="The browse archive — sidebar headings, search placeholder and empty state."
-          fields={GARAGE_FIELDS}
-          defaults={GARAGE_COPY}
-        />
-        <PageEditor
-          page="nav"
-          title="Navigation labels"
-          description="Rename every link and button in the header, mobile menu, account dropdown and footer. The site logo name is set separately under Quick UI settings."
-          fields={NAV_FIELDS}
-          defaults={NAV_COPY}
-        />
-        </div>
+          <div className="px-5 py-5">
+            <div className="mb-4 flex items-center justify-between">
+              <p className="text-sm text-white/50">
+                Edit car details (name, price, specs) without touching source code.
+                Edits are applied on top of the original data.
+              </p>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!window.confirm("Reset ALL car edits? This reverts every override.")) return;
+                  try { await resetAllCarEdits(); toast.success("All car edits reset"); } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Failed"); }
+                }}
+                className="rounded border border-white/15 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-white/60 hover:border-apex-red hover:text-apex-red"
+              >
+                Reset All
+              </button>
+            </div>
+
+            {/* Car list */}
+            <div className="max-h-[400px] space-y-1 overflow-y-auto">
+              {carsList().map((c) => {
+                const ov = carOverrides?.[c.slug];
+                const hasEdits = ov && Object.values(ov).some((v) => v != null && v !== "");
+                return (
+                  <div key={c.slug} className="flex items-center justify-between rounded-md px-3 py-2 hover:bg-white/[0.03]">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm text-white">
+                        {c.brand} {c.model} ({c.year})
+                        {hasEdits && <span className="ml-1.5 text-[9px] text-apex-red">edited</span>}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => openCarEditor(c.slug)}
+                      className="shrink-0 rounded p-1 text-white/40 hover:text-white"
+                    >
+                      <Pencil className="size-3.5" />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Inline editor modal */}
+          {editCarSlug && (
+            <div className="border-t border-apex-line px-5 py-5">
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="font-display text-xs font-bold uppercase tracking-[0.14em] text-white">
+                  Editing: {editCarSlug}
+                </h3>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try { await resetCarEdit({ slug: editCarSlug }); toast.success("Car edits reset"); setEditCarSlug(null); } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Failed"); }
+                    }}
+                    className="rounded border border-white/15 px-2 py-1 text-[10px] font-bold text-white/60 hover:text-white"
+                  >
+                    Reset
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditCarSlug(null)}
+                    className="rounded p-1 text-white/40 hover:text-white"
+                  >
+                    <X className="size-4" />
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-3">
+                {CAR_EDIT_FIELDS.map((f) => (
+                  <div key={f.key}>
+                    <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40">
+                      {f.label}
+                    </label>
+                    {f.multiline ? (
+                      <textarea
+                        value={editDraft[f.key] ?? ""}
+                        onChange={(e) => setEditDraft((d) => ({ ...d, [f.key]: e.target.value }))}
+                        rows={4}
+                        className="w-full resize-none rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3 py-2 text-sm text-white outline-none focus:border-apex-red"
+                      />
+                    ) : (
+                      <input
+                        type={f.key === "priceUSD" || f.key === "horsepower" || f.key === "topSpeedKmh" || f.key === "zeroToHundredKmh" ? "number" : "text"}
+                        value={editDraft[f.key] ?? ""}
+                        onChange={(e) => setEditDraft((d) => ({ ...d, [f.key]: e.target.value }))}
+                        placeholder={f.hint ?? ""}
+                        className="w-full rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3 py-2 text-sm text-white outline-none focus:border-apex-red"
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => void saveCarEdits()}
+                className="mt-4 rounded-md bg-apex-red px-4 py-2 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-white hover:opacity-90"
+              >
+                Save Edits
+              </button>
+            </div>
+          )}
+        </CollapsibleSection>
+      </div>
+
+      {/* ── Page Copy Editors ───────────────────────────────────────────── */}
+      <div className="mt-12">
+        <CollapsibleSection title="Page Copy" icon={Pencil} defaultOpen={false}>
+          <div className="px-5 py-5">
+            <p className="mb-4 text-sm text-white/50">
+              Override any on-page text. Leave a field blank to keep the
+              default. All changes save automatically.
+            </p>
+          </div>
+
+          {/* Home page */}
+          <div className="px-5 pb-5">
+            <PageEditor
+              page="home"
+              title="Home Page"
+              description="Hero section, CTAs, featured cars and marque headings."
+              fields={Object.keys(HOME_COPY).map((k) => ({
+                key: k,
+                label: k,
+                multiline: k.includes("Body") || k.includes("body") || k.includes("Slugs"),
+              }))}
+              defaults={HOME_COPY}
+            />
+          </div>
+
+          {/* Navigation labels */}
+          <div className="px-5 pb-5">
+            <PageEditor
+              page="nav"
+              title="Navigation Labels"
+              description="Labels shown in the navigation bar."
+              fields={Object.keys(NAV_COPY).map((k) => ({ key: k, label: k }))}
+              defaults={NAV_COPY}
+            />
+          </div>
+
+          {/* Garage page */}
+          <div className="px-5 pb-5">
+            <PageEditor
+              page="garage"
+              title="Garage / Machines Page"
+              description="Filter labels, headings, and empty states."
+              fields={Object.keys(GARAGE_COPY).map((k) => ({ key: k, label: k }))}
+              defaults={GARAGE_COPY}
+            />
+          </div>
         </CollapsibleSection>
       </div>
     </div>
