@@ -48,7 +48,7 @@ const NAV: { id: TabId; label: string; icon: LucideIcon }[] = [
   { id: "crates", label: "Crates", icon: Package },
   { id: "upgrades", label: "Upgrades", icon: Wrench },
   { id: "inventory", label: "Parts", icon: Boxes },
-  { id: "achievements", label: "Feats", icon: Trophy },
+  { id: "achievements", label: "Achievements", icon: Trophy },
   { id: "prestige", label: "Prestige", icon: Sparkles },
 ];
 

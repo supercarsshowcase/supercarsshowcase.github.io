@@ -627,7 +627,7 @@ function AchievementsPanel({ state }: { state: GameState }) {
   return (
     <div>
       <PanelHeader
-        eyebrow="Feats"
+        eyebrow="Achievements"
         title="ACHIEVEMENTS"
         hint={`${state.achievements.length}/${ACHIEVEMENTS.length} unlocked. Rewards pay out automatically.`}
       />
