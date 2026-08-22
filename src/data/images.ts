@@ -9,13 +9,13 @@ import type { Car } from "@/lib/types";
 
 const CAR_IMAGES: Record<string, string> = {
   "bugatti-veyron-16-4": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c9/Bugatti_Veyron_16.4_%E2%80%93_Frontansicht_%281%29%2C_5._April_2012%2C_D%C3%BCsseldorf.jpg/960px-Bugatti_Veyron_16.4_%E2%80%93_Frontansicht_%281%29%2C_5._April_2012%2C_D%C3%BCsseldorf.jpg",
-  "bugatti-veyron-super-sport": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c9/Bugatti_Veyron_16.4_%E2%80%93_Frontansicht_%281%29%2C_5._April_2012%2C_D%C3%BCsseldorf.jpg/960px-Bugatti_Veyron_16.4_%E2%80%93_Frontansicht_%281%29%2C_5._April_2012%2C_D%C3%BCsseldorf.jpg",
+  "bugatti-veyron-super-sport": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/2011_Bugatti_Veyron_Super_Sport.jpg/960px-2011_Bugatti_Veyron_Super_Sport.jpg",
   "bugatti-chiron": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/Bugatti_Chiron_1.jpg/960px-Bugatti_Chiron_1.jpg",
-  "bugatti-chiron-sport": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/Bugatti_Chiron_1.jpg/960px-Bugatti_Chiron_1.jpg",
-  "bugatti-chiron-super-sport-300": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/Bugatti_Chiron_1.jpg/960px-Bugatti_Chiron_1.jpg",
+  "bugatti-chiron-sport": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b4/Bugatti_Chiron_Sport_gfos25_1.jpg/960px-Bugatti_Chiron_Sport_gfos25_1.jpg",
+  "bugatti-chiron-super-sport-300": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/2022_Bugatti_Chiron_Super_Sport_WRE.jpg/960px-2022_Bugatti_Chiron_Super_Sport_WRE.jpg",
   "bugatti-divo": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/16/Bugatti_Divo%2C_GIMS_2019%2C_Le_Grand-Saconnex_%28GIMS0029%29.jpg/960px-Bugatti_Divo%2C_GIMS_2019%2C_Le_Grand-Saconnex_%28GIMS0029%29.jpg",
   "bugatti-centodieci": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/56/2022_Bugatti_Centodieci_in_Grigio_Chiaro%2C_front_left.jpg/960px-2022_Bugatti_Centodieci_in_Grigio_Chiaro%2C_front_left.jpg",
-  "bugatti-la-voiture-noire": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/Bugatti_Chiron_1.jpg/960px-Bugatti_Chiron_1.jpg",
+  "bugatti-la-voiture-noire": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Bugatti_La_Voiture_Noire_%2850263623691%29.jpg/960px-Bugatti_La_Voiture_Noire_%2850263623691%29.jpg",
   "bugatti-bolide": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/2024_Bugatti_Bolide_4.jpg/960px-2024_Bugatti_Bolide_4.jpg",
   "bugatti-mistral": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/00/Bugatti_Mistral_2.jpg/960px-Bugatti_Mistral_2.jpg",
   "bugatti-tourbillon": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/51/Bugatti_Tourbillon.jpg/960px-Bugatti_Tourbillon.jpg",
@@ -103,13 +103,13 @@ const CAR_IMAGES: Record<string, string> = {
   "aston-martin-dbx707": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/2021_Aston_Martin_DBX_in_Midnight_Blue%2C_front_left.jpg/960px-2021_Aston_Martin_DBX_in_Midnight_Blue%2C_front_left.jpg",
   "aston-martin-vanquish": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cf/Aston_Martin_Vanquish_S_-_prawy_prz%C3%B3d_%28MSP17%29.jpg/960px-Aston_Martin_Vanquish_S_-_prawy_prz%C3%B3d_%28MSP17%29.jpg",
   "koenigsegg-ccx": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/Koenigsegg_CCX_-_Flickr_-_Alexandre_Pr%C3%A9vot_%2811%29.jpg/960px-Koenigsegg_CCX_-_Flickr_-_Alexandre_Pr%C3%A9vot_%2811%29.jpg",
-  "koenigsegg-agera-rs": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0a/2015_Koenigsegg_Agera_N_%2819886243212%29.jpg/960px-2015_Koenigsegg_Agera_N_%2819886243212%29.jpg",
+  "koenigsegg-agera-rs": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/65/Koenigsegg_Agera_RST_2.jpg/960px-Koenigsegg_Agera_RST_2.jpg",
   "koenigsegg-regera": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b6/Regera_%28light_gradient%29.png/960px-Regera_%28light_gradient%29.png",
   "koenigsegg-jesko": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/GIMS_2019%2C_Le_Grand-Saconnex_%28GIMS0833%29.jpg/960px-GIMS_2019%2C_Le_Grand-Saconnex_%28GIMS0833%29.jpg",
-  "koenigsegg-jesko-absolut": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/GIMS_2019%2C_Le_Grand-Saconnex_%28GIMS0833%29.jpg/960px-GIMS_2019%2C_Le_Grand-Saconnex_%28GIMS0833%29.jpg",
+  "koenigsegg-jesko-absolut": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d5/Koenigsegg%2C_Auto_2024%2C_Zurich_%28PANA0940%29.jpg/960px-Koenigsegg%2C_Auto_2024%2C_Zurich_%28PANA0940%29.jpg",
   "koenigsegg-gemera": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/Koenigsegg_Gemera.jpg/960px-Koenigsegg_Gemera.jpg",
   "koenigsegg-cc850": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/50/2022_Koenigsegg_CC850.jpg/960px-2022_Koenigsegg_CC850.jpg",
-  "koenigsegg-one-1": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0a/2015_Koenigsegg_Agera_N_%2819886243212%29.jpg/960px-2015_Koenigsegg_Agera_N_%2819886243212%29.jpg",
+  "koenigsegg-one-1": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b1/Koenigsegg_One_1_Engine%2C_GIMS_2014%28Ank_Kumar%29_02.jpg/960px-Koenigsegg_One_1_Engine%2C_GIMS_2014%28Ank_Kumar%29_02.jpg",
   "pagani-zonda-c12": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/42/Pagani_Zonda_C12_%27chassis_001%27_Genf_2019_1Y7A5539.jpg/960px-Pagani_Zonda_C12_%27chassis_001%27_Genf_2019_1Y7A5539.jpg",
   "pagani-zonda-cinque": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/42/Pagani_Zonda_C12_%27chassis_001%27_Genf_2019_1Y7A5539.jpg/960px-Pagani_Zonda_C12_%27chassis_001%27_Genf_2019_1Y7A5539.jpg",
   "pagani-huayra": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/Pagani%2C_GIMS_2019%2C_Le_Grand-Saconnex_%28GIMS0023%29.jpg/960px-Pagani%2C_GIMS_2019%2C_Le_Grand-Saconnex_%28GIMS0023%29.jpg",
@@ -124,7 +124,7 @@ const CAR_IMAGES: Record<string, string> = {
   "rolls-royce-wraith": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/35/2019_Rolls-Royce_Wraith_V12_Automatic_6.6.jpg/960px-2019_Rolls-Royce_Wraith_V12_Automatic_6.6.jpg",
   "rolls-royce-dawn": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/32/2019_Rolls-Royce_Dawn_V12_Automatic_6.6.jpg/960px-2019_Rolls-Royce_Dawn_V12_Automatic_6.6.jpg",
   "rolls-royce-boat-tail": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/37/Rolls-Royce_Boat_Tail_side.png/960px-Rolls-Royce_Boat_Tail_side.png",
-  "rolls-royce-black-badge-ghost": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/2022_Rolls-Royce_Ghost_Black_Badge_in_Arctic_White%2C_front_left.jpg/960px-2022_Rolls-Royce_Ghost_Black_Badge_in_Arctic_White%2C_front_left.jpg",
+  "rolls-royce-black-badge-ghost": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/84/Rolls-Royce_Ghost_Black_Badge_I_Series_II_Black_%2814%29.jpg/960px-Rolls-Royce_Ghost_Black_Badge_I_Series_II_Black_%2814%29.jpg",
   "bentley-continental-gt": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/Bentley_Continental_GT_First_Edition_%2849919050697%29_%28cropped%29_%28cropped%29.jpg/960px-Bentley_Continental_GT_First_Edition_%2849919050697%29_%28cropped%29_%28cropped%29.jpg",
   "bentley-continental-gt-speed": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/Bentley_Continental_GT_First_Edition_%2849919050697%29_%28cropped%29_%28cropped%29.jpg/960px-Bentley_Continental_GT_First_Edition_%2849919050697%29_%28cropped%29_%28cropped%29.jpg",
   "bentley-flying-spur": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/Bentley_Flying_Spur_W12_Speed_%282019%29_1X7A1636.jpg/960px-Bentley_Flying_Spur_W12_Speed_%282019%29_1X7A1636.jpg",
@@ -161,7 +161,7 @@ const CAR_IMAGES: Record<string, string> = {
   "lotus-3-eleven": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ef/Lotus_3-Eleven_1Y7A6172.jpg/960px-Lotus_3-Eleven_1Y7A6172.jpg",
   "rimac-nevera": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/22/Rimac_Nevera.jpg/960px-Rimac_Nevera.jpg",
   "rimac-concept-one": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b6/2016-03-01_Geneva_Motor_Show_0977_%28cropped%29.JPG/960px-2016-03-01_Geneva_Motor_Show_0977_%28cropped%29.JPG",
-  "rimac-nevera-r": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/22/Rimac_Nevera.jpg/960px-Rimac_Nevera.jpg",
+  "rimac-nevera-r": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/Rimac_Nevera_R_Auto_Zuerich_2024_DSC_6340.jpg/960px-Rimac_Nevera_R_Auto_Zuerich_2024_DSC_6340.jpg",
   "hennessey-venom-gt": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Hennessey_Venom_GT_%2816040233465%29.jpg/960px-Hennessey_Venom_GT_%2816040233465%29.jpg",
   "hennessey-venom-f5": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/2022_Hennessey_Venom_F5_Roadster_6.6_Front.jpg/960px-2022_Hennessey_Venom_F5_Roadster_6.6_Front.jpg",
   "hennessey-venom-f5-revolution": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/2022_Hennessey_Venom_F5_Roadster_6.6_Front.jpg/960px-2022_Hennessey_Venom_F5_Roadster_6.6_Front.jpg",
@@ -221,20 +221,59 @@ const GALLERY_VIEWS: { key: string; label: string }[] = [
   { key: "cockpit", label: "Cockpit" },
 ];
 
+/** Per-brand gallery photos for views 2-4 (rear, side, cockpit). */
+const BRAND_GALLERY: Record<string, { rear: string; side: string; cockpit: string }> = {
+  Bugatti: {
+    rear: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/Bugatti_Chiron%2C_IAA_2017%2C_Frankfurt_%281Y7A2857%29.jpg/960px-Bugatti_Chiron%2C_IAA_2017%2C_Frankfurt_%281Y7A2857%29.jpg",
+    side: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Bugatti_La_Voiture_Noire_%2850263623691%29.jpg/960px-Bugatti_La_Voiture_Noire_%2850263623691%29.jpg",
+    cockpit: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9d/2018_Bugatti_Chiron_in_Exposed_Blue_Carbon%2C_front_right.jpg/960px-2018_Bugatti_Chiron_in_Exposed_Blue_Carbon%2C_front_right.jpg",
+  },
+  Ferrari: {
+    rear: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f7/Ferrari-Monaco-4071021.jpg/960px-Ferrari-Monaco-4071021.jpg",
+    side: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/LaFerrari_in_Beverly_Hills_%2814563979888%29.jpg/960px-LaFerrari_in_Beverly_Hills_%2814563979888%29.jpg",
+    cockpit: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/Ferrari_488_3.9_Pista_Spider_interior.jpg/960px-Ferrari_488_3.9_Pista_Spider_interior.jpg",
+  },
+  Lamborghini: {
+    rear: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Lamborghini_Hurac%C3%A1n_Tecnica_1X7A7432.jpg/960px-Lamborghini_Hurac%C3%A1n_Tecnica_1X7A7432.jpg",
+    side: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/da/Lamborghini_Aventador_SVJ_Roadster_IMG_9580.jpg/960px-Lamborghini_Aventador_SVJ_Roadster_IMG_9580.jpg",
+    cockpit: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/81/Lamborghini_Superleggera-20180708.jpg/960px-Lamborghini_Superleggera-20180708.jpg",
+  },
+  Porsche: {
+    rear: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Porsche_911_Carrera_RS%2C_Bj._1972-73_%282016-07-02_01_Sp%29.JPG/960px-Porsche_911_Carrera_RS%2C_Bj._1972-73_%282016-07-02_01_Sp%29.JPG",
+    side: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dc/2020_Porsche_Taycan_4S_79kWh_Front.jpg/960px-2020_Porsche_Taycan_4S_79kWh_Front.jpg",
+    cockpit: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/df/Porsche_%22911%22_GT3_interior_cockpit_%286268302441%29.jpg/960px-Porsche_%22911%22_GT3_interior_cockpit_%286268302441%29.jpg",
+  },
+  McLaren: {
+    rear: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/McLaren_720S_Orange_Rear_SCD_24.jpg/960px-McLaren_720S_Orange_Rear_SCD_24.jpg",
+    side: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/79/McLaren_720S_%271001HP_Super_Hyper%27_%282018%29_%2855311108634%29.jpg/960px-McLaren_720S_%271001HP_Super_Hyper%27_%282018%29_%2855311108634%29.jpg",
+    cockpit: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/63/2021_McLaren_Artura_%281%29.jpg/960px-2021_McLaren_Artura_%281%29.jpg",
+  },
+  "Mercedes-AMG": {
+    rear: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/Mercedes-AMG_GT_Black_Series_IMG_0331.jpg/960px-Mercedes-AMG_GT_Black_Series_IMG_0331.jpg",
+    side: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2e/Mercedes-Benz_SLS_AMG_%28C_197%29_%E2%80%93_Frontansicht_ge%C3%B6ffnet%2C_10._August_2011%2C_D%C3%BCsseldorf.jpg/960px-Mercedes-Benz_SLS_AMG_%28C_197%29_%E2%80%93_Frontansicht_ge%C3%B6ffnet%2C_10._August_2011%2C_D%C3%BCsseldorf.jpg",
+    cockpit: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/52/Mercedes-Benz_C_200_Avantgarde_%28W_205%29_%E2%80%93_Frontansicht%2C_26._April_2014%2C_D%C3%BCsseldorf.jpg/960px-Mercedes-Benz_C_200_Avantgarde_%28W_205%29_%E2%80%93_Frontansicht%2C_26._April_2014%2C_D%C3%BCsseldorf.jpg",
+  },
+};
+
 /**
- * Five distinct pictures per car. The primary view uses a real photo and the
- * second view uses the marque's real photo; the remaining views are
- * deterministic generated scenes so the gallery is always full and always
- * unique to that car.
+ * Five distinct pictures per car. The primary view uses the car's own real photo,
+ * the second uses the marque archive photo, and the remaining three pull
+ * real rear / side / cockpit photos for the brand.
  */
 export function getCarGallery(car: Car): GalleryImage[] {
   const carSrc = CAR_IMAGES[car.slug] ?? "";
   const brandSrc = BRAND_IMAGES[car.brand] ?? "";
+  const gallery = BRAND_GALLERY[car.brand];
 
   return GALLERY_VIEWS.map((view, index) => {
     let src = "";
     if (index === 0) src = carSrc;
     if (index === 1) src = brandSrc !== carSrc ? brandSrc : "";
+    if (gallery) {
+      if (index === 2) src = gallery.rear;
+      if (index === 3) src = gallery.side;
+      if (index === 4) src = gallery.cockpit;
+    }
     return {
       src,
       label: view.label,
