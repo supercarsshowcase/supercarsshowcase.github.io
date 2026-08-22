@@ -19,7 +19,6 @@ import {
   Settings2,
   Sparkles,
   Trash2,
-  Trophy,
   Volume2,
   Waves,
   Wind,
@@ -34,7 +33,6 @@ import {
   DEALERS,
   GAME_CAR_MAP,
   PARTS,
-  RACES,
   RARITY_META,
   STARTER_ID,
   UPGRADES,
@@ -49,7 +47,6 @@ import {
   carValue,
   rollCrate,
   rollDealerStock,
-  rollRace,
   upgradeCost,
   type Action,
 } from "@/game/engine";
@@ -100,7 +97,6 @@ export function GamePanels({
   if (tab === "dealer") return <DealerPanel state={state} dispatch={dispatch} />;
   if (tab === "crates") return <CratesPanel state={state} dispatch={dispatch} />;
   if (tab === "upgrades") return <UpgradesPanel state={state} dispatch={dispatch} />;
-  if (tab === "racing") return <RacingPanel state={state} dispatch={dispatch} />;
   if (tab === "inventory") return <InventoryPanel state={state} dispatch={dispatch} />;
   if (tab === "achievements") return <AchievementsPanel state={state} />;
   if (tab === "prestige") return <PrestigePanel state={state} dispatch={dispatch} />;
@@ -171,7 +167,7 @@ function GaragePanel({ state, dispatch }: { state: GameState; dispatch: React.Di
               >
                 <div className="relative h-36 overflow-hidden bg-[#0a0a0b]">
                   <SmartImage
-                    src={gameCarImage(c.gallerySlug)}
+                    src={gameCarImage(c)}
                     alt={c.name}
                     seed={c.id}
                     className="h-full w-full object-cover opacity-90 transition-transform duration-500 group-hover:scale-105"
@@ -316,7 +312,7 @@ function DealerPanel({ state, dispatch }: { state: GameState; dispatch: React.Di
                       >
                         <div className="relative h-20 bg-[#0a0a0b]">
                           <SmartImage
-                            src={gameCarImage(c.gallerySlug)}
+                            src={gameCarImage(c)}
                             alt={c.name}
                             seed={carId}
                             className="h-full w-full object-cover"
@@ -483,7 +479,7 @@ function CrateCarReveal({ carId }: { carId: string }) {
         style={{ borderColor: meta.color, boxShadow: `0 0 40px ${meta.color}33` }}
       >
         <SmartImage
-          src={gameCarImage(c.gallerySlug)}
+          src={gameCarImage(c)}
           alt={c.name}
           seed={carId}
           className="h-full w-full object-cover"
@@ -571,71 +567,6 @@ function UpgradesPanel({ state, dispatch }: { state: GameState; dispatch: React.
   );
 }
 
-// ── Racing ────────────────────────────────────────────────────────────────────
-
-function RacingPanel({ state, dispatch }: { state: GameState; dispatch: React.Dispatch<Action> }) {
-  const level = levelFrom(state);
-  const power = carPower(state, state.activeCarId);
-  const [last, setLast] = useState<string | null>(null);
-
-  return (
-    <div>
-      <PanelHeader
-        eyebrow="Competition"
-        title="RACE & EARN"
-        hint={`Your active car: ${fmtNum(power)} hp. Bigger power gap = higher win chance.`}
-      />
-      {last && (
-        <div className="mb-4 rounded-lg border border-apex-red/40 bg-apex-red/10 px-4 py-2.5 text-sm text-white/80">
-          {last}
-        </div>
-      )}
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-        {RACES.map((race) => {
-          const locked = level < race.unlockLevel;
-          const chance = Math.min(0.97, Math.max(0.05, power / (power + race.reqPower * 0.9)));
-          return (
-            <div
-              key={race.id}
-              className={cn(
-                "flex items-center justify-between gap-3 rounded-xl border bg-apex-panel p-4",
-                locked ? "border-white/10 opacity-50" : "border-apex-line",
-              )}
-            >
-              <div>
-                <div className="flex items-center gap-2">
-                  <Trophy className="size-4 text-apex-red" />
-                  <h4 className="font-display text-base font-black text-white">{race.name}</h4>
-                </div>
-                <p className="mt-1 text-[11px] text-white/40">
-                  {fmtMoney(race.rewardCash)} · +{race.rewardRep} rep · ~{Math.round(chance * 100)}% win
-                </p>
-              </div>
-              <button
-                type="button"
-                disabled={locked}
-                onClick={() => {
-                  const r = rollRace(state, race.id);
-                  dispatch({ type: "ENTER_RACE", raceId: race.id, result: r });
-                  const part = r.partId ? ` + part: ${PARTS.find((p) => p.id === r.partId)?.name ?? ""}` : "";
-                  setLast(
-                    r.won
-                      ? `Won ${race.name} · +${fmtMoney(r.cash)} · +${r.rep} rep${part}`
-                      : `Lost ${race.name} · consolation +${fmtMoney(r.cash)}`,
-                  );
-                }}
-                className="rounded-md border border-apex-red/50 bg-apex-red/10 px-3 py-1.5 font-display text-[10px] font-bold uppercase tracking-[0.14em] text-white transition-colors hover:bg-apex-red disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-white/30"
-              >
-                {locked ? `Level ${race.unlockLevel}` : "Race"}
-              </button>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 // ── Inventory / parts ─────────────────────────────────────────────────────────
 
 function InventoryPanel({ state, dispatch }: { state: GameState; dispatch: React.Dispatch<Action> }) {
@@ -649,7 +580,7 @@ function InventoryPanel({ state, dispatch }: { state: GameState; dispatch: React
       />
       {held.length === 0 ? (
         <p className="text-sm text-white/40">
-          Empty. Open crates or win races to collect performance parts.
+          Empty. Open crates to collect performance parts.
         </p>
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">

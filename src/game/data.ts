@@ -1,12 +1,12 @@
 import { carsList } from "@/data/cars";
 import { getCarImage } from "@/data/images";
+import type { Car } from "@/lib/types";
 import type {
   AchievementDef,
   CrateDef,
   DealerDef,
   GameCarDef,
   PartDef,
-  RaceDef,
   Rarity,
   RarityMeta,
   StatKey,
@@ -409,8 +409,8 @@ export const CRATES: CrateDef[] = [
     desc: "Unclaimed cargo from across the sea.",
     weights: { common: 10, uncommon: 40, rare: 32, epic: 14, legendary: 4 },
     maxTier: 3,
-    cashMin: 500,
-    cashMax: 5000,
+    cashMin: 400,
+    cashMax: 4200,
   },
   {
     id: "dealer",
@@ -421,8 +421,8 @@ export const CRATES: CrateDef[] = [
     desc: "Dealer plates included. No questions asked.",
     weights: { rare: 10, epic: 46, legendary: 34, exotic: 10 },
     maxTier: 4,
-    cashMin: 3000,
-    cashMax: 30000,
+    cashMin: 2000,
+    cashMax: 22000,
   },
   {
     id: "exotic",
@@ -433,8 +433,8 @@ export const CRATES: CrateDef[] = [
     desc: "Carbon, titanium and attitude.",
     weights: { epic: 12, legendary: 48, exotic: 34, hyper: 6 },
     maxTier: 6,
-    cashMin: 20000,
-    cashMax: 250000,
+    cashMin: 15000,
+    cashMax: 180000,
   },
   {
     id: "mythic",
@@ -445,8 +445,8 @@ export const CRATES: CrateDef[] = [
     desc: "The collection agency keeps asking.",
     weights: { legendary: 8, exotic: 32, hyper: 44, mythic: 15, ultimate: 1 },
     maxTier: 8,
-    cashMin: 300000,
-    cashMax: 3000000,
+    cashMin: 250000,
+    cashMax: 2200000,
   },
   {
     id: "vault",
@@ -457,31 +457,13 @@ export const CRATES: CrateDef[] = [
     desc: "One of one. Maybe two.",
     weights: { hyper: 20, mythic: 58, ultimate: 22 },
     maxTier: 10,
-    cashMin: 5000000,
-    cashMax: 60000000,
+    cashMin: 4000000,
+    cashMax: 40000000,
   },
 ];
 
 export const CRATE_MAP: Record<string, CrateDef> = Object.fromEntries(
   CRATES.map((cr) => [cr.id, cr]),
-);
-
-// ── Races ─────────────────────────────────────────────────────────────────────
-
-export const RACES: RaceDef[] = [
-  { id: "street-dash", name: "Street Dash", unlockLevel: 1, reqPower: 90, rewardCash: 800, rewardRep: 5, partChance: 0.2 },
-  { id: "drag-night", name: "Drag Night", unlockLevel: 4, reqPower: 210, rewardCash: 3500, rewardRep: 15, partChance: 0.3 },
-  { id: "track-day", name: "Track Day", unlockLevel: 10, reqPower: 520, rewardCash: 14000, rewardRep: 40, partChance: 0.35 },
-  { id: "time-attack", name: "Time Attack", unlockLevel: 18, reqPower: 950, rewardCash: 45000, rewardRep: 90, partChance: 0.4 },
-  { id: "championship", name: "City Championship", unlockLevel: 30, reqPower: 1650, rewardCash: 160000, rewardRep: 220, partChance: 0.45 },
-  { id: "grand-prix", name: "Grand Prix Sprint", unlockLevel: 45, reqPower: 2700, rewardCash: 550000, rewardRep: 500, partChance: 0.5 },
-  { id: "endurance", name: "24h Endurance", unlockLevel: 70, reqPower: 4100, rewardCash: 2200000, rewardRep: 1200, partChance: 0.6 },
-  { id: "hyper-finale", name: "Hyper Finale", unlockLevel: 100, reqPower: 6600, rewardCash: 12000000, rewardRep: 4000, partChance: 0.7 },
-  { id: "mythic-showdown", name: "Mythic Showdown", unlockLevel: 140, reqPower: 10500, rewardCash: 65000000, rewardRep: 12000, partChance: 0.8 },
-];
-
-export const RACE_MAP: Record<string, RaceDef> = Object.fromEntries(
-  RACES.map((r) => [r.id, r]),
 );
 
 // ── Achievements ──────────────────────────────────────────────────────────────
@@ -578,23 +560,32 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     rewardRep: 2000,
   },
   {
-    id: "win-5",
-    name: "First Blood",
-    desc: "Win 5 races.",
-    check: (s) => s.racesWon >= 5,
+    id: "upgrades-10",
+    name: "Getting Serious",
+    desc: "Install 10 upgrade stages on one car.",
+    check: (s) =>
+      Object.values(s.ownedCars).some(
+        (o) => Object.values(o.upgrades).reduce((a, b) => a + b, 0) >= 10,
+      ),
   },
   {
-    id: "win-25",
-    name: "Seasoned Racer",
-    desc: "Win 25 races.",
-    check: (s) => s.racesWon >= 25,
+    id: "upgrades-30",
+    name: "Tuning Pro",
+    desc: "Install 30 upgrade stages on one car.",
+    check: (s) =>
+      Object.values(s.ownedCars).some(
+        (o) => Object.values(o.upgrades).reduce((a, b) => a + b, 0) >= 30,
+      ),
     rewardCash: 1_000_000,
   },
   {
-    id: "win-100",
-    name: "Champion",
-    desc: "Win 100 races.",
-    check: (s) => s.racesWon >= 100,
+    id: "upgrades-60",
+    name: "Workshop Legend",
+    desc: "Install 60 upgrade stages on one car.",
+    check: (s) =>
+      Object.values(s.ownedCars).some(
+        (o) => Object.values(o.upgrades).reduce((a, b) => a + b, 0) >= 60,
+      ),
     rewardRep: 5000,
   },
   {
@@ -688,9 +679,45 @@ export function fmtNum(n: number): string {
   return Math.round(n).toLocaleString();
 }
 
-/** Real Wikimedia photo for a gallery slug, or "" to use the generated scene. */
-export function gameCarImage(gallerySlug: string): string {
-  if (!gallerySlug) return "";
-  const car = carsList().find((c) => c.slug === gallerySlug);
-  return car ? getCarImage(car) : "";
+/** Manual image overrides for game cars whose archive twin uses a different slug. */
+const GAME_IMAGE_ALIASES: Record<string, string> = {
+  "ferrari-458-12": "ferrari-488-gtb",
+  "mclaren-540c-15": "mclaren-600lt",
+  "911-carrera-97": "porsche-911-gt3",
+  "imola-20": "pagani-huayra",
+  "veneno-14": "lamborghini-aventador-svj",
+};
+
+const normTokens = (s: string): string[] =>
+  s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim().split(/\s+/).filter(Boolean);
+
+/**
+ * Real Wikimedia photo for a game car, or "" to use the generated scene.
+ * Resolves exact slug → manual alias → best brand+model fuzzy match.
+ */
+export function gameCarImage(def: GameCarDef): string {
+  const archive = carsList();
+  const targetSlug = def.gallerySlug || GAME_IMAGE_ALIASES[def.id];
+  if (targetSlug) {
+    const exact = archive.find((c) => c.slug === targetSlug);
+    if (exact) {
+      const img = getCarImage(exact);
+      if (img) return img;
+    }
+  }
+  const brand = normTokens(def.brand).join(" ");
+  const defTokens = normTokens(def.name).filter((t) => t.length >= 2);
+  let best: { car: Car; score: number } | null = null;
+  for (const c of archive) {
+    const cBrand = normTokens(c.brand).join(" ");
+    if (!(cBrand.includes(brand) || brand.includes(cBrand))) continue;
+    const cTokens = normTokens(c.model);
+    let score = 0;
+    for (const t of defTokens) {
+      if (cTokens.includes(t)) score += 10;
+    }
+    if (Math.abs(c.year - def.year) <= 3) score += 5;
+    if (score >= 10 && (!best || score > best.score)) best = { car: c, score };
+  }
+  return best ? getCarImage(best.car) : "";
 }

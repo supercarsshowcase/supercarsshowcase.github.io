@@ -43,7 +43,6 @@ const TABS = [
   { id: "dealer", label: "Dealers" },
   { id: "crates", label: "Crates" },
   { id: "upgrades", label: "Upgrades" },
-  { id: "racing", label: "Racing" },
   { id: "inventory", label: "Parts" },
   { id: "achievements", label: "Feats" },
   { id: "prestige", label: "Prestige" },
@@ -244,7 +243,7 @@ export function GameMain({
             className="relative mt-4 w-full max-w-2xl"
           >
             <SmartImage
-              src={gameCarImage(active.gallerySlug)}
+              src={gameCarImage(active)}
               alt={active.name}
               className="mx-auto w-full max-h-[260px] object-contain drop-shadow-[0_20px_60px_rgba(0,0,0,0.8)]"
             />

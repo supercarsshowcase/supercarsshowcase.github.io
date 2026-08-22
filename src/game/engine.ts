@@ -5,20 +5,13 @@ import {
   GAME_CAR_MAP,
   PARTS,
   PART_MAP,
-  RACE_MAP,
   STARTER_ID,
   SECRET_CAR_ID,
   UPGRADE_MAP,
   levelFrom,
   rarityIndex,
 } from "./data";
-import type {
-  CrateResult,
-  DealerDef,
-  GameState,
-  RaceResult,
-  Rarity,
-} from "./types";
+import type { CrateResult, DealerDef, GameState, Rarity } from "./types";
 
 const SAVE_KEY = "supercars.game.v1";
 const STORAGE_VERSION = 1;
@@ -57,7 +50,6 @@ export function initialGameState(): GameState {
     ownedCars: { [STARTER_ID]: { upgrades: {} } },
     inventory: {},
     cratesOpened: 0,
-    racesWon: 0,
     totalClicks: 0,
     totalEarned: 0,
     achievements: [],
@@ -109,7 +101,7 @@ export function carClickValue(state: GameState, carId: string): number {
   const cond = conditionOf(state, carId);
   const condMult = 0.5 + 0.5 * cond;
   const mults = carUpgradeMults(state, carId);
-  return Math.max(1, Math.round(def.value * 0.002 * (1 + mults.clickMult) * condMult * clickMultiplier(state)));
+  return Math.max(1, Math.round(def.value * 0.0012 * (1 + mults.clickMult) * condMult * clickMultiplier(state)));
 }
 
 export function carPower(state: GameState, carId: string): number {
@@ -172,7 +164,7 @@ export function clickValue(state: GameState): number {
   const cond = conditionOf(state, state.activeCarId);
   const condMult = 0.5 + 0.5 * cond;
   const mults = carUpgradeMults(state, state.activeCarId);
-  const base = def.value * 0.002;
+  const base = def.value * 0.0012;
   return Math.max(1, Math.round(base * (1 + mults.clickMult) * condMult * clickMultiplier(state)));
 }
 
@@ -184,7 +176,7 @@ export function passivePerSec(state: GameState): number {
     const cond = conditionOf(state, carId);
     const condMult = 0.5 + 0.5 * cond;
     const mults = carUpgradeMults(state, carId);
-    base += def.value * 0.00012 * (1 + mults.passiveMult) * condMult;
+    base += def.value * 0.00005 * (1 + mults.passiveMult) * condMult;
   }
   return base * passiveMultiplier(state);
 }
@@ -195,7 +187,7 @@ export function upgradeCost(state: GameState, carId: string, upgradeId: string):
   if (!def || !up) return Infinity;
   const stage = state.ownedCars[carId]?.upgrades[upgradeId] ?? 0;
   if (stage >= up.stages.length) return Infinity;
-  const tier = Math.min(2_000_000, Math.max(1, Math.pow(def.value / 10_000, 0.62)));
+  const tier = Math.min(2_000_000, Math.max(1, Math.pow(def.value / 10_000, 0.72)));
   return Math.max(1, Math.round(up.stages[stage].cost * tier));
 }
 
@@ -217,12 +209,12 @@ function weightedPick<T>(entries: { value: T; weight: number }[]): T | undefined
 }
 
 const CRATE_CAR_CHANCE: Record<string, number> = {
-  scrapyard: 0.12,
-  import: 0.18,
-  dealer: 0.25,
-  exotic: 0.3,
-  mythic: 0.35,
-  vault: 0.45,
+  scrapyard: 0.05,
+  import: 0.09,
+  dealer: 0.12,
+  exotic: 0.16,
+  mythic: 0.2,
+  vault: 0.28,
 };
 
 export function rollCrate(state: GameState, crateId: string): CrateResult {
@@ -250,26 +242,6 @@ export function rollCrate(state: GameState, crateId: string): CrateResult {
 
   const cash = Math.round(crate.cashMin + Math.random() * (crate.cashMax - crate.cashMin));
   return { kind: "cash", cash };
-}
-
-export function rollRace(state: GameState, raceId: string): RaceResult {
-  const race = RACE_MAP[raceId];
-  if (!race) return { won: false, cash: 0, rep: 0 };
-  const power = carPower(state, state.activeCarId);
-  const chance = Math.min(0.97, Math.max(0.05, power / (power + race.reqPower * 0.9)));
-  const won = Math.random() < chance;
-  const variance = 0.8 + Math.random() * 0.6;
-  let partId: string | undefined;
-  if (Math.random() < race.partChance) {
-    const pool = PARTS.filter((p) => rarityIndex(p.rarity) <= rarityIndex(won ? "exotic" : "rare"));
-    partId = pool.length ? pool[Math.floor(Math.random() * pool.length)].id : undefined;
-  }
-  return {
-    won,
-    cash: won ? Math.round(race.rewardCash * variance) : Math.round(race.rewardCash * 0.12),
-    rep: won ? race.rewardRep : Math.round(race.rewardRep * 0.15),
-    partId,
-  };
 }
 
 // ── Daily reward ──────────────────────────────────────────────────────────────
@@ -303,7 +275,6 @@ export type Action =
   | { type: "BUY_UPGRADE"; upgradeId: string }
   | { type: "OPEN_CRATE"; crateId: string; result: CrateResult }
   | { type: "SELL_PART"; partId: string }
-  | { type: "ENTER_RACE"; raceId: string; result: RaceResult }
   | { type: "CLAIM_DAILY"; reward: number }
   | { type: "REFRESH_DEALER"; dealerId: string; stock: string[]; refreshAt: number; cost: number }
   | { type: "PRESTIGE" }
@@ -381,7 +352,7 @@ export function gameReducer(state: GameState, action: Action): GameState {
     case "SELL_CAR": {
       if (!state.ownedCars[action.id]) return state;
       if (Object.keys(state.ownedCars).length <= 1) return state;
-      const gain = Math.round(carValue(state, action.id) * 0.6);
+      const gain = Math.round(carValue(state, action.id) * 0.45);
       const ownedCars = { ...state.ownedCars };
       delete ownedCars[action.id];
       const activeCarId =
@@ -421,7 +392,7 @@ export function gameReducer(state: GameState, action: Action): GameState {
       if (r.kind === "car" && r.carId) {
         const def = GAME_CAR_MAP[r.carId];
         if (def && ownedCars[r.carId]) {
-          cash += Math.round(def.value * 0.4);
+          cash += Math.round(def.value * 0.3);
         } else if (def) {
           ownedCars = { ...ownedCars, [r.carId]: { upgrades: {} } };
         }
@@ -446,22 +417,6 @@ export function gameReducer(state: GameState, action: Action): GameState {
       if (count === 1) delete inventory[action.partId];
       else inventory[action.partId] = count - 1;
       return { ...state, inventory, cash: state.cash + (def?.value ?? 0) };
-    }
-    case "ENTER_RACE": {
-      const race = RACE_MAP[action.raceId];
-      if (!race) return state;
-      const inventory = { ...state.inventory };
-      if (action.result.partId) {
-        inventory[action.result.partId] = (inventory[action.result.partId] ?? 0) + 1;
-      }
-      return applyAchievements({
-        ...state,
-        cash: state.cash + action.result.cash,
-        reputation: state.reputation + action.result.rep,
-        racesWon: state.racesWon + (action.result.won ? 1 : 0),
-        inventory,
-        lastTick: Date.now(),
-      });
     }
     case "CLAIM_DAILY": {
       const now = new Date();

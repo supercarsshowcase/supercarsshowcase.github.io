@@ -83,17 +83,6 @@ export interface CrateDef {
   cashMax: number;
 }
 
-export interface RaceDef {
-  id: string;
-  name: string;
-  unlockLevel: number;
-  /** Power needed for ~50% win; player power = hp * (1 + hpMult). */
-  reqPower: number;
-  rewardCash: number;
-  rewardRep: number;
-  partChance: number;
-}
-
 export interface AchievementDef {
   id: string;
   name: string;
@@ -126,7 +115,6 @@ export interface GameState {
   ownedCars: Record<string, OwnedCar>;
   inventory: Record<string, number>;
   cratesOpened: number;
-  racesWon: number;
   totalClicks: number;
   totalEarned: number;
   achievements: string[];
@@ -142,11 +130,4 @@ export interface CrateResult {
   carId?: string;
   partId?: string;
   cash?: number;
-}
-
-export interface RaceResult {
-  won: boolean;
-  cash: number;
-  rep: number;
-  partId?: string;
 }
