@@ -18,8 +18,8 @@ const STORAGE_VERSION = 1;
 
 /** The Lucky Spin wheel is free once every 15 minutes. */
 export const SPIN_COOLDOWN_MS = 15 * 60_000;
-/** Chance the wheel lands on a supercar (1%). */
-export const SPIN_CAR_CHANCE = 0.01;
+/** Chance the wheel lands on a supercar (0.3%). */
+export const SPIN_CAR_CHANCE = 0.003;
 
 // ── Initial state ─────────────────────────────────────────────────────────────
 
@@ -168,7 +168,7 @@ export function clickValue(state: GameState): number {
   const cond = conditionOf(state, state.activeCarId);
   const condMult = 0.5 + 0.5 * cond;
   const mults = carUpgradeMults(state, state.activeCarId);
-  const base = def.value * 0.0008;
+  const base = def.value * 0.003;
   return Math.max(1, Math.round(base * (1 + mults.clickMult) * condMult * clickMultiplier(state)));
 }
 
@@ -213,12 +213,12 @@ function weightedPick<T>(entries: { value: T; weight: number }[]): T | undefined
 }
 
 const CRATE_CAR_CHANCE: Record<string, number> = {
-  scrapyard: 0.03,
-  import: 0.06,
-  dealer: 0.08,
-  exotic: 0.10,
-  mythic: 0.12,
-  vault: 0.18,
+  scrapyard: 0.01,
+  import: 0.02,
+  dealer: 0.04,
+  exotic: 0.06,
+  mythic: 0.08,
+  vault: 0.12,
 };
 
 export function rollCrate(state: GameState, crateId: string): CrateResult {
