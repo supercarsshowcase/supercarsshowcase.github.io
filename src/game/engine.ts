@@ -11,7 +11,7 @@ import {
   levelFrom,
   rarityIndex,
 } from "./data";
-import type { CrateResult, DealerDef, GameState, Rarity } from "./types";
+import type { CrateResult, DealerDef, GameState } from "./types";
 
 const SAVE_KEY = "supercars.game.v1";
 const STORAGE_VERSION = 1;
@@ -93,15 +93,6 @@ export function carValue(state: GameState, carId: string): number {
   const condMult = 0.45 + 0.55 * cond;
   const mults = carUpgradeMults(state, carId);
   return Math.round(def.value * (1 + mults.valueMult) * condMult);
-}
-
-export function carClickValue(state: GameState, carId: string): number {
-  const def = GAME_CAR_MAP[carId];
-  if (!def) return 0;
-  const cond = conditionOf(state, carId);
-  const condMult = 0.5 + 0.5 * cond;
-  const mults = carUpgradeMults(state, carId);
-  return Math.max(1, Math.round(def.value * 0.0008 * (1 + mults.clickMult) * condMult * clickMultiplier(state)));
 }
 
 export function carPower(state: GameState, carId: string): number {
@@ -466,14 +457,20 @@ export function gameReducer(state: GameState, action: Action): GameState {
 
 /** Merge a loaded save over the defaults defensively. */
 function normalize(current: GameState, loaded: Partial<GameState>): GameState {
-  return {
+  const base = {
     ...initialGameState(),
     ...loaded,
     ownedCars: loaded.ownedCars ?? current.ownedCars,
     inventory: loaded.inventory ?? current.inventory,
-    dealerStock: loaded.dealerStock ?? {},
     daily: { ...initialGameState().daily, ...(loaded.daily ?? {}) },
   };
+  // Fill any dealer that has no stock yet (old saves predate stock seeding).
+  const dealerStock: Record<string, string[]> = {};
+  for (const d of DEALERS) {
+    const stock = base.dealerStock?.[d.id];
+    dealerStock[d.id] = stock && stock.length > 0 ? stock : rollDealerStock(d);
+  }
+  return { ...base, dealerStock };
 }
 
 // ── Persistence ───────────────────────────────────────────────────────────────
@@ -497,27 +494,4 @@ export function loadGame(): GameState {
   }
 }
 
-export function exportSave(state: GameState): string {
-  return JSON.stringify({ ...state, version: STORAGE_VERSION });
-}
 
-export function importSave(json: string): GameState | null {
-  try {
-    const parsed = JSON.parse(json) as Partial<GameState>;
-    if (!parsed || typeof parsed.cash !== "number") return null;
-    return normalize(initialGameState(), parsed);
-  } catch {
-    return null;
-  }
-}
-
-/** Rare rarity odds used by the crate reveal UI. */
-export function rarityFromWeights(
-  weights: Partial<Record<Rarity, number>>,
-): Rarity | undefined {
-  const entries = Object.entries(weights).map(([r, w]) => ({
-    value: r as Rarity,
-    weight: w as number,
-  }));
-  return weightedPick(entries);
-}

@@ -652,10 +652,6 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   },
 ];
 
-export const ACHIEVEMENT_MAP: Record<string, AchievementDef> = Object.fromEntries(
-  ACHIEVEMENTS.map((a) => [a.id, a]),
-);
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 /** Player level, derived from total lifetime earnings. */

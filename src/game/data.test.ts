@@ -45,6 +45,13 @@ describe("game car images", () => {
     }
   });
 
+  test("direct photos take precedence and aliases still resolve", () => {
+    // civic-lx-95 has a direct photo (no archive twin)
+    expect(gameCarImage(GAME_CAR_MAP["civic-lx-95"])).toContain("upload.wikimedia.org");
+    // 458 Italia has no archive entry either — resolves via alias to the 488 GTB photo
+    expect(gameCarImage(GAME_CAR_MAP["ferrari-458-12"])).toContain("488_GTB");
+  });
+
   test("returns the generated scene for fictional cars with no photo", () => {
     const cases = ["rusty-hatch-91", "beater-sedan-87", "crystal-one-24"];
     for (const id of cases) {
