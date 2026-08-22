@@ -1,5 +1,6 @@
 import { useEffect, useReducer, useRef } from "react";
 import { useMutation, useQuery } from "convex/react";
+import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
 import { GameMain } from "@/components/game/GameMain";
 import { gameReducer, loadGame, saveGame } from "@/game/engine";
@@ -34,8 +35,16 @@ export default function Game() {
       claimedGiftsRef.current.add(gift._id);
       if (gift.kind === "money" && gift.amount) {
         dispatch({ type: "ADD_CASH", amount: gift.amount });
+        toast.success(`💰 Admin Gift: +$${gift.amount.toLocaleString()} added to your balance!`, {
+          duration: 8000,
+          style: { background: "#1a0a04", border: "1px solid rgba(255,46,0,0.4)", color: "#fff" },
+        });
       } else if (gift.kind === "car" && gift.carId) {
         dispatch({ type: "ADD_CAR", carId: gift.carId });
+        toast.success(`🏎️ Admin Gift: A new car was added to your garage!`, {
+          duration: 8000,
+          style: { background: "#1a0a04", border: "1px solid rgba(255,46,0,0.4)", color: "#fff" },
+        });
       }
       // Mark as claimed in the backend (fire-and-forget).
       void claimGift({ giftId: gift._id });
