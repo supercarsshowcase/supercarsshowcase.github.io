@@ -672,7 +672,7 @@ function AchievementsPanel({ state }: { state: GameState }) {
 // ── Prestige ──────────────────────────────────────────────────────────────────
 
 function PrestigePanel({ state, dispatch }: { state: GameState; dispatch: React.Dispatch<Action> }) {
-  const req = 2500 * (state.prestigeLevel + 1);
+  const req = 5000 * (state.prestigeLevel + 1);
   const ready = state.reputation >= req;
   return (
     <div>

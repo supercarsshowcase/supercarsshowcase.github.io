@@ -55,7 +55,7 @@ export function initialGameState(): GameState {
     achievements: [],
     dealerRefreshAt: now,
     dealerStock,
-    daily: { day: "", streak: 0 },
+    daily: { nextClaimAt: 0, lastClaimAt: 0, streak: 0 },
     clicksOnStarter: 0,
     lastTick: now,
   };
@@ -101,7 +101,7 @@ export function carClickValue(state: GameState, carId: string): number {
   const cond = conditionOf(state, carId);
   const condMult = 0.5 + 0.5 * cond;
   const mults = carUpgradeMults(state, carId);
-  return Math.max(1, Math.round(def.value * 0.0012 * (1 + mults.clickMult) * condMult * clickMultiplier(state)));
+  return Math.max(1, Math.round(def.value * 0.0008 * (1 + mults.clickMult) * condMult * clickMultiplier(state)));
 }
 
 export function carPower(state: GameState, carId: string): number {
@@ -164,7 +164,7 @@ export function clickValue(state: GameState): number {
   const cond = conditionOf(state, state.activeCarId);
   const condMult = 0.5 + 0.5 * cond;
   const mults = carUpgradeMults(state, state.activeCarId);
-  const base = def.value * 0.0012;
+  const base = def.value * 0.0008;
   return Math.max(1, Math.round(base * (1 + mults.clickMult) * condMult * clickMultiplier(state)));
 }
 
@@ -176,7 +176,7 @@ export function passivePerSec(state: GameState): number {
     const cond = conditionOf(state, carId);
     const condMult = 0.5 + 0.5 * cond;
     const mults = carUpgradeMults(state, carId);
-    base += def.value * 0.00005 * (1 + mults.passiveMult) * condMult;
+    base += def.value * 0.00003 * (1 + mults.passiveMult) * condMult;
   }
   return base * passiveMultiplier(state);
 }
@@ -187,7 +187,7 @@ export function upgradeCost(state: GameState, carId: string, upgradeId: string):
   if (!def || !up) return Infinity;
   const stage = state.ownedCars[carId]?.upgrades[upgradeId] ?? 0;
   if (stage >= up.stages.length) return Infinity;
-  const tier = Math.min(2_000_000, Math.max(1, Math.pow(def.value / 10_000, 0.72)));
+  const tier = Math.min(2_000_000, Math.max(1, Math.pow(def.value / 10_000, 0.8)));
   return Math.max(1, Math.round(up.stages[stage].cost * tier));
 }
 
@@ -246,9 +246,11 @@ export function rollCrate(state: GameState, crateId: string): CrateResult {
 
 // ── Daily reward ──────────────────────────────────────────────────────────────
 
-export function dailyReward(state: GameState, now: Date): number {
-  const day = now.toDateString();
-  const streak = state.daily.day === day ? state.daily.streak : state.daily.day === new Date(now.getTime() - 86400000).toDateString() ? state.daily.streak + 1 : 1;
+export function dailyReward(state: GameState, now: number): number {
+  const streak =
+    state.daily.lastClaimAt > 0 && now - state.daily.lastClaimAt <= 86_400_000
+      ? state.daily.streak + 1
+      : 1;
   const mult = Math.min(streak, 14);
   return Math.round(100 * Math.pow(1.25, mult - 1) * (1 + state.prestigeLevel * 2));
 }
@@ -275,7 +277,7 @@ export type Action =
   | { type: "BUY_UPGRADE"; upgradeId: string }
   | { type: "OPEN_CRATE"; crateId: string; result: CrateResult }
   | { type: "SELL_PART"; partId: string }
-  | { type: "CLAIM_DAILY"; reward: number }
+  | { type: "CLAIM_DAILY"; reward: number; now?: number }
   | { type: "REFRESH_DEALER"; dealerId: string; stock: string[]; refreshAt: number; cost: number }
   | { type: "PRESTIGE" }
   | { type: "HARD_RESET" }
@@ -352,7 +354,7 @@ export function gameReducer(state: GameState, action: Action): GameState {
     case "SELL_CAR": {
       if (!state.ownedCars[action.id]) return state;
       if (Object.keys(state.ownedCars).length <= 1) return state;
-      const gain = Math.round(carValue(state, action.id) * 0.45);
+      const gain = Math.round(carValue(state, action.id) * 0.35);
       const ownedCars = { ...state.ownedCars };
       delete ownedCars[action.id];
       const activeCarId =
@@ -419,18 +421,20 @@ export function gameReducer(state: GameState, action: Action): GameState {
       return { ...state, inventory, cash: state.cash + (def?.value ?? 0) };
     }
     case "CLAIM_DAILY": {
-      const now = new Date();
-      const day = now.toDateString();
+      const now = action.now ?? Date.now();
+      if (now < state.daily.nextClaimAt) return state;
       const streak =
-        state.daily.day === day
-          ? state.daily.streak
-          : state.daily.day === new Date(now.getTime() - 86400000).toDateString()
-            ? state.daily.streak + 1
-            : 1;
+        state.daily.lastClaimAt > 0 && now - state.daily.lastClaimAt <= 86_400_000
+          ? state.daily.streak + 1
+          : 1;
       return {
         ...state,
         cash: state.cash + action.reward,
-        daily: { day, streak },
+        daily: {
+          nextClaimAt: now + 12 * 3_600_000,
+          lastClaimAt: now,
+          streak,
+        },
       };
     }
     case "REFRESH_DEALER":
@@ -441,7 +445,7 @@ export function gameReducer(state: GameState, action: Action): GameState {
         dealerRefreshAt: action.refreshAt,
       };
     case "PRESTIGE": {
-      const requirement = 2500 * (state.prestigeLevel + 1);
+      const requirement = 5000 * (state.prestigeLevel + 1);
       if (state.reputation < requirement) return state;
       return {
         ...initialGameState(),

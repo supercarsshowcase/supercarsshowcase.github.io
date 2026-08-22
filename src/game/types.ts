@@ -120,7 +120,7 @@ export interface GameState {
   achievements: string[];
   dealerRefreshAt: number;
   dealerStock: Record<string, string[]>;
-  daily: { day: string; streak: number };
+  daily: { nextClaimAt: number; lastClaimAt: number; streak: number };
   clicksOnStarter: number;
   lastTick: number;
 }

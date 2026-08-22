@@ -8,8 +8,6 @@ import {
   Star,
   Car as CarIcon,
   Save,
-  Download,
-  Upload,
   Trash2,
   Gift,
   MousePointerClick,
@@ -76,7 +74,11 @@ export function GameMain({
   const perClick = clickValue(state);
   const rarityMeta = RARITY_META[active.rarity];
   const condition = (state.ownedCars[state.activeCarId]?.upgrades.condition ?? 0) / 6;
-  const daily = dailyReward(state, new Date());
+  const now = state.lastTick;
+  const daily = dailyReward(state, now);
+  const canClaim = now >= state.daily.nextClaimAt;
+  const waitMin = canClaim ? 0 : Math.max(1, Math.ceil((state.daily.nextClaimAt - now) / 60000));
+  const waitLabel = waitMin >= 60 ? `${Math.floor(waitMin / 60)}h ${waitMin % 60}m` : `${waitMin}m`;
   const levelBase = Math.max(1, level - state.prestigeLevel * 10);
   const nextLevelEarned = Math.pow(levelBase, 2) * 500;
 
@@ -100,32 +102,12 @@ export function GameMain({
   };
 
   const claimDaily = () => {
-    dispatch({ type: "CLAIM_DAILY", reward: daily });
+    if (!canClaim) {
+      toast.error(`Daily unlocks in ${waitLabel}`);
+      return;
+    }
+    dispatch({ type: "CLAIM_DAILY", reward: daily, now });
     toast.success(`Daily reward claimed: ${fmtMoney(daily)}`);
-  };
-
-  const handleExport = () => {
-    const blob = new Blob([exportSaveJson(state)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "supercars-game-save.json";
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const handleImport = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const saved = importSaveJson(String(reader.result));
-      if (saved) {
-        dispatch({ type: "LOAD", state: saved });
-        toast.success("Save imported");
-      } else {
-        toast.error("Invalid save file");
-      }
-    };
-    reader.readAsText(file);
   };
 
   return (
@@ -158,10 +140,11 @@ export function GameMain({
         <button
           type="button"
           onClick={claimDaily}
-          className="inline-flex items-center gap-2 rounded-md border border-apex-red/40 bg-apex-red/10 px-3.5 py-2 font-display text-[11px] font-bold uppercase tracking-[0.12em] text-white transition-colors hover:bg-apex-red"
+          disabled={!canClaim}
+          className="inline-flex items-center gap-2 rounded-md border border-apex-red/40 bg-apex-red/10 px-3.5 py-2 font-display text-[11px] font-bold uppercase tracking-[0.12em] text-white transition-colors hover:bg-apex-red disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-white/40"
         >
           <Gift className="size-4 text-apex-red" />
-          Daily {fmtMoney(daily)}
+          {canClaim ? `Daily ${fmtMoney(daily)}` : `Daily in ${waitLabel}`}
           {state.daily.streak > 1 && (
             <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-[9px]">×{state.daily.streak}</span>
           )}
@@ -176,26 +159,6 @@ export function GameMain({
         >
           <Save className="size-4" /> Save
         </button>
-        <button
-          type="button"
-          onClick={handleExport}
-          className="inline-flex items-center gap-2 rounded-md border border-white/15 px-3 py-2 font-display text-[11px] font-bold uppercase tracking-[0.12em] text-white/70 transition-colors hover:border-apex-red hover:text-white"
-        >
-          <Download className="size-4" /> Export
-        </button>
-        <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-white/15 px-3 py-2 font-display text-[11px] font-bold uppercase tracking-[0.12em] text-white/70 transition-colors hover:border-apex-red hover:text-white">
-          <Upload className="size-4" /> Import
-          <input
-            type="file"
-            accept="application/json"
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) handleImport(f);
-              e.target.value = "";
-            }}
-          />
-        </label>
         <button
           type="button"
           onClick={() => {
@@ -364,17 +327,4 @@ function StatPill({
   );
 }
 
-// Import/export helpers (kept here to avoid engine importing browser APIs twice).
-function exportSaveJson(state: GameState): string {
-  return JSON.stringify({ ...state });
-}
 
-function importSaveJson(json: string): GameState | null {
-  try {
-    const parsed = JSON.parse(json) as Partial<GameState>;
-    if (!parsed || typeof parsed.cash !== "number") return null;
-    return parsed as GameState;
-  } catch {
-    return null;
-  }
-}
