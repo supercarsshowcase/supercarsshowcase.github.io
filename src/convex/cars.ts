@@ -32,7 +32,7 @@ async function getAdmin(ctx: QueryCtx | MutationCtx) {
   const userId = await getAuthUserId(ctx);
   if (userId === null) return null;
   const user = await ctx.db.get(userId);
-  return user && user.role === "admin" ? user : null;
+  return user && (user.role === "owner" || user.role === "admin" || user.role === "moderator") ? user : null;
 }
 
 /** Public — every visitor needs these to render edited car data. */
