@@ -26,9 +26,14 @@ import {
   Bug,
   Heart,
   MessageSquare,
+  Car,
+  Save,
+  Undo2,
+  RotateCcw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Id } from "@/convex/_generated/dataModel";
+import { carsList, mergedCarBySlug } from "@/data/cars";
 
 const FEEDBACK_META: Record<
   string,
@@ -82,7 +87,12 @@ const ACCENT_PRESETS = [
   { name: "Champagne", value: "#e8c98a" },
 ];
 
-type Settings = { bannerText: string; bannerEnabled: boolean; accent: string } | undefined;
+type Settings = {
+  bannerText: string;
+  bannerEnabled: boolean;
+  accent: string;
+  siteName: string;
+} | undefined;
 
 export default function Admin() {
   const stats = useQuery(api.site.getAdminStats);
@@ -121,8 +131,73 @@ export default function Admin() {
   const [bannerText, setBannerText] = useState("");
   const [bannerEnabled, setBannerEnabled] = useState(false);
   const [accent, setAccent] = useState("#ff2e00");
+  const [siteName, setSiteName] = useState("Supercars Showcase");
   const [saveStatus, setSaveStatus] = useState<"idle" | "saved" | "error">("idle");
   const [hydrated, setHydrated] = useState(false);
+
+  // ── Machines editor ──
+  const saveCarEdit = useMutation(api.cars.saveCarEdit);
+  const resetCarEdit = useMutation(api.cars.resetCarEdit);
+  const allCars = carsList();
+  const [editSlug, setEditSlug] = useState("");
+  const [editModel, setEditModel] = useState("");
+  const [editYear, setEditYear] = useState("");
+  const [editPrice, setEditPrice] = useState("");
+  const [editHp, setEditHp] = useState("");
+  const [editSpeed, setEditSpeed] = useState("");
+  const [editEngine, setEditEngine] = useState("");
+  const [editDesc, setEditDesc] = useState("");
+  const [editBusy, setEditBusy] = useState(false);
+
+  const selectCar = (slug: string) => {
+    setEditSlug(slug);
+    const c = slug ? mergedCarBySlug(slug) : undefined;
+    setEditModel(c?.model ?? "");
+    setEditYear(c ? String(c.year) : "");
+    setEditPrice(c ? String(c.priceUSD) : "");
+    setEditHp(c ? String(c.horsepower) : "");
+    setEditSpeed(c ? String(c.topSpeedKmh) : "");
+    setEditEngine(c?.engine ?? "");
+    setEditDesc(c?.description ?? "");
+  };
+
+  const saveMachine = async () => {
+    if (!editSlug || editBusy) return;
+    setEditBusy(true);
+    try {
+      await saveCarEdit({
+        slug: editSlug,
+        fields: {
+          model: editModel.trim() || undefined,
+          engine: editEngine.trim() || undefined,
+          description: editDesc.trim() || undefined,
+          year: editYear.trim() ? Number(editYear) : undefined,
+          priceUSD: editPrice.trim() ? Number(editPrice) : undefined,
+          horsepower: editHp.trim() ? Number(editHp) : undefined,
+          topSpeedKmh: editSpeed.trim() ? Number(editSpeed) : undefined,
+        },
+      });
+      toast.success("Machine updated across the site");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not save machine");
+    } finally {
+      setEditBusy(false);
+    }
+  };
+
+  const resetMachine = async () => {
+    if (!editSlug || editBusy) return;
+    setEditBusy(true);
+    try {
+      await resetCarEdit({ slug: editSlug });
+      selectCar(editSlug);
+      toast.success("Reverted to stock data");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not reset machine");
+    } finally {
+      setEditBusy(false);
+    }
+  };
 
   // Sync the form when settings first load (render-time pattern).
   const [prevSettings, setPrevSettings] = useState<Settings>(settings);
@@ -133,16 +208,18 @@ export default function Admin() {
       setBannerText(settings.bannerText);
       setBannerEnabled(settings.bannerEnabled);
       setAccent(settings.accent);
+      setSiteName(settings.siteName);
     }
   }
 
   const persist = useCallback(
-    async (text: string, enabled: boolean, color: string) => {
+    async (text: string, enabled: boolean, color: string, name: string) => {
       try {
         await updateSiteSettings({
           bannerText: text,
           bannerEnabled: enabled,
           accent: /^#[0-9a-fA-F]{6}$/.test(color) ? color : "#ff2e00",
+          siteName: name,
         });
         setSaveStatus("saved");
       } catch (e) {
@@ -160,18 +237,23 @@ export default function Admin() {
       settings &&
       bannerText === settings.bannerText &&
       bannerEnabled === settings.bannerEnabled &&
-      accent === settings.accent;
+      accent === settings.accent &&
+      siteName === settings.siteName;
     if (unchanged) return;
-    const timer = setTimeout(() => void persist(bannerText, bannerEnabled, accent), 700);
+    const timer = setTimeout(
+      () => void persist(bannerText, bannerEnabled, accent, siteName),
+      700,
+    );
     return () => clearTimeout(timer);
-  }, [bannerText, bannerEnabled, accent, settings, hydrated, persist]);
+  }, [bannerText, bannerEnabled, accent, siteName, settings, hydrated, persist]);
 
   const dirty =
     hydrated &&
     (!settings ||
       bannerText !== settings.bannerText ||
       bannerEnabled !== settings.bannerEnabled ||
-      accent !== settings.accent);
+      accent !== settings.accent ||
+      siteName !== settings.siteName);
 
   const toggleRole = async (userId: string, currentRole: string) => {
     const next = currentRole === "admin" ? "user" : "admin";
@@ -340,6 +422,22 @@ export default function Admin() {
             </div>
           ) : (
             <div className="space-y-6 px-5 py-5">
+              {/* Site name */}
+              <div>
+                <label className="font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">
+                  Site name
+                </label>
+                <input
+                  type="text"
+                  value={siteName}
+                  onChange={(e) => setSiteName(e.target.value)}
+                  maxLength={40}
+                  className="mt-3 w-full rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3.5 py-2.5 text-sm text-white outline-none transition-colors placeholder:text-white/20 focus:border-apex-red"
+                  placeholder="e.g. My Supercar Archive"
+                />
+                <p className="mt-1.5 text-[11px] text-white/25">Appears as the site logo in the header and footer. Saved automatically.</p>
+              </div>
+
               {/* Accent color */}
               <div>
                 <label className="font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">
@@ -542,6 +640,153 @@ export default function Admin() {
             })}
           </ul>
         )}
+      </section>
+
+      {/* Machines editor */}
+      <section className="mt-12 rounded-lg border border-apex-line bg-apex-panel">
+        <div className="flex items-center gap-2 border-b border-apex-line px-5 py-4">
+          <Car className="size-4 text-apex-red" />
+          <h2 className="font-display text-sm font-bold uppercase tracking-[0.16em] text-white">
+            Machines editor
+          </h2>
+          <span className="rounded-full bg-apex-red/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-apex-red">
+            Owner only
+          </span>
+        </div>
+        <div className="px-5 py-5">
+          <p className="mb-4 text-sm text-apex-muted">
+            Pick a machine and edit its name, price or specs — changes apply
+            instantly across the whole site (garage, detail pages, compare,
+            rankings). Leave a field empty to keep the original value.
+          </p>
+
+          {/* Select machine */}
+          <label className="font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">
+            Machine
+          </label>
+          <select
+            value={editSlug}
+            onChange={(e) => selectCar(e.target.value)}
+            className="mt-3 w-full cursor-pointer rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3.5 py-2.5 text-sm text-white outline-none transition-colors focus:border-apex-red"
+          >
+            <option value="">Select a machine…</option>
+            {allCars.map((c) => (
+              <option key={c.slug} value={c.slug}>
+                {c.brand} · {c.model}
+              </option>
+            ))}
+          </select>
+
+          {editSlug ? (
+            <div className="mt-6 grid gap-5 sm:grid-cols-2">
+              <div>
+                <label className="font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">
+                  Name / model
+                </label>
+                <input
+                  value={editModel}
+                  onChange={(e) => setEditModel(e.target.value)}
+                  className="mt-2 w-full rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3.5 py-2.5 text-sm text-white outline-none focus:border-apex-red"
+                />
+              </div>
+              <div>
+                <label className="font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">
+                  Year
+                </label>
+                <input
+                  value={editYear}
+                  onChange={(e) => setEditYear(e.target.value)}
+                  type="number"
+                  className="mt-2 w-full rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3.5 py-2.5 text-sm text-white outline-none focus:border-apex-red"
+                />
+              </div>
+              <div>
+                <label className="font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">
+                  Price (USD)
+                </label>
+                <input
+                  value={editPrice}
+                  onChange={(e) => setEditPrice(e.target.value)}
+                  type="number"
+                  className="mt-2 w-full rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3.5 py-2.5 text-sm text-white outline-none focus:border-apex-red"
+                />
+              </div>
+              <div>
+                <label className="font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">
+                  Horsepower
+                </label>
+                <input
+                  value={editHp}
+                  onChange={(e) => setEditHp(e.target.value)}
+                  type="number"
+                  className="mt-2 w-full rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3.5 py-2.5 text-sm text-white outline-none focus:border-apex-red"
+                />
+              </div>
+              <div>
+                <label className="font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">
+                  Top speed (km/h)
+                </label>
+                <input
+                  value={editSpeed}
+                  onChange={(e) => setEditSpeed(e.target.value)}
+                  type="number"
+                  className="mt-2 w-full rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3.5 py-2.5 text-sm text-white outline-none focus:border-apex-red"
+                />
+              </div>
+              <div>
+                <label className="font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">
+                  Engine
+                </label>
+                <input
+                  value={editEngine}
+                  onChange={(e) => setEditEngine(e.target.value)}
+                  className="mt-2 w-full rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3.5 py-2.5 text-sm text-white outline-none focus:border-apex-red"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">
+                  Description
+                </label>
+                <textarea
+                  value={editDesc}
+                  onChange={(e) => setEditDesc(e.target.value)}
+                  rows={3}
+                  maxLength={600}
+                  className="mt-2 w-full resize-none rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3.5 py-2.5 text-sm text-white outline-none focus:border-apex-red"
+                />
+              </div>
+              <div className="flex items-center gap-3 sm:col-span-2">
+                <button
+                  type="button"
+                  onClick={() => void saveMachine()}
+                  disabled={editBusy}
+                  className="inline-flex items-center gap-2 rounded-md bg-apex-red px-4 py-2.5 font-display text-[11px] font-bold uppercase tracking-[0.12em] text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                >
+                  <Save className="size-3.5" />
+                  {editBusy ? "Saving…" : "Save changes"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void resetMachine()}
+                  disabled={editBusy}
+                  className="inline-flex items-center gap-2 rounded-md border border-white/15 px-4 py-2.5 font-display text-[11px] font-bold uppercase tracking-[0.12em] text-white/60 transition-colors hover:border-apex-red hover:text-apex-red disabled:opacity-50"
+                >
+                  <Undo2 className="size-3.5" />
+                  Revert to stock
+                </button>
+                <p className="hidden text-[11px] text-white/25 sm:block">
+                  <RotateCcw className="mr-1 inline size-3" /> Editing a machine
+                  overrides, not replaces, the original record — revert any time.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <p className="mt-4 rounded-md border border-dashed border-apex-line bg-white/[0.02] px-4 py-6 text-center text-sm text-white/30">
+              Select a machine above to start editing. Your changes appear
+              everywhere immediately.
+            </p>
+          )}
+        </div>
       </section>
     </div>
   );

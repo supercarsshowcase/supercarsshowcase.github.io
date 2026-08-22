@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router";
 import { motion } from "framer-motion";
 import { ArrowRight, ChevronUp } from "lucide-react";
-import { CARS } from "@/data/cars";
+import { carsList } from "@/data/cars";
 import { BRANDS } from "@/data/brands";
 import { getBrandImage } from "@/data/images";
 import { CarCard } from "@/components/CarCard";
@@ -51,7 +51,7 @@ function HeroBackground() {
 
 export default function Landing() {
   const featured = FEATURED_SLUGS.map((slug) =>
-    CARS.find((c) => c.slug === slug),
+    carsList().find((c) => c.slug === slug),
   ).filter((c): c is NonNullable<typeof c> => Boolean(c));
 
   return (

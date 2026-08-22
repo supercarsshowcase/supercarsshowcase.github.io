@@ -15,6 +15,7 @@ export const DEFAULT_SITE_SETTINGS = {
   bannerText: "",
   bannerEnabled: false,
   accent: "#ff2e00",
+  siteName: "Supercars Showcase",
 } as const;
 
 const SETTINGS_KEY = "site";
@@ -40,6 +41,7 @@ export const getSiteSettings = query({
       bannerText: doc?.bannerText ?? DEFAULT_SITE_SETTINGS.bannerText,
       bannerEnabled: doc?.bannerEnabled ?? DEFAULT_SITE_SETTINGS.bannerEnabled,
       accent: doc?.accent ?? DEFAULT_SITE_SETTINGS.accent,
+      siteName: doc?.siteName ?? DEFAULT_SITE_SETTINGS.siteName,
     };
   },
 });
@@ -49,6 +51,7 @@ export const updateSiteSettings = mutation({
     bannerText: v.string(),
     bannerEnabled: v.boolean(),
     accent: v.string(),
+    siteName: v.string(),
   },
   handler: async (ctx, args) => {
     const admin = await getAdmin(ctx);
@@ -56,24 +59,26 @@ export const updateSiteSettings = mutation({
 
     const accent = /^#[0-9a-fA-F]{6}$/.test(args.accent) ? args.accent : DEFAULT_SITE_SETTINGS.accent;
     const bannerText = args.bannerText.slice(0, 200);
+    const siteName = args.siteName.trim().slice(0, 40) || DEFAULT_SITE_SETTINGS.siteName;
 
     const existing = await ctx.db
       .query("siteSettings")
       .withIndex("by_key", (q) => q.eq("key", SETTINGS_KEY))
       .first();
 
+    const patch = {
+      bannerText,
+      bannerEnabled: args.bannerEnabled,
+      accent,
+      siteName,
+    };
+
     if (existing) {
-      await ctx.db.patch(existing._id, {
-        bannerText,
-        bannerEnabled: args.bannerEnabled,
-        accent,
-      });
+      await ctx.db.patch(existing._id, patch);
     } else {
       await ctx.db.insert("siteSettings", {
         key: SETTINGS_KEY,
-        bannerText,
-        bannerEnabled: args.bannerEnabled,
-        accent,
+        ...patch,
       });
     }
   },

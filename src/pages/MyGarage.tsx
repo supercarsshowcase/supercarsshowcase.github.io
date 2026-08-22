@@ -3,7 +3,7 @@ import { Link } from "react-router";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { CarCard } from "@/components/CarCard";
-import { carBySlug } from "@/data/cars";
+import { mergedCarBySlug } from "@/data/cars";
 import type { Car } from "@/lib/types";
 import { useApp } from "@/context/app-context";
 import { formatPriceFull, formatNumber } from "@/lib/format";
@@ -42,7 +42,7 @@ export default function MyGarage() {
   const cars = useMemo<Car[]>(
     () =>
       (garage?.carSlugs ?? [])
-        .map((slug) => carBySlug(slug))
+        .map((slug) => mergedCarBySlug(slug))
         .filter((c): c is Car => Boolean(c)),
     [garage],
   );

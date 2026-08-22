@@ -65,7 +65,28 @@ const schema = defineSchema(
       bannerText: v.string(),
       bannerEnabled: v.boolean(),
       accent: v.string(),
+      siteName: v.string(),
     }).index("by_key", ["key"]),
+
+    // Owner-editable car overrides, keyed by slug. Only edited fields stored.
+    carEdits: defineTable({
+      slug: v.string(),
+      model: v.optional(v.string()),
+      year: v.optional(v.number()),
+      category: v.optional(v.string()),
+      priceUSD: v.optional(v.number()),
+      engine: v.optional(v.string()),
+      horsepower: v.optional(v.number()),
+      torqueNm: v.optional(v.number()),
+      zeroToHundredKmh: v.optional(v.number()),
+      topSpeedKmh: v.optional(v.number()),
+      weightKg: v.optional(v.number()),
+      driveType: v.optional(v.string()),
+      transmission: v.optional(v.string()),
+      production: v.optional(v.string()),
+      description: v.optional(v.string()),
+      updatedAt: v.number(),
+    }).index("by_slug", ["slug"]),
 
     // Visitor feedback, ideas and suggestions, reviewed in the admin panel.
     feedback: defineTable({

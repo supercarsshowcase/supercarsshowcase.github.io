@@ -7,6 +7,9 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { applyCarOverrides } from "@/data/cars";
 import type { CurrencyCode } from "@/lib/types";
 
 interface AppContextValue {
@@ -49,6 +52,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return [];
     }
   });
+
+  // Owner-editable car overrides — applied globally so edited names, prices,
+  // specs and descriptions show across every page and lookup.
+  const carOverrides = useQuery(api.cars.getCarOverrides);
+  useEffect(() => {
+    applyCarOverrides(carOverrides);
+  }, [carOverrides]);
 
   useEffect(() => {
     try {

@@ -1,13 +1,13 @@
 import { Link } from "react-router";
 import { Heart, Trash2, ArrowRight } from "lucide-react";
-import { CARS, carBySlug } from "@/data/cars";
+import { mergedCarBySlug } from "@/data/cars";
 import { useApp } from "@/context/app-context";
 import { CarCard } from "@/components/CarCard";
 
 export default function Favorites() {
   const { favorites, clearFavorites } = useApp();
   const cars = favorites
-    .map((slug) => carBySlug(slug))
+    .map((slug) => mergedCarBySlug(slug))
     .filter((c): c is NonNullable<typeof c> => Boolean(c));
 
   return (

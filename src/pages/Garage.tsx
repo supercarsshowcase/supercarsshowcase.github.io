@@ -1,22 +1,22 @@
 import { useMemo, useState } from "react";
 import { Search, X, ChevronDown, RotateCcw } from "lucide-react";
-import { CARS, brandNames, categories } from "@/data/cars";
+import { carsList, brandNames, categories } from "@/data/cars";
 import { useApp } from "@/context/app-context";
 import { formatPriceCompact, formatNumber } from "@/lib/format";
 import { CarCard } from "@/components/CarCard";
 import { Slider } from "@/components/ui/slider";
-import type { SortMode } from "@/lib/types";
+import type { Car, SortMode } from "@/lib/types";
 
 const PRICE_MAX = 50_000_000;
 
 // ── Derived rarities from production counts ──
 const PROD_UNITS: Record<string, number> = {};
-for (const c of CARS) {
+for (const c of carsList()) {
   const m = c.production.match(/(\d+)\s*units?/i);
   PROD_UNITS[c.slug] = m ? parseInt(m[1]) : Infinity;
 }
 
-function getRarity(car: typeof CARS[number]): string {
+function getRarity(car: Car): string {
   const u = PROD_UNITS[car.slug];
   if (u <= 15) return "Ultra Rare";
   if (u <= 60) return "Limited";
@@ -48,7 +48,7 @@ export default function Garage() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    let list = CARS.filter((car) => {
+    let list = carsList().filter((car) => {
       if (brand !== "All Brands" && car.brand !== brand) return false;
       if (category !== "All Categories" && car.category !== category) return false;
       if (rarity !== "All Rarities" && getRarity(car) !== rarity) return false;
@@ -215,7 +215,7 @@ export default function Garage() {
               <span className="inline-block size-1.5 rounded-full bg-apex-red" /> The Garage
             </p>
             <h1 className="mt-2 font-display text-4xl font-black tracking-tight text-white/90 sm:text-5xl">
-              {CARS.length} MACHINES ARCHIVED.
+              {carsList().length} MACHINES ARCHIVED.
             </h1>
           </div>
           <span className="shrink-0 font-display text-xs font-semibold uppercase tracking-[0.16em] text-white/25">

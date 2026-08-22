@@ -21,7 +21,7 @@ import {
   Warehouse,
   Loader2,
 } from "lucide-react";
-import { carBySlug, carsByBrand } from "@/data/cars";
+import { mergedCarBySlug, carsList } from "@/data/cars";
 import { useAuth } from "@/hooks/use-auth";
 import { brandByName } from "@/data/brands";
 import { getCarGallery, getCarImage } from "@/data/images";
@@ -95,7 +95,7 @@ export default function CarDetail() {
     setCopied(false);
   }
 
-  const car = slug ? carBySlug(slug) : undefined;
+  const car = slug ? mergedCarBySlug(slug) : undefined;
   const brand = car ? brandByName(car.brand) : undefined;
   const inGarage = car ? (garage?.carSlugs.includes(car.slug) ?? false) : false;
 
@@ -118,7 +118,7 @@ export default function CarDetail() {
   };
 
   const related = car
-    ? carsByBrand(car.brand)
+    ? carsList().filter((c) => c.brand === car.brand)
         .filter((c) => c.slug !== car.slug)
         .slice(0, 4)
     : [];

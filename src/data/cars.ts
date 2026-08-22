@@ -1,5 +1,35 @@
 import type { Car } from "@/lib/types";
 
+// Owner-editable overrides merged on top of the stock data (see convex/cars.ts).
+// Populated at runtime by the app so admin edits show across the whole site.
+const carOverrides = new Map<string, Partial<Car>>();
+
+export function applyCarOverrides(
+  map: Record<string, Record<string, unknown>> | null | undefined,
+) {
+  carOverrides.clear();
+  if (!map) return;
+  for (const [slug, patch] of Object.entries(map)) {
+    carOverrides.set(slug, patch as Partial<Car>);
+  }
+}
+
+export function mergeCar(base: Car): Car {
+  const patch = carOverrides.get(base.slug);
+  return patch ? { ...base, ...patch } : base;
+}
+
+/** The full archive with any owner edits applied. */
+export function carsList(): Car[] {
+  return CARS.map(mergeCar);
+}
+
+/** Look up one car with any owner edits applied. */
+export function mergedCarBySlug(slug: string): Car | undefined {
+  const base = CARS.find((c) => c.slug === slug);
+  return base ? mergeCar(base) : undefined;
+}
+
 export const CARS: Car[] = [
   // ─────────────────────────── BUGATTI ───────────────────────────
   {

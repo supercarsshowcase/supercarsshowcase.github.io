@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Link } from "react-router";
 import { Gauge, Zap, Banknote, ArrowRight } from "lucide-react";
-import { CARS } from "@/data/cars";
+import { carsList } from "@/data/cars";
 import { getCarImage, carWikiTitle } from "@/data/images";
 import { useApp } from "@/context/app-context";
 import { formatNumber, formatPriceCompact } from "@/lib/format";
@@ -66,15 +66,15 @@ function RankedRow({
 export default function Rankings() {
   const { currency } = useApp();
   const fastest = useMemo(
-    () => [...CARS].sort((a, b) => b.topSpeedKmh - a.topSpeedKmh).slice(0, 10),
+    () => carsList().sort((a, b) => b.topSpeedKmh - a.topSpeedKmh).slice(0, 10),
     [],
   );
   const powerful = useMemo(
-    () => [...CARS].sort((a, b) => b.horsepower - a.horsepower).slice(0, 10),
+    () => carsList().sort((a, b) => b.horsepower - a.horsepower).slice(0, 10),
     [],
   );
   const expensive = useMemo(
-    () => [...CARS].sort((a, b) => b.priceUSD - a.priceUSD).slice(0, 10),
+    () => carsList().sort((a, b) => b.priceUSD - a.priceUSD).slice(0, 10),
     [],
   );
 

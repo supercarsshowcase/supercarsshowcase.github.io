@@ -1,7 +1,7 @@
 import { Link, useParams } from "react-router";
 import { ArrowLeft, MapPin, Flag, CalendarDays } from "lucide-react";
 import { brandBySlug } from "@/data/brands";
-import { carsByBrand } from "@/data/cars";
+import { carsList } from "@/data/cars";
 import { getBrandImage } from "@/data/images";
 import { SmartImage } from "@/components/SmartImage";
 import { CarCard } from "@/components/CarCard";
@@ -26,7 +26,7 @@ export default function BrandDetail() {
     );
   }
 
-  const cars = carsByBrand(brand.name);
+  const cars = carsList().filter((c) => c.brand === brand.name);
 
   return (
     <div>

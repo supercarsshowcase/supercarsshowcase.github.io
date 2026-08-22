@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { Scale, Plus, X, ArrowRight } from "lucide-react";
-import { CARS, carBySlug } from "@/data/cars";
-import { getCarImage, carWikiTitle } from "@/data/images";
+import { carsList, mergedCarBySlug } from "@/data/cars";
+import { getCarImage } from "@/data/images";
 import { useApp } from "@/context/app-context";
+import type { Car } from "@/lib/types";
 import { formatPriceCompact, formatNumber } from "@/lib/format";
 import { SmartImage } from "@/components/SmartImage";
 
@@ -11,7 +12,7 @@ const MAX_CARS = 3;
 
 type Row = {
   label: string;
-  value: (car: (typeof CARS)[number]) => string;
+  value: (car: Car) => string;
 };
 
 const ROWS: Row[] = [
@@ -45,7 +46,7 @@ export default function Compare() {
   }, []);
 
   const cars = slugs
-    .map((slug) => carBySlug(slug))
+    .map((slug) => mergedCarBySlug(slug))
     .filter((c): c is NonNullable<typeof c> => Boolean(c));
 
   const update = (next: string[]) => {
@@ -62,7 +63,7 @@ export default function Compare() {
     update(slugs.filter((s) => s !== slug));
   };
 
-  const remaining = CARS.filter((c) => !slugs.includes(c.slug));
+  const remaining = carsList().filter((c) => !slugs.includes(c.slug));
 
   return (
     <div className="mx-auto max-w-[1400px] px-4 py-12 sm:px-6">

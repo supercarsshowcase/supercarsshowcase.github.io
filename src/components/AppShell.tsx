@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router";
 import {
   Heart,
@@ -27,7 +27,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { CURRENCIES } from "@/lib/format";
-import { CARS } from "@/data/cars";
+import { carsList } from "@/data/cars";
 import { BRANDS } from "@/data/brands";
 import type { CurrencyCode } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -43,16 +43,20 @@ const NAV_LINKS = [
 
 const REGIONS = ["GB EN", "US EN", "DE DE", "FR FR", "IT IT", "AE EN"];
 
-function Logo() {
+function Logo({ name }: { name?: string }) {
+  const words = (name || "Supercars Showcase").split(/\s+/).filter(Boolean);
   return (
     <Link to="/" className="group flex items-center gap-1.5">
-      <span className="font-display text-base font-black tracking-tight text-white sm:text-lg">
-        SUPERCARS
-      </span>
-      <span className="size-1.5 shrink-0 rounded-full bg-apex-red transition-transform group-hover:scale-150" />
-      <span className="font-display text-base font-black tracking-tight text-white sm:text-lg">
-        SHOWCASE
-      </span>
+      {words.map((word, i) => (
+        <Fragment key={i}>
+          {i > 0 && (
+            <span className="size-1.5 shrink-0 rounded-full bg-apex-red transition-transform group-hover:scale-150" />
+          )}
+          <span className="font-display text-base font-black uppercase tracking-tight text-white sm:text-lg">
+            {word}
+          </span>
+        </Fragment>
+      ))}
     </Link>
   );
 }
@@ -83,7 +87,8 @@ export function AppShell() {
   }, [settings]);
 
   const surpriseMe = () => {
-    const car = CARS[Math.floor(Math.random() * CARS.length)];
+    const all = carsList();
+    const car = all[Math.floor(Math.random() * all.length)];
     navigate(`/cars/${car.slug}`);
   };
 
@@ -102,7 +107,7 @@ export function AppShell() {
       <header className="sticky top-0 z-50 border-b border-apex-line bg-black/85 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between gap-3 px-4 sm:px-6">
           <div className="flex items-center gap-6">
-            <Logo />
+            <Logo name={settings?.siteName} />
             <nav className="hidden items-center gap-1 lg:flex">
               {NAV_LINKS.map((link) => (
                 <NavLink
@@ -389,7 +394,7 @@ export function AppShell() {
         <div className="mx-auto max-w-[1400px] px-4 py-12 sm:px-6">
           <div className="flex flex-col gap-10 md:flex-row md:justify-between">
             <div className="max-w-sm">
-              <Logo />
+              <Logo name={settings?.siteName} />
               <p className="mt-4 text-sm leading-6 text-apex-muted">
                 A cinematic archive of the world&apos;s greatest machines. Real
                 specs. Real prices. Nothing for sale — just for the eyes.

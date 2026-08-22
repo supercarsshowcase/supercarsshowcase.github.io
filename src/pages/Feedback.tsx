@@ -16,7 +16,7 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { CARS, carBySlug } from "@/data/cars";
+import { carsList, mergedCarBySlug } from "@/data/cars";
 import { cn } from "@/lib/utils";
 
 const FEEDBACK_TYPES = [
@@ -193,7 +193,7 @@ export default function Feedback() {
               <option value="" className="bg-[#0b0b0c] text-white/60">
                 No specific machine
               </option>
-              {CARS.map((c) => (
+              {carsList().map((c) => (
                 <option key={c.slug} value={c.slug} className="bg-[#0b0b0c] text-white">
                   {c.brand} {c.model} · {c.year}
                 </option>
@@ -329,7 +329,7 @@ export default function Feedback() {
           <ul className="mt-6 grid gap-3 md:grid-cols-2">
             {publicFeedback.map((f) => {
               const badge = FEEDBACK_BADGE[f.type] ?? FEEDBACK_BADGE.other;
-              const car = f.carSlug ? carBySlug(f.carSlug) : undefined;
+              const car = f.carSlug ? mergedCarBySlug(f.carSlug) : undefined;
               return (
                 <li
                   key={f._id}
