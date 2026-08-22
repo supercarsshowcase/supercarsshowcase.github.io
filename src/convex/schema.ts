@@ -106,6 +106,14 @@ const schema = defineSchema(
       createdAt: v.number(),
       updatedAt: v.number(),
     }).index("by_user", ["userId"]),
+
+    // Editable public-page copy, keyed by page ("home" | "garage"). The owner
+    // overrides any of these fields from the Admin "Pages" editor.
+    pageContent: defineTable({
+      key: v.string(),
+      fields: v.record(v.string(), v.string()),
+      updatedAt: v.number(),
+    }).index("by_key", ["key"]),
   },
   {
     schemaValidation: false,

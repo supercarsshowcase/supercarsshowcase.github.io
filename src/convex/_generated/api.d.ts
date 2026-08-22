@@ -14,6 +14,7 @@ import type * as cars from "../cars.js";
 import type * as feedback from "../feedback.js";
 import type * as garage from "../garage.js";
 import type * as http from "../http.js";
+import type * as pages from "../pages.js";
 import type * as profile from "../profile.js";
 import type * as site from "../site.js";
 import type * as users from "../users.js";
@@ -31,6 +32,7 @@ declare const fullApi: ApiFromModules<{
   feedback: typeof feedback;
   garage: typeof garage;
   http: typeof http;
+  pages: typeof pages;
   profile: typeof profile;
   site: typeof site;
   users: typeof users;

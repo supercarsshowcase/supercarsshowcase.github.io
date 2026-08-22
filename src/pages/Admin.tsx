@@ -30,10 +30,13 @@ import {
   Save,
   Undo2,
   RotateCcw,
+  LayoutDashboard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Id } from "@/convex/_generated/dataModel";
 import { carsList, mergedCarBySlug } from "@/data/cars";
+import { HOME_COPY, GARAGE_COPY } from "@/data/page-copy";
+import { PageEditor, type PageField } from "@/components/PageEditor";
 
 const FEEDBACK_META: Record<
   string,
@@ -85,6 +88,59 @@ const ACCENT_PRESETS = [
   { name: "Cyan", value: "#2dd4bf" },
   { name: "Violet", value: "#a78bfa" },
   { name: "Champagne", value: "#e8c98a" },
+];
+
+const HOME_FIELDS: PageField[] = [
+  { key: "heroKicker", label: "Hero — kicker line" },
+  { key: "heroLine1", label: "Hero — headline line 1" },
+  { key: "heroSubA", label: "Hero — headline line 2 (left)" },
+  { key: "heroSubB", label: "Hero — headline line 2 (right)" },
+  { key: "heroBody", label: "Hero — paragraph", multiline: true },
+  { key: "cta1Lbl", label: "Hero — button 1" },
+  { key: "cta2Lbl", label: "Hero — button 2" },
+  { key: "featuredEyebrow", label: "Featured — eyebrow" },
+  { key: "featuredTitle", label: "Featured — title" },
+  { key: "marquesEyebrow", label: "Marques — eyebrow" },
+  { key: "marquesTitle", label: "Marques — title" },
+  {
+    key: "ctaHeading",
+    label: "Bottom CTA — heading",
+    hint: "The last word is highlighted in the accent color.",
+  },
+  { key: "ctaBody", label: "Bottom CTA — text", multiline: true },
+  { key: "ctaBtn1", label: "Bottom CTA — button 1" },
+  { key: "ctaBtn2", label: "Bottom CTA — button 2" },
+  {
+    key: "featuredSlugs",
+    label: "Featured machines (slugs)",
+    multiline: true,
+    hint: "Comma-separated slugs, e.g. bugatti-tourbillon,mclaren-p1. They power the Hall of Legends grid.",
+  },
+];
+
+const GARAGE_FIELDS: PageField[] = [
+  { key: "eyebrow", label: "Eyebrow label" },
+  {
+    key: "heading",
+    label: "Heading",
+    hint: "Use {n} for the machine count, e.g. {n} MACHINES ARCHIVED.",
+  },
+  {
+    key: "resultsLbl",
+    label: "Results label",
+    hint: "{n} = current result count.",
+  },
+  { key: "filtersLbl", label: "Sidebar — filters heading" },
+  { key: "resetLbl", label: "Sidebar — reset button" },
+  { key: "searchPlaceholder", label: "Search box — placeholder" },
+  { key: "brandLbl", label: "Filter — Brand label" },
+  { key: "categoryLbl", label: "Filter — Category label" },
+  { key: "rarityLbl", label: "Filter — Rarity label" },
+  { key: "priceLbl", label: "Filter — Max Price label" },
+  { key: "sortLbl", label: "Filter — Sort label" },
+  { key: "emptyTitle", label: "Empty state — title" },
+  { key: "emptyBody", label: "Empty state — text" },
+  { key: "clearLbl", label: "Empty state — button" },
 ];
 
 type Settings = {
@@ -788,6 +844,38 @@ export default function Admin() {
           )}
         </div>
       </section>
+
+      {/* Pages editor */}
+      <div className="mt-12 space-y-6">
+        <div className="flex items-center gap-3">
+          <span className="flex size-10 items-center justify-center rounded-lg bg-apex-red/15">
+            <LayoutDashboard className="size-5 text-apex-red" />
+          </span>
+          <div>
+            <h2 className="font-display text-xl font-black tracking-tight text-white">
+              PAGES
+            </h2>
+            <p className="text-sm text-apex-muted">
+              Rename or rewrite the Home and Garage page copy — changes apply
+              instantly across the site.
+            </p>
+          </div>
+        </div>
+        <PageEditor
+          page="home"
+          title="Home page"
+          description="The landing page everyone sees first — hero, featured machines, marques and closing call to action."
+          fields={HOME_FIELDS}
+          defaults={HOME_COPY}
+        />
+        <PageEditor
+          page="garage"
+          title="Garage page"
+          description="The browse archive — sidebar headings, search placeholder and empty state."
+          fields={GARAGE_FIELDS}
+          defaults={GARAGE_COPY}
+        />
+      </div>
     </div>
   );
 }

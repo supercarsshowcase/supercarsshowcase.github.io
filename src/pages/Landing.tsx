@@ -2,19 +2,13 @@ import { useState } from "react";
 import { Link } from "react-router";
 import { motion } from "framer-motion";
 import { ArrowRight, ChevronUp } from "lucide-react";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import { carsList } from "@/data/cars";
 import { BRANDS } from "@/data/brands";
 import { getBrandImage } from "@/data/images";
 import { CarCard } from "@/components/CarCard";
-
-const FEATURED_SLUGS = [
-  "bugatti-tourbillon",
-  "koenigsegg-jesko-absolut",
-  "ferrari-daytona-sp3",
-  "rimac-nevera-r",
-  "lamborghini-revuelto",
-  "mclaren-p1",
-];
+import { HOME_COPY } from "@/data/page-copy";
 
 const STATS = [
   { value: "200+", label: "Machines" },
@@ -50,6 +44,12 @@ function HeroBackground() {
 }
 
 export default function Landing() {
+  const home = useQuery(api.pages.getPageContent, { page: "home" });
+  const copy = { ...HOME_COPY, ...(home ?? {}) };
+  const FEATURED_SLUGS = (copy.featuredSlugs || HOME_COPY.featuredSlugs)
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
   const featured = FEATURED_SLUGS.map((slug) =>
     carsList().find((c) => c.slug === slug),
   ).filter((c): c is NonNullable<typeof c> => Boolean(c));
@@ -68,32 +68,30 @@ export default function Landing() {
           >
             <p className="flex items-center gap-2 font-display text-[11px] font-semibold uppercase tracking-[0.28em] text-apex-red sm:text-xs">
               <span className="inline-block size-2 rounded-full bg-apex-red" />
-              Volume 01 — 200 Machines Archived
+              {copy.heroKicker}
             </p>
             <h1 className="mt-6 font-display text-6xl font-black leading-[0.9] tracking-tight sm:text-8xl">
-              ENGINES
+              {copy.heroLine1}
               <br />
-              <span className="text-white/35">OF THE</span>{" "}
-              <span className="text-white">ELITE.</span>
+              <span className="text-white/35">{copy.heroSubA}</span>{" "}
+              <span className="text-white">{copy.heroSubB}</span>
             </h1>
             <p className="mt-7 max-w-lg text-base leading-7 text-white/70 sm:text-lg">
-              A cinematic gallery of Bugatti, Mercedes-AMG, BMW M, Ferrari,
-              Lamborghini, Porsche, McLaren and more. Real specs. Real prices.
-              Nothing for sale — just for the eyes.
+              {copy.heroBody}
             </p>
             <div className="mt-9 flex flex-wrap items-center gap-4">
               <Link
                 to="/garage"
                 className="group inline-flex items-center gap-2 rounded-md bg-apex-red px-6 py-3.5 font-display text-sm font-bold uppercase tracking-[0.14em] text-white transition-all hover:bg-apex-red-bright hover:shadow-[0_0_40px_-8px_rgba(255,46,0,0.7)]"
               >
-                Enter the Garage
+                {copy.cta1Lbl}
                 <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
               </Link>
               <Link
                 to="/brands/bugatti"
                 className="inline-flex items-center gap-2 rounded-md border border-white/25 px-6 py-3.5 font-display text-sm font-bold uppercase tracking-[0.14em] text-white transition-colors hover:border-white hover:bg-white/5"
               >
-                Bugatti Collection
+                {copy.cta2Lbl}
               </Link>
             </div>
           </motion.div>
@@ -131,10 +129,10 @@ export default function Landing() {
         <div className="mb-10 flex items-end justify-between gap-4">
           <div>
             <p className="font-display text-[11px] font-semibold uppercase tracking-[0.28em] text-apex-red">
-              Featured machines
+              {copy.featuredEyebrow}
             </p>
             <h2 className="mt-3 font-display text-3xl font-black tracking-tight sm:text-4xl">
-              THE HALL OF LEGENDS
+              {copy.featuredTitle}
             </h2>
           </div>
           <Link
@@ -156,10 +154,10 @@ export default function Landing() {
         <div className="mx-auto max-w-[1400px] px-4 py-20 sm:px-6">
           <div className="mb-10">
             <p className="font-display text-[11px] font-semibold uppercase tracking-[0.28em] text-apex-red">
-              18 marques, one archive
+              {copy.marquesEyebrow}
             </p>
             <h2 className="mt-3 font-display text-3xl font-black tracking-tight sm:text-4xl">
-              BROWSE BY MARQUE
+              {copy.marquesTitle}
             </h2>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
@@ -190,25 +188,35 @@ export default function Landing() {
         <div className="absolute inset-0 bg-gradient-to-br from-[#2a0a04] via-apex-ink to-apex-ink" />
         <div className="relative mx-auto max-w-[1400px] px-4 py-20 text-center sm:px-6">
           <h2 className="font-display text-4xl font-black tracking-tight sm:text-5xl">
-            READY TO <span className="text-apex-red">DREAM</span>?
+            {(() => {
+              const w = (copy.ctaHeading || "").trim().split(/\s+/).filter(Boolean);
+              const last = w.pop() ?? "";
+              return w.length ? (
+                <>
+                  {w.join(" ")}{" "}
+                  <span className="text-apex-red">{last}</span>
+                </>
+              ) : (
+                <span className="text-white">{last}</span>
+              );
+            })()}
           </h2>
           <p className="mx-auto mt-4 max-w-md text-white/60">
-            Open the garage and wander through the fastest, rarest and most
-            expensive machines ever built.
+            {copy.ctaBody}
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
             <Link
               to="/garage"
               className="group inline-flex items-center gap-2 rounded-md bg-apex-red px-7 py-3.5 font-display text-sm font-bold uppercase tracking-[0.14em] text-white transition-all hover:bg-apex-red-bright"
             >
-              Open the Garage
+              {copy.ctaBtn1}
               <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
             </Link>
             <Link
               to="/rankings"
               className="inline-flex items-center gap-2 rounded-md border border-white/25 px-7 py-3.5 font-display text-sm font-bold uppercase tracking-[0.14em] text-white transition-colors hover:border-white"
             >
-              See Rankings
+              {copy.ctaBtn2}
             </Link>
           </div>
         </div>
