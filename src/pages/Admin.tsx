@@ -297,9 +297,8 @@ export default function Admin() {
         ))}
       </div>
 
-      {/* ── Users & Roles + Quick UI Settings ───────────────────────────── */}
-      <div className="mt-12 grid gap-8 md:grid-cols-2">
-        {/* Users */}
+      {/* ── Users & Roles ────────────────────────────────────────────── */}
+      <div className="mt-12">
         <CollapsibleSection title="Users & Roles" icon={Shield} defaultOpen={false}>
           {users === undefined ? (
             <div className="flex items-center gap-2 px-5 py-8 text-sm text-white/50">
@@ -373,9 +372,9 @@ export default function Admin() {
         </CollapsibleSection>
       </div>
 
-      {/* Quick UI Settings — full width */}
-      <div className="mt-12">
-        <CollapsibleSection title="Quick UI Settings" icon={Palette} defaultOpen={false}>
+      {/* ── Quick UI Settings ──────────────────────────────────────────── */}
+      <div className="mt-6">
+        <CollapsibleSection title="Quick UI Settings" icon={Palette} defaultOpen={true}>
           <div className="flex items-center justify-end border-b border-apex-line px-5 py-4">
             {hydrated && (
               <span
