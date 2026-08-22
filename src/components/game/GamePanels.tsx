@@ -255,33 +255,61 @@ function SpinPanel({ state, dispatch }: { state: GameState; dispatch: React.Disp
             1% chance of a supercar · free every 15 minutes
           </p>
 
-          <div className="mt-6 rounded-xl border border-apex-line bg-apex-panel p-5 text-center">
-            {result ? (
-              wonCar ? (
-                <div>
-                  <p className="font-display text-[10px] font-semibold uppercase tracking-[0.28em] text-amber-300">
-                    🏆 Supercar won!
-                  </p>
-                  <p className="mt-2 font-display text-2xl font-black text-white">{wonCar.name}</p>
-                  <p className="mt-1 text-xs text-white/40">
-                    {wonCar.brand} · {fmtMoney(wonCar.value)} · {fmtNum(wonCar.hp)} hp — added to your garage
-                  </p>
-                </div>
+          <div className="mt-6 min-h-[7.5rem] rounded-xl border border-apex-line bg-apex-panel p-5 text-center">
+            <AnimatePresence mode="wait">
+              {spinning ? (
+                <motion.p
+                  key="spinning"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="font-display text-[10px] font-semibold uppercase tracking-[0.28em] text-white/40"
+                >
+                  Spinning… the wheel decides your fate
+                </motion.p>
+              ) : result ? (
+                wonCar ? (
+                  <motion.div
+                    key={`won-${result.carId}`}
+                    initial={{ opacity: 0, scale: 0.8, y: 8 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    transition={{ type: "spring", stiffness: 260, damping: 18 }}
+                  >
+                    <p className="font-display text-[10px] font-semibold uppercase tracking-[0.28em] text-amber-300">
+                      🏆 Supercar won!
+                    </p>
+                    <p className="mt-2 font-display text-2xl font-black text-white">{wonCar.name}</p>
+                    <p className="mt-1 text-xs text-white/40">
+                      {wonCar.brand} · {fmtMoney(wonCar.value)} · {fmtNum(wonCar.hp)} hp — added to your garage
+                    </p>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key={`won-${result.amount}`}
+                    initial={{ opacity: 0, scale: 0.8, y: 8 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    transition={{ type: "spring", stiffness: 260, damping: 18 }}
+                  >
+                    <p className="font-display text-[10px] font-semibold uppercase tracking-[0.28em] text-white/40">
+                      You won
+                    </p>
+                    <p className="mt-2 font-display text-4xl font-black text-apex-red">
+                      +{fmtMoney(result.amount ?? 0)}
+                    </p>
+                  </motion.div>
+                )
               ) : (
-                <div>
-                  <p className="font-display text-[10px] font-semibold uppercase tracking-[0.28em] text-white/40">
-                    You won
-                  </p>
-                  <p className="mt-2 font-display text-4xl font-black text-apex-red">
-                    +{fmtMoney(result.amount ?? 0)}
-                  </p>
-                </div>
-              )
-            ) : (
-              <p className="font-display text-[10px] font-semibold uppercase tracking-[0.28em] text-white/40">
-                Good luck — the wheel is rigged in your favour… barely.
-              </p>
-            )}
+                <motion.p
+                  key="idle"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="font-display text-[10px] font-semibold uppercase tracking-[0.28em] text-white/40"
+                >
+                  Good luck — the wheel is rigged in your favour… barely.
+                </motion.p>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </div>
