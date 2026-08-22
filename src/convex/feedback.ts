@@ -94,6 +94,8 @@ export const listPublicFeedback = query({
         carSlug: f.carSlug ?? null,
         createdAt: f.createdAt,
         authorName: user?.name ?? "Anonymous",
+        authorImage: user?.image ?? "",
+        authorAccent: user?.accent ?? "",
       };
     });
   },

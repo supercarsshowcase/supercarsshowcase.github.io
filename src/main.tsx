@@ -17,6 +17,7 @@ import { RequireAdmin } from "./components/RequireAdmin";
 import Landing from "./pages/Landing.tsx";
 import Feedback from "./pages/Feedback.tsx";
 import MyGarage from "./pages/MyGarage.tsx";
+import Profile from "./pages/Profile.tsx";
 import Admin from "./pages/Admin.tsx";
 import Garage from "./pages/Garage.tsx";
 import CarDetail from "./pages/CarDetail.tsx";
@@ -73,6 +74,14 @@ createRoot(document.getElementById("root")!).render(
                   element={
                     <RequireAuth>
                       <MyGarage />
+                    </RequireAuth>
+                  }
+                />
+                <Route
+                  path="/profile"
+                  element={
+                    <RequireAuth>
+                      <Profile />
                     </RequireAuth>
                   }
                 />

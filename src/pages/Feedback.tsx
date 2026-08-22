@@ -344,8 +344,23 @@ export default function Feedback() {
                     >
                       {badge.label}
                     </span>
-                    <span className="truncate text-[11px] text-white/35">
-                      {f.authorName} · {timeAgo(f.createdAt)}
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      {f.authorImage ? (
+                        <img
+                          src={f.authorImage}
+                          alt=""
+                          referrerPolicy="no-referrer"
+                          className="size-4 shrink-0 rounded-full object-cover"
+                          style={
+                            f.authorAccent
+                              ? { boxShadow: `0 0 0 1.5px ${f.authorAccent}` }
+                              : undefined
+                          }
+                        />
+                      ) : null}
+                      <span className="truncate text-[11px] text-white/35">
+                        {f.authorName} · {timeAgo(f.createdAt)}
+                      </span>
                     </span>
                   </div>
                   <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-white/80">

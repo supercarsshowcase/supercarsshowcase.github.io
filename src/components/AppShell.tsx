@@ -12,6 +12,7 @@ import {
   Shield,
   Megaphone,
   Warehouse,
+  UserRound,
 } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -216,10 +217,25 @@ export function AppShell() {
                       <img
                         src={user.image}
                         alt=""
+                        referrerPolicy="no-referrer"
                         className="size-5 rounded-full object-cover"
+                        style={
+                          user?.accent
+                            ? { boxShadow: `0 0 0 2px ${user.accent}` }
+                            : undefined
+                        }
                       />
                     ) : (
-                      <User className="size-4" />
+                      <span
+                        className="flex size-5 items-center justify-center rounded-full"
+                        style={
+                          user?.accent
+                            ? { boxShadow: `0 0 0 2px ${user.accent}` }
+                            : undefined
+                        }
+                      >
+                        <User className="size-4" />
+                      </span>
                     )}
                   </button>
                 </DropdownMenuTrigger>
@@ -248,6 +264,13 @@ export function AppShell() {
                   >
                     <Warehouse className="mr-2 size-4" />
                     My garage
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => navigate("/profile")}
+                    className="cursor-pointer"
+                  >
+                    <UserRound className="mr-2 size-4" />
+                    Edit profile
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => navigate("/compare")}
