@@ -263,6 +263,13 @@ export function spinReadyAt(state: GameState): number {
   return state.lastSpinAt + SPIN_COOLDOWN_MS;
 }
 
+/** All cars the wheel's 1% supercar slice can drop (legendary+ non-secret). */
+export function spinSupercarPool() {
+  return Object.values(GAME_CAR_MAP).filter(
+    (c) => !c.secret && rarityIndex(c.rarity) >= 4,
+  );
+}
+
 /**
  * Roll the wheel: 1% supercar (random legendary+ non-secret), otherwise one of
  * the 11 cash slices. The winning slice index is returned so the animation can
@@ -270,9 +277,7 @@ export function spinReadyAt(state: GameState): number {
  */
 export function rollSpin(state: GameState): SpinResult {
   if (Math.random() < SPIN_CAR_CHANCE) {
-    const pool = Object.values(GAME_CAR_MAP).filter(
-      (c) => !c.secret && rarityIndex(c.rarity) >= 4,
-    );
+    const pool = spinSupercarPool();
     if (pool.length > 0) {
       const pick = pool[Math.floor(Math.random() * pool.length)];
       return { kind: "car", carId: pick.id, slice: 0 };

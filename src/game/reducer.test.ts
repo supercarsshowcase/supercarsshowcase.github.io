@@ -9,6 +9,7 @@ import {
   SPIN_COOLDOWN_MS,
   spinCashSlices,
   spinReadyAt,
+  spinSupercarPool,
 } from "./engine";
 import type { GameState } from "./types";
 
@@ -229,6 +230,15 @@ describe("reducer: lucky spin", () => {
       expect(def).toBeDefined();
       expect(def!.secret).not.toBe(true);
       expect(["legendary", "exotic", "hyper", "mythic", "ultimate"]).toContain(def!.rarity);
+    }
+  });
+
+  test("the supercar pool is legendary+ and never includes the secret", () => {
+    const pool = spinSupercarPool();
+    expect(pool.length).toBeGreaterThan(10);
+    for (const c of pool) {
+      expect(c.secret).not.toBe(true);
+      expect(["legendary", "exotic", "hyper", "mythic", "ultimate"]).toContain(c.rarity);
     }
   });
 });

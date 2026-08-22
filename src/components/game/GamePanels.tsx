@@ -50,6 +50,7 @@ import {
   rollSpin,
   spinCashSlices,
   spinReadyAt,
+  spinSupercarPool,
   upgradeCost,
   type Action,
 } from "@/game/engine";
@@ -155,6 +156,11 @@ function SpinPanel({ state, dispatch }: { state: GameState; dispatch: React.Disp
   const [rotation, setRotation] = useState(0);
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState<SpinResult | null>(null);
+  const supercarPool = spinSupercarPool();
+  const [previewIdx, setPreviewIdx] = useState(() =>
+    Math.floor(Math.random() * Math.max(1, supercarPool.length)),
+  );
+  const previewCar = supercarPool[previewIdx % supercarPool.length];
 
   const now = state.lastTick;
   const readyAt = spinReadyAt(state);
@@ -190,8 +196,8 @@ function SpinPanel({ state, dispatch }: { state: GameState; dispatch: React.Disp
         title="SPIN THE WHEEL"
         hint="Free every 15 minutes. Cash on 99% of the wheel — and a supercar on 1%."
       />
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="relative mx-auto aspect-square w-full max-w-[420px]">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1.15fr_1fr]">
+        <div className="relative mx-auto aspect-square w-full max-w-[600px]">
           {/* Pointer */}
           <div className="absolute left-1/2 top-0 z-20 -translate-x-1/2 -translate-y-1/2">
             <svg width="34" height="30" viewBox="0 0 34 30" className="drop-shadow-[0_4px_10px_rgba(0,0,0,0.7)]">
@@ -212,10 +218,31 @@ function SpinPanel({ state, dispatch }: { state: GameState; dispatch: React.Disp
               }
             }}
           >
+            {/* Supercar photo riding on the gold slice (rotates with the wheel) */}
+            {previewCar && (
+              <div
+                className="absolute overflow-hidden rounded-md border-2 border-amber-300/70"
+                style={{
+                  left: `${50 + 30 * Math.sin((SLICE_DEG / 2 * Math.PI) / 180)}%`,
+                  top: `${50 - 30 * Math.cos((SLICE_DEG / 2 * Math.PI) / 180)}%`,
+                  width: "21%",
+                  aspectRatio: "16/10",
+                  transform: "translate(-50%, -50%) rotate(15deg)",
+                  boxShadow: "0 4px 18px rgba(0,0,0,0.55)",
+                }}
+              >
+                <SmartImage
+                  src={gameCarImage(previewCar)}
+                  alt={previewCar.name}
+                  seed={previewCar.id}
+                  className="h-full w-full object-cover"
+                />
+              </div>
+            )}
             {/* Slice labels */}
             {Array.from({ length: SLICE_COUNT }, (_, i) => {
               const angle = ((i * SLICE_DEG + SLICE_DEG / 2) * Math.PI) / 180;
-              const r = 37;
+              const r = i === 0 ? 43 : 37;
               const x = 50 + r * Math.sin(angle);
               const y = 50 - r * Math.cos(angle);
               const compact =
@@ -254,6 +281,39 @@ function SpinPanel({ state, dispatch }: { state: GameState; dispatch: React.Disp
           <p className="mt-2 text-center text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">
             1% chance of a supercar · free every 15 minutes
           </p>
+
+          {/* Jackpot preview — the supercar on the wheel */}
+          {previewCar && (
+            <div className="mt-6 overflow-hidden rounded-xl border border-amber-300/30 bg-apex-panel">
+              <div className="relative h-40 bg-[#0a0a0b]">
+                <SmartImage
+                  src={gameCarImage(previewCar)}
+                  alt={previewCar.name}
+                  seed={previewCar.id}
+                  className="h-full w-full object-cover"
+                />
+                <span className="absolute left-2 top-2 rounded-sm border border-amber-300 bg-black/50 px-2 py-0.5 font-display text-[9px] font-bold uppercase tracking-[0.16em] text-amber-300 backdrop-blur">
+                  1% Jackpot
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-3 p-4">
+                <div className="min-w-0">
+                  <p className="font-display text-lg font-black text-white">{previewCar.name}</p>
+                  <p className="truncate text-[11px] text-white/40">
+                    {previewCar.brand} · {fmtNum(previewCar.hp)} hp · {fmtMoney(previewCar.value)}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPreviewIdx((i) => (i + 1) % supercarPool.length)}
+                  className="shrink-0 rounded-md border border-amber-300/40 px-3 py-2 font-display text-[10px] font-bold uppercase tracking-[0.14em] text-amber-300 transition-colors hover:bg-amber-300/10"
+                >
+                  <RefreshCw className="mr-1 inline size-3.5" />
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="mt-6 min-h-[7.5rem] rounded-xl border border-apex-line bg-apex-panel p-5 text-center">
             <AnimatePresence mode="wait">
