@@ -220,7 +220,6 @@ export default function Admin() {
   const users = useQuery(api.site.listUsers);
   const settings = useQuery(api.site.getSiteSettings);
 
-  const bootstrapOwner = useMutation(api.site.bootstrapOwner);
   const setUserRole = useMutation(api.site.setUserRole);
   const updateSiteSettings = useMutation(api.site.updateSiteSettings);
 
@@ -524,13 +523,6 @@ export default function Admin() {
           Site analytics, user roles, and quick UI settings. Only admins can see
           this page.
         </p>
-        <button
-          type="button"
-          onClick={() => void bootstrapOwner().then(() => toast.success("You are now the owner!")).catch((e: unknown) => toast.error(e instanceof Error ? e.message : "Failed"))}
-          className="mt-4 inline-flex items-center gap-2 rounded-md bg-amber-500/20 border border-amber-500/40 px-4 py-2 font-display text-[11px] font-bold uppercase tracking-[0.12em] text-amber-400 hover:bg-amber-500/30 transition-colors"
-        >
-          <Crown className="size-3.5" /> Become Owner
-        </button>
       </div>
 
       {/* Stats */}
@@ -620,7 +612,6 @@ export default function Admin() {
                       <option value="user">User</option>
                       <option value="moderator">Moderator</option>
                       <option value="admin">Admin</option>
-                      <option value="owner">Owner</option>
                     </select>
                     <button
                       type="button"
