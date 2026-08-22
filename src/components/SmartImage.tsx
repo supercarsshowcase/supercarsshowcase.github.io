@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { paletteFromSeed } from "@/lib/seed";
 
@@ -85,36 +85,34 @@ function GeneratedScene({
 }
 
 /**
- * Renders a real photo when `src` is provided. Falls back to a deterministic
- * generated scene on error. Resets error state when `src` changes.
+ * Renders a real photo on top of a deterministic generated-scene background.
+ * When the image loads, it covers the scene. When it fails, the browser hides
+ * the img element inline and the scene shows through — no React error state,
+ * no stale-error trap, no flash.
  */
 export function SmartImage({ src, alt, label, sublabel, accent = "#ff2e00", className, seed, viewLabel }: SmartImageProps) {
-  const [errored, setErrored] = useState(false);
-
-  // Reset error state when src changes
-  useEffect(() => {
-    setErrored(false);
-  }, [src]);
-
   const fallbackSeed = seed ?? alt ?? "machine";
-
-  if (!src || errored) {
-    return (
-      <div className={cn("overflow-hidden bg-apex-ink", className)}>
-        <GeneratedScene label={label} sublabel={sublabel} accent={accent} seed={fallbackSeed} viewLabel={viewLabel} />
-      </div>
-    );
-  }
 
   return (
     <div className={cn("relative overflow-hidden bg-apex-ink", className)}>
-      <img
-        src={src}
-        alt={alt}
-        referrerPolicy="no-referrer"
-        className="h-full w-full object-cover"
-        onError={() => setErrored(true)}
-      />
+      {/* Scene always renders as the background layer */}
+      <GeneratedScene label={label} sublabel={sublabel} accent={accent} seed={fallbackSeed} viewLabel={viewLabel} />
+
+      {/* If src is empty, just the scene. Otherwise try to load the photo. */}
+      {src ? (
+        <img
+          key={src}
+          src={src}
+          alt={alt}
+          referrerPolicy="no-referrer"
+          loading="lazy"
+          className="absolute inset-0 z-10 h-full w-full object-cover"
+          onError={(e) => {
+            // Hide the broken img so the scene underneath shows through
+            (e.target as HTMLImageElement).style.display = "none";
+          }}
+        />
+      ) : null}
     </div>
   );
 }

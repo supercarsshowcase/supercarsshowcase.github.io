@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { carBySlug, carsByBrand } from "@/data/cars";
 import { brandByName } from "@/data/brands";
-import { getCarGallery, getCarImageHiRes, carWikiTitle } from "@/data/images";
+import { getCarGallery, getCarImage } from "@/data/images";
 import { useApp } from "@/context/app-context";
 import {
   formatPriceFull,
@@ -169,7 +169,7 @@ export default function CarDetail() {
             <SmartImage
               src={
                 activeView === 0
-                  ? getCarImageHiRes(car)
+                  ? getCarImage(car)
                   : (gallery[activeView]?.src ?? "")
               }
               alt={`${car.brand} ${car.model} — ${gallery[activeView]?.label ?? ""}`}
