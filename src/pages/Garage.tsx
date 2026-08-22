@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Search, SlidersHorizontal, X } from "lucide-react";
+import { Search, X, ChevronDown, RotateCcw } from "lucide-react";
 import { CARS, brandNames, categories } from "@/data/cars";
 import { useApp } from "@/context/app-context";
 import { formatPriceCompact, formatNumber } from "@/lib/format";
@@ -9,34 +9,52 @@ import type { SortMode } from "@/lib/types";
 
 const PRICE_MAX = 50_000_000;
 
+// ── Derived rarities from production counts ──
+const PROD_UNITS: Record<string, number> = {};
+for (const c of CARS) {
+  const m = c.production.match(/(\d+)\s*units?/i);
+  PROD_UNITS[c.slug] = m ? parseInt(m[1]) : Infinity;
+}
+
+function getRarity(car: typeof CARS[number]): string {
+  const u = PROD_UNITS[car.slug];
+  if (u <= 15) return "Ultra Rare";
+  if (u <= 60) return "Limited";
+  if (u <= 500) return "Exclusive";
+  if (u < 10_000) return "Production";
+  return "Mass Production";
+}
+
+const RARITIES = ["All Rarities", "Ultra Rare", "Limited", "Exclusive", "Production", "Mass Production"];
+
 const SORT_OPTIONS: { value: SortMode; label: string }[] = [
   { value: "featured", label: "Featured" },
-  { value: "price-desc", label: "Price: High to Low" },
-  { value: "price-asc", label: "Price: Low to High" },
-  { value: "year-desc", label: "Year: Newest" },
-  { value: "year-asc", label: "Year: Oldest" },
-  { value: "speed-desc", label: "Top Speed: Fastest" },
-  { value: "power-desc", label: "Power: Most HP" },
+  { value: "price-desc", label: "Price • High → Low" },
+  { value: "price-asc", label: "Price • Low → High" },
+  { value: "year-desc", label: "Year • Newest" },
+  { value: "year-asc", label: "Year • Oldest" },
+  { value: "speed-desc", label: "Top Speed • Fastest" },
+  { value: "power-desc", label: "Power • Most HP" },
 ];
 
 export default function Garage() {
   const { currency } = useApp();
   const [query, setQuery] = useState("");
-  const [brand, setBrand] = useState("All");
-  const [category, setCategory] = useState("All");
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, PRICE_MAX]);
-  const [sort, setSort] = useState<SortMode>("featured");
+  const [brand, setBrand] = useState("All Brands");
+  const [category, setCategory] = useState("All Categories");
+  const [rarity, setRarity] = useState("All Rarities");
+  const [maxPrice, setMaxPrice] = useState(PRICE_MAX);
+  const [sort, setSort] = useState<SortMode>("price-desc");
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     let list = CARS.filter((car) => {
-      if (brand !== "All" && car.brand !== brand) return false;
-      if (category !== "All" && car.category !== category) return false;
-      if (car.priceUSD < priceRange[0] || car.priceUSD > priceRange[1])
-        return false;
+      if (brand !== "All Brands" && car.brand !== brand) return false;
+      if (category !== "All Categories" && car.category !== category) return false;
+      if (rarity !== "All Rarities" && getRarity(car) !== rarity) return false;
+      if (car.priceUSD > maxPrice) return false;
       if (q) {
-        const haystack =
-          `${car.brand} ${car.model} ${car.year} ${car.category} ${car.engine}`.toLowerCase();
+        const haystack = `${car.brand} ${car.model} ${car.year} ${car.category} ${car.engine}`.toLowerCase();
         if (!haystack.includes(q)) return false;
       }
       return true;
@@ -65,152 +83,171 @@ export default function Garage() {
         break;
     }
     return list;
-  }, [query, brand, category, priceRange, sort]);
+  }, [query, brand, category, rarity, maxPrice, sort]);
 
   const hasFilters =
-    query || brand !== "All" || category !== "All" || priceRange[0] > 0 || priceRange[1] < PRICE_MAX;
+    query || brand !== "All Brands" || category !== "All Categories" ||
+    rarity !== "All Rarities" || maxPrice < PRICE_MAX;
 
   const reset = () => {
     setQuery("");
-    setBrand("All");
-    setCategory("All");
-    setPriceRange([0, PRICE_MAX]);
-    setSort("featured");
+    setBrand("All Brands");
+    setCategory("All Categories");
+    setRarity("All Rarities");
+    setMaxPrice(PRICE_MAX);
+    setSort("price-desc");
   };
 
-  return (
-    <div className="mx-auto max-w-[1400px] px-4 py-12 sm:px-6">
-      {/* Header */}
-      <div className="mb-8 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="font-display text-[11px] font-semibold uppercase tracking-[0.28em] text-apex-red">
-            The archive
-          </p>
-          <h1 className="mt-2 font-display text-4xl font-black tracking-tight sm:text-5xl">
-            THE GARAGE
-          </h1>
-        </div>
-        <p className="text-sm text-apex-muted">
-          <span className="font-display text-xl font-black text-white">
-            {filtered.length}
-          </span>{" "}
-          of {CARS.length} machines
-        </p>
-      </div>
+  const Dropdown = ({
+    value,
+    onChange,
+    options,
+  }: {
+    value: string;
+    onChange: (v: string) => void;
+    options: string[];
+  }) => (
+    <div className="relative">
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="h-11 w-full cursor-pointer appearance-none rounded-md border border-white/[0.08] bg-[#0b0b0c] px-4 pr-9 text-sm text-white outline-none transition-colors focus:border-apex-red"
+      >
+        {options.map((opt) => (
+          <option key={opt} value={opt} className="bg-[#0b0b0c] text-white">
+            {opt}
+          </option>
+        ))}
+      </select>
+      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-white/30" />
+    </div>
+  );
 
-      {/* Filter bar */}
-      <div className="mb-10 rounded-lg border border-apex-line bg-apex-panel p-4 sm:p-5">
-        <div className="grid gap-4 lg:grid-cols-[1fr_auto_auto_auto]">
+  return (
+    <div className="mx-auto flex max-w-[1600px] gap-0 px-4 py-12 sm:px-6">
+      {/* ── LEFT SIDEBAR ── */}
+      <aside className="w-[280px] shrink-0 border-r border-white/[0.06] pr-6">
+        {/* Header */}
+        <div className="mb-8 flex items-center justify-between">
+          <span className="font-display text-[11px] font-bold uppercase tracking-[0.2em] text-white/50">
+            FILTERS
+          </span>
+          <button
+            type="button"
+            onClick={reset}
+            className="inline-flex items-center gap-1 font-display text-[10px] font-semibold uppercase tracking-[0.14em] text-white/35 transition-colors hover:text-apex-red"
+          >
+            <RotateCcw className="size-3" /> Reset
+          </button>
+        </div>
+
+        {/* Search */}
+        <div className="mb-6 space-y-1.5">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-white/40" />
+            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-white/25" />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search Bugatti, Chiron, V12, Hypercar…"
-              className="h-11 w-full rounded-md border border-apex-line bg-black pl-10 pr-4 text-sm text-white outline-none transition-colors placeholder:text-white/30 focus:border-apex-red"
+              placeholder="Search models..."
+              className="h-11 w-full rounded-md border border-white/[0.08] bg-[#0b0b0c] pl-10 pr-4 text-sm text-white outline-none transition-colors placeholder:text-white/20 focus:border-apex-red"
             />
           </div>
-
-          <select
-            value={brand}
-            onChange={(e) => setBrand(e.target.value)}
-            aria-label="Filter by brand"
-            className="h-11 cursor-pointer appearance-none rounded-md border border-apex-line bg-black px-4 pr-9 text-sm text-white outline-none focus:border-apex-red"
-          >
-            <option value="All">All Marques</option>
-            {brandNames.map((b) => (
-              <option key={b} value={b}>
-                {b}
-              </option>
-            ))}
-          </select>
-
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            aria-label="Filter by category"
-            className="h-11 cursor-pointer appearance-none rounded-md border border-apex-line bg-black px-4 pr-9 text-sm text-white outline-none focus:border-apex-red"
-          >
-            <option value="All">All Categories</option>
-            {categories.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-
-          <select
-            value={sort}
-            onChange={(e) => setSort(e.target.value as SortMode)}
-            aria-label="Sort cars"
-            className="h-11 cursor-pointer appearance-none rounded-md border border-apex-line bg-black px-4 pr-9 text-sm text-white outline-none focus:border-apex-red"
-          >
-            {SORT_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                Sort: {opt.label}
-              </option>
-            ))}
-          </select>
         </div>
 
-        {/* Price slider */}
-        <div className="mt-5 flex items-center gap-4">
-          <SlidersHorizontal className="size-4 shrink-0 text-white/40" />
-          <div className="flex-1">
-            <Slider
-              value={priceRange}
-              min={0}
-              max={PRICE_MAX}
-              step={250_000}
-              minStepsBetweenThumbs={1}
-              onValueChange={(val) =>
-                setPriceRange([val[0], val[1]] as [number, number])
-              }
-            />
+        {/* Brand */}
+        <div className="mb-6 space-y-1.5">
+          <label className="font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">Brand</label>
+          <Dropdown value={brand} onChange={setBrand} options={["All Brands", ...brandNames]} />
+        </div>
+
+        {/* Category */}
+        <div className="mb-6 space-y-1.5">
+          <label className="font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">Category</label>
+          <Dropdown value={category} onChange={setCategory} options={["All Categories", ...categories]} />
+        </div>
+
+        {/* Rarity */}
+        <div className="mb-6 space-y-1.5">
+          <label className="font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">Rarity</label>
+          <Dropdown value={rarity} onChange={setRarity} options={RARITIES} />
+        </div>
+
+        {/* Max Price */}
+        <div className="mb-6 space-y-1.5">
+          <div className="flex items-center justify-between">
+            <label className="font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">Max Price</label>
+            <span className="font-display text-[11px] font-bold text-apex-red">
+              {maxPrice >= PRICE_MAX
+                ? formatPriceCompact(PRICE_MAX, currency)
+                : formatPriceCompact(maxPrice, currency)}
+            </span>
           </div>
-          <span className="hidden w-44 shrink-0 text-right text-xs text-white/60 sm:block">
-            {formatPriceCompact(priceRange[0], currency)} –{" "}
-            {priceRange[1] >= PRICE_MAX
-              ? formatPriceCompact(PRICE_MAX, currency) + "+"
-              : formatPriceCompact(priceRange[1], currency)}
+          <Slider
+            value={[maxPrice]}
+            min={0}
+            max={PRICE_MAX}
+            step={250_000}
+            onValueChange={([v]) => setMaxPrice(v)}
+            className="[&_[data-slot=slider-range]]:bg-apex-red [&_[data-slot=slider-thumb]]:border-apex-red"
+          />
+        </div>
+
+        {/* Sort */}
+        <div className="space-y-1.5">
+          <label className="font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">Sort By</label>
+          <Dropdown
+            value={SORT_OPTIONS.find((o) => o.value === sort)?.label ?? "Price • High → Low"}
+            onChange={(v) => {
+              const opt = SORT_OPTIONS.find((o) => o.label === v);
+              if (opt) setSort(opt.value);
+            }}
+            options={SORT_OPTIONS.map((o) => o.label)}
+          />
+        </div>
+      </aside>
+
+      {/* ── MAIN CONTENT ── */}
+      <main className="min-w-0 flex-1 pl-8">
+        {/* Top header */}
+        <div className="mb-8 flex items-end justify-between">
+          <div>
+            <p className="inline-flex items-center gap-1.5 font-display text-[11px] font-semibold uppercase tracking-[0.28em] text-apex-red">
+              <span className="inline-block size-1.5 rounded-full bg-apex-red" /> The Garage
+            </p>
+            <h1 className="mt-2 font-display text-4xl font-black tracking-tight text-white/90 sm:text-5xl">
+              {CARS.length} MACHINES ARCHIVED.
+            </h1>
+          </div>
+          <span className="shrink-0 font-display text-xs font-semibold uppercase tracking-[0.16em] text-white/25">
+            {filtered.length} RESULTS
           </span>
         </div>
 
-        {hasFilters && (
-          <button
-            type="button"
-            onClick={reset}
-            className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-apex-red transition-colors hover:text-white"
-          >
-            <X className="size-3.5" /> Clear all filters
-          </button>
+        {/* Grid or empty */}
+        {filtered.length > 0 ? (
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {filtered.map((car) => (
+              <CarCard key={car.slug} car={car} />
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center rounded-lg border border-white/[0.06] bg-[#0b0b0c] px-6 py-32 text-center">
+            <p className="font-display text-3xl font-black text-white">
+              NO MATCHES
+            </p>
+            <p className="mt-3 text-sm text-white/40">
+              Try adjusting your filters.
+            </p>
+            <button
+              type="button"
+              onClick={reset}
+              className="mt-8 rounded-md bg-apex-red px-6 py-2.5 font-display text-xs font-bold uppercase tracking-[0.14em] text-white transition-colors hover:bg-apex-red-bright"
+            >
+              Clear Filters
+            </button>
+          </div>
         )}
-      </div>
-
-      {/* Grid */}
-      {filtered.length > 0 ? (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filtered.map((car) => (
-            <CarCard key={car.slug} car={car} />
-          ))}
-        </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-apex-line bg-apex-panel/40 px-6 py-24 text-center">
-          <p className="font-display text-2xl font-black text-white">
-            No machines found
-          </p>
-          <p className="mt-2 text-sm text-apex-muted">
-            Try adjusting your filters or search query.
-          </p>
-          <button
-            type="button"
-            onClick={reset}
-            className="mt-6 rounded-md bg-apex-red px-5 py-2.5 font-display text-xs font-bold uppercase tracking-[0.14em] text-white transition-colors hover:bg-apex-red-bright"
-          >
-            Reset filters
-          </button>
-        </div>
-      )}
+      </main>
     </div>
   );
 }
