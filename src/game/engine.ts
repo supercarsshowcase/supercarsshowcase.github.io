@@ -540,7 +540,7 @@ export function gameReducer(state: GameState, action: Action): GameState {
         ...initialGameState(),
         prestigeLevel: state.prestigeLevel + 1,
         achievements: state.achievements,
-        totalEarned: state.totalEarned,
+        totalEarned: 0,
         lastTick: Date.now(),
       };
     }

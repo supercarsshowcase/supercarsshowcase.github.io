@@ -41,6 +41,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { Id } from "@/convex/_generated/dataModel";
 import { carsList, mergedCarBySlug } from "@/data/cars";
+import { GAME_CAR_MAP } from "@/game/data";
 import { HOME_COPY, GARAGE_COPY, NAV_COPY, SITE_UPDATES_COPY } from "@/data/page-copy";
 import { PageEditor, type PageField } from "@/components/PageEditor";
 
@@ -871,11 +872,14 @@ export default function Admin() {
                   className="w-full cursor-pointer rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3 py-2 text-sm text-white outline-none focus:border-apex-red"
                 >
                   <option value="">Choose a car…</option>
-                  {carsList().map((c) => (
-                    <option key={c.slug} value={c.slug}>
-                      {c.brand} · {c.model}
-                    </option>
-                  ))}
+                  {Object.values(GAME_CAR_MAP)
+                    .filter((c) => !c.secret)
+                    .sort((a, b) => b.value - a.value)
+                    .map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.brand} · {c.name} ({c.year}) — ${c.value.toLocaleString()}
+                      </option>
+                    ))}
                 </select>
                 <button
                   type="button"
@@ -939,10 +943,30 @@ export default function Admin() {
                 <label className="font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">
                   Duration (minutes)
                 </label>
+                <div className="mt-2 flex gap-2">
+                  {["5", "15", "30", "60", "120", "1440"].map((v) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => setEventDuration(v)}
+                      className={cn(
+                        "rounded-md border px-2.5 py-1.5 text-[10px] font-bold transition-colors",
+                        eventDuration === v
+                          ? "border-apex-red bg-apex-red/20 text-apex-red"
+                          : "border-white/15 text-white/50 hover:border-white/30",
+                      )}
+                    >
+                      {v === "1440" ? "24h" : `${v}m`}
+                    </button>
+                  ))}
+                </div>
                 <input
                   type="number"
                   value={eventDuration}
                   onChange={(e) => setEventDuration(e.target.value)}
+                  min="1"
+                  max="1440"
+                  placeholder="Custom minutes"
                   className="mt-2 w-full rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3 py-2 text-sm text-white outline-none focus:border-apex-red"
                 />
               </div>

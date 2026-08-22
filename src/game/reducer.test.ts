@@ -149,7 +149,7 @@ describe("reducer: tick and prestige", () => {
     expect(next.prestigeLevel).toBe(1);
     expect(Object.keys(next.ownedCars)).toEqual(["rusty-hatch-91"]);
     expect(next.achievements).toContain("first-click");
-    expect(next.totalEarned).toBe(90_000);
+    expect(next.totalEarned).toBe(0);
   });
 });
 
