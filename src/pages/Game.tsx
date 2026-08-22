@@ -1,12 +1,16 @@
 import { useEffect, useReducer, useRef } from "react";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import { GameMain } from "@/components/game/GameMain";
 import { gameReducer, loadGame, saveGame } from "@/game/engine";
 
 const SAVE_INTERVAL_MS = 5000;
 
 export default function Game() {
+  const activeEvent = useQuery(api.adminAbuse.getActiveEvent);
   const [state, dispatch] = useReducer(gameReducer, undefined, loadGame);
   const stateRef = useRef(state);
+  const globalMultiplier = activeEvent?.multiplier ?? 1;
 
   // Keep the latest state available to the save handlers without re-creating them.
   useEffect(() => {
@@ -39,10 +43,10 @@ export default function Game() {
   // Passive income tick.
   useEffect(() => {
     const id = window.setInterval(() => {
-      dispatch({ type: "TICK", now: Date.now() });
+      dispatch({ type: "TICK", now: Date.now(), globalMultiplier });
     }, 1000);
     return () => window.clearInterval(id);
   }, []);
 
-  return <GameMain state={state} dispatch={dispatch} />;
+  return <GameMain state={state} dispatch={dispatch} globalMultiplier={globalMultiplier} activeEvent={activeEvent} />;
 }

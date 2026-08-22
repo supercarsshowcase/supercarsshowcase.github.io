@@ -327,8 +327,8 @@ function newAchievements(state: GameState): { id: string; cash: number; rep: num
 // ── Reducer ───────────────────────────────────────────────────────────────────
 
 export type Action =
-  | { type: "CLICK"; amount: number }
-  | { type: "TICK"; now: number }
+  | { type: "CLICK"; amount: number; globalMultiplier?: number }
+  | { type: "TICK"; now: number; globalMultiplier?: number }
   | { type: "BUY_CAR"; id: string }
   | { type: "SELL_CAR"; id: string }
   | { type: "SET_ACTIVE"; id: string }
@@ -388,7 +388,9 @@ export function gameReducer(state: GameState, action: Action): GameState {
     }
     case "TICK": {
       const dt = Math.min(28_800, Math.max(0, (action.now - state.lastTick) / 1000));
-      const gain = Math.floor(passivePerSec(state) * dt);
+      const raw = passivePerSec(state) * dt;
+      const mult = action.globalMultiplier ?? 1;
+      const gain = Math.floor(raw * mult);
       if (gain <= 0) return { ...state, lastTick: action.now };
       return applyAchievements({
         ...state,

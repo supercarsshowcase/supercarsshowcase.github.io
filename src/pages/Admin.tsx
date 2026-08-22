@@ -34,6 +34,9 @@ import {
   Send,
   ChevronDown,
   Newspaper,
+  Zap,
+  Gift,
+  Flame,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -216,6 +219,87 @@ export default function Admin() {
 
   const setUserRole = useMutation(api.site.setUserRole);
   const updateSiteSettings = useMutation(api.site.updateSiteSettings);
+
+  // ── Admin Abuse ──
+  const giveMoney = useMutation(api.adminAbuse.giveMoney);
+  const giveCar = useMutation(api.adminAbuse.giveCar);
+  const setMultiplierEvent = useMutation(api.adminAbuse.setMultiplierEvent);
+  const clearMultiplierEvent = useMutation(api.adminAbuse.clearMultiplierEvent);
+  const activeEvent = useQuery(api.adminAbuse.getActiveEvent);
+  const users_list = users; // alias to avoid shadowing
+
+  const [abuseUserId, setAbuseUserId] = useState("");
+  const [abuseAmount, setAbuseAmount] = useState("1000000");
+  const [abuseCarId, setAbuseCarId] = useState("");
+  const [abuseBusy, setAbuseBusy] = useState(false);
+
+  const [eventMultiplier, setEventMultiplier] = useState("100");
+  const [eventLabel, setEventLabel] = useState("100x EVENT");
+  const [eventDuration, setEventDuration] = useState("60");
+  const [eventBusy, setEventBusy] = useState(false);
+
+  const handleGiveMoney = async () => {
+    if (!abuseUserId || !abuseAmount || abuseBusy) return;
+    setAbuseBusy(true);
+    try {
+      const r = await giveMoney({
+        userId: abuseUserId as unknown as Id<"users">,
+        amount: Number(abuseAmount),
+      });
+      toast.success(`Gave $${Number(abuseAmount).toLocaleString()} to ${r.userName}`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setAbuseBusy(false);
+    }
+  };
+
+  const handleGiveCar = async () => {
+    if (!abuseUserId || !abuseCarId || abuseBusy) return;
+    setAbuseBusy(true);
+    try {
+      const r = await giveCar({
+        userId: abuseUserId as unknown as Id<"users">,
+        carId: abuseCarId,
+      });
+      toast.success(`Gave ${r.carId} to ${r.userName}`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setAbuseBusy(false);
+    }
+  };
+
+  const handleSetEvent = async () => {
+    const mult = Number(eventMultiplier);
+    const dur = Number(eventDuration);
+    if (!mult || !dur || eventBusy) return;
+    setEventBusy(true);
+    try {
+      await setMultiplierEvent({
+        multiplier: mult,
+        label: eventLabel.trim() || `${mult}x EVENT`,
+        durationMinutes: dur,
+      });
+      toast.success(`${mult}x event active for ${dur} minutes!`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setEventBusy(false);
+    }
+  };
+
+  const handleClearEvent = async () => {
+    setEventBusy(true);
+    try {
+      await clearMultiplierEvent();
+      toast.success("Event cleared");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setEventBusy(false);
+    }
+  };
 
   const feedback = useQuery(api.feedback.listFeedback);
   const setFeedbackStatus = useMutation(api.feedback.setFeedbackStatus);
@@ -681,6 +765,182 @@ export default function Admin() {
               ? `${announceCount} message${announceCount > 1 ? "s" : ""} ready — press Enter to send, or hit Broadcast. Short messages fade fast, long ones stay longer.`
               : "Press Enter to send — or hit Broadcast. Short messages fade fast, long ones stay longer."}
           </p>
+        </div>
+      </CollapsibleSection>
+      </div>
+
+      {/* Admin Abuse */}
+      <div className="mt-12">
+      <CollapsibleSection
+        title="Admin Abuse"
+        icon={Zap}
+        badge="Power"
+        defaultOpen={false}
+      >
+        <div className="px-5 py-5 space-y-8">
+          {/* Active event banner */}
+          {activeEvent && (
+            <div className="rounded-lg border border-apex-red/40 bg-apex-red/10 p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Flame className="size-6 text-apex-red animate-pulse" />
+                  <div>
+                    <p className="font-display text-lg font-black text-apex-red">{activeEvent.label}</p>
+                    <p className="text-xs text-white/50">
+                      Expires {new Date(activeEvent.expiresAt).toLocaleTimeString()}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void handleClearEvent()}
+                  disabled={eventBusy}
+                  className="rounded-md border border-white/20 px-3 py-1.5 text-[10px] font-bold uppercase text-white/60 hover:border-apex-red hover:text-apex-red"
+                >
+                  End Event
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Give money / car */}
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <Gift className="size-4 text-apex-red" />
+              <h3 className="font-display text-sm font-bold uppercase tracking-[0.14em] text-white">Send Gift</h3>
+            </div>
+            <label className="font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">
+              Select user
+            </label>
+            <select
+              value={abuseUserId}
+              onChange={(e) => setAbuseUserId(e.target.value)}
+              className="mt-2 w-full cursor-pointer rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3.5 py-2.5 text-sm text-white outline-none focus:border-apex-red"
+            >
+              <option value="">Choose a user…</option>
+              {users_list?.map((u) => (
+                <option key={u._id} value={u._id}>
+                  {u.name ?? u.email ?? u._id}
+                </option>
+              ))}
+            </select>
+
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              {/* Give money */}
+              <div className="rounded-lg border border-white/[0.08] bg-[#0b0b0c] p-4">
+                <p className="text-xs font-semibold text-white/60 mb-3">Give Cash</p>
+                <input
+                  type="number"
+                  value={abuseAmount}
+                  onChange={(e) => setAbuseAmount(e.target.value)}
+                  placeholder="1000000"
+                  className="w-full rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3 py-2 text-sm text-white outline-none focus:border-apex-red"
+                />
+                <button
+                  type="button"
+                  onClick={() => void handleGiveMoney()}
+                  disabled={!abuseUserId || !abuseAmount || abuseBusy}
+                  className="mt-3 w-full rounded-md bg-emerald-600 px-4 py-2 font-display text-[11px] font-bold uppercase tracking-[0.12em] text-white hover:bg-emerald-500 disabled:opacity-40"
+                >
+                  {abuseBusy ? "Sending…" : `Send $${Number(abuseAmount || 0).toLocaleString()}`}
+                </button>
+              </div>
+
+              {/* Give car */}
+              <div className="rounded-lg border border-white/[0.08] bg-[#0b0b0c] p-4">
+                <p className="text-xs font-semibold text-white/60 mb-3">Give Car</p>
+                <select
+                  value={abuseCarId}
+                  onChange={(e) => setAbuseCarId(e.target.value)}
+                  className="w-full cursor-pointer rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3 py-2 text-sm text-white outline-none focus:border-apex-red"
+                >
+                  <option value="">Choose a car…</option>
+                  {carsList().map((c) => (
+                    <option key={c.slug} value={c.slug}>
+                      {c.brand} · {c.model}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => void handleGiveCar()}
+                  disabled={!abuseUserId || !abuseCarId || abuseBusy}
+                  className="mt-3 w-full rounded-md bg-apex-red px-4 py-2 font-display text-[11px] font-bold uppercase tracking-[0.12em] text-white hover:bg-apex-red-bright disabled:opacity-40"
+                >
+                  {abuseBusy ? "Sending…" : "Send Car"}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Multiplier event */}
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <Flame className="size-4 text-apex-red" />
+              <h3 className="font-display text-sm font-bold uppercase tracking-[0.14em] text-white">Multiplier Event</h3>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div>
+                <label className="font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">
+                  Multiplier
+                </label>
+                <div className="mt-2 flex gap-2">
+                  {["10", "50", "100", "500", "1000"].map((v) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => { setEventMultiplier(v); setEventLabel(`${v}x EVENT`); }}
+                      className={cn(
+                        "rounded-md border px-3 py-1.5 text-xs font-bold transition-colors",
+                        eventMultiplier === v
+                          ? "border-apex-red bg-apex-red/20 text-apex-red"
+                          : "border-white/15 text-white/50 hover:border-white/30",
+                      )}
+                    >
+                      {v}x
+                    </button>
+                  ))}
+                </div>
+                <input
+                  type="number"
+                  value={eventMultiplier}
+                  onChange={(e) => setEventMultiplier(e.target.value)}
+                  className="mt-2 w-full rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3 py-2 text-sm text-white outline-none focus:border-apex-red"
+                />
+              </div>
+              <div>
+                <label className="font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">
+                  Event label
+                </label>
+                <input
+                  type="text"
+                  value={eventLabel}
+                  onChange={(e) => setEventLabel(e.target.value)}
+                  className="mt-2 w-full rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3 py-2 text-sm text-white outline-none focus:border-apex-red"
+                />
+              </div>
+              <div>
+                <label className="font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">
+                  Duration (minutes)
+                </label>
+                <input
+                  type="number"
+                  value={eventDuration}
+                  onChange={(e) => setEventDuration(e.target.value)}
+                  className="mt-2 w-full rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3 py-2 text-sm text-white outline-none focus:border-apex-red"
+                />
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => void handleSetEvent()}
+              disabled={eventBusy || !eventMultiplier || !eventDuration}
+              className="mt-4 inline-flex items-center gap-2 rounded-md bg-gradient-to-r from-apex-red to-orange-600 px-6 py-3 font-display text-[11px] font-bold uppercase tracking-[0.12em] text-white hover:opacity-90 disabled:opacity-40"
+            >
+              <Flame className="size-3.5" />
+              {eventBusy ? "Activating…" : `Activate ${eventMultiplier}x Event`}
+            </button>
+          </div>
         </div>
       </CollapsibleSection>
       </div>

@@ -126,6 +126,28 @@ const schema = defineSchema(
       messages: v.optional(v.array(v.string())),
       createdAt: v.number(),
     }).index("by_created", ["createdAt"]),
+
+    // Global multiplier event set by admins. Single doc keyed "active".
+    // When active, all players earn multiplied income.
+    multiplierEvents: defineTable({
+      key: v.string(),
+      multiplier: v.number(),
+      label: v.string(),
+      expiresAt: v.number(),
+      createdAt: v.number(),
+    }).index("by_key", ["key"]),
+
+    // Admin gifts (money / cars) pending for individual users.
+    adminGifts: defineTable({
+      userId: v.id("users"),
+      kind: v.string(), // "money" | "car"
+      amount: v.optional(v.number()),
+      carId: v.optional(v.string()),
+      claimed: v.boolean(),
+      createdAt: v.number(),
+    })
+      .index("by_user", ["userId"])
+      .index("by_user_claimed", ["userId", "claimed"]),
   },
   {
     schemaValidation: false,

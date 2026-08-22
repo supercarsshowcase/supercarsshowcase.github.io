@@ -5,6 +5,7 @@ import {
   Car as CarIcon,
   CircleDollarSign,
   Coins,
+  Flame,
   Gift,
   MousePointerClick,
   Package,
@@ -76,9 +77,13 @@ interface Popup {
 export function GameMain({
   state,
   dispatch,
+  globalMultiplier = 1,
+  activeEvent,
 }: {
   state: GameState;
   dispatch: React.Dispatch<Action>;
+  globalMultiplier?: number;
+  activeEvent?: { multiplier: number; label: string; expiresAt: number } | null;
 }) {
   const [tab, setTab] = useState<TabId>("earn");
   const [popups, setPopups] = useState<Popup[]>([]);
@@ -87,8 +92,8 @@ export function GameMain({
   const active = GAME_CAR_MAP[state.activeCarId] ?? GAME_CAR_MAP[STARTER_ID];
   const level = levelFrom(state);
   const cash = state.cash;
-  const income = passivePerSec(state);
-  const perClick = clickValue(state);
+  const income = Math.round(passivePerSec(state) * globalMultiplier);
+  const perClick = Math.round(clickValue(state) * globalMultiplier);
   const rarityMeta = RARITY_META[active.rarity];
   const condition = (state.ownedCars[state.activeCarId]?.upgrades.condition ?? 0) / 6;
   const now = state.lastTick;
@@ -105,7 +110,7 @@ export function GameMain({
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const crit = Math.random() < critChance(state);
     const amount = Math.round(perClick * (crit ? 5 : 1));
-    dispatch({ type: "CLICK", amount });
+    dispatch({ type: "CLICK", amount, globalMultiplier });
     const rect = e.currentTarget.getBoundingClientRect();
     const id = ++popupId.current;
     const popup: Popup = {
@@ -143,6 +148,34 @@ export function GameMain({
 
   return (
     <div className="px-3 py-4 sm:px-5 lg:px-7">
+      {/* ── Active Event Banner ── */}
+      {activeEvent && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-4 overflow-hidden rounded-xl border border-apex-red/50 bg-gradient-to-r from-apex-red/20 via-orange-600/20 to-apex-red/20 p-4"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="flex size-10 items-center justify-center rounded-lg bg-apex-red/30 animate-pulse">
+                <Flame className="size-5 text-apex-red" />
+              </span>
+              <div>
+                <p className="font-display text-sm font-black uppercase tracking-wider text-apex-red">
+                  {activeEvent.label}
+                </p>
+                <p className="text-[11px] text-white/50">
+                  All earnings multiplied · Expires {new Date(activeEvent.expiresAt).toLocaleTimeString()}
+                </p>
+              </div>
+            </div>
+            <span className="font-display text-2xl font-black text-apex-red">
+              {activeEvent.multiplier}x
+            </span>
+          </div>
+        </motion.div>
+      )}
+
       {/* ── Header ── */}
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
