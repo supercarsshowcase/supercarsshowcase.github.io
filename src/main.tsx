@@ -12,7 +12,9 @@ import { BrowserRouter, Route, Routes, useLocation } from "react-router";
 import "./index.css";
 import "./types/global.d.ts";
 
+import { RequireAuth } from "./components/RequireAuth";
 import Landing from "./pages/Landing.tsx";
+import Assistant from "./pages/Assistant.tsx";
 import Garage from "./pages/Garage.tsx";
 import CarDetail from "./pages/CarDetail.tsx";
 import BrandDetail from "./pages/BrandDetail.tsx";
@@ -64,6 +66,14 @@ createRoot(document.getElementById("root")!).render(
                 <Route path="/rankings" element={<Rankings />} />
                 <Route path="/favorites" element={<Favorites />} />
                 <Route path="/compare" element={<Compare />} />
+                <Route
+                  path="/assistant"
+                  element={
+                    <RequireAuth>
+                      <Assistant />
+                    </RequireAuth>
+                  }
+                />
                 <Route path="*" element={<NotFound />} />
               </Route>
               <Route
