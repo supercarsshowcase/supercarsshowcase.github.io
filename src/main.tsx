@@ -54,6 +54,15 @@ function RouteSyncer() {
   return null;
 }
 
+/** Scroll to the top whenever the URL changes so every new page starts from the top. */
+function ScrollToTop() {
+  const location = useLocation();
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, [location.pathname]);
+  return null;
+}
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <VlyToolbar />
@@ -62,6 +71,7 @@ createRoot(document.getElementById("root")!).render(
         <AppProvider>
           <BrowserRouter>
             <RouteSyncer />
+            <ScrollToTop />
             <Routes>
               <Route element={<AppShell />}>
                 <Route path="/" element={<Landing />} />
