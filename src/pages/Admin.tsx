@@ -549,7 +549,7 @@ export default function Admin() {
         </div>
       )}
 
-      <div className="mt-12 grid gap-8 lg:grid-cols-2">
+      <div className="mt-12 grid gap-8 md:grid-cols-2">
         {/* Users */}
       <CollapsibleSection
         title="Users & Roles"
