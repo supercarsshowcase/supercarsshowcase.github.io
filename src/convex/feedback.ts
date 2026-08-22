@@ -74,6 +74,31 @@ export const listFeedback = query({
   },
 });
 
+/**
+ * Public wall — every visitor can read what people have submitted. Emails and
+ * read-status stay out of this view; only the author's name is shown.
+ */
+export const listPublicFeedback = query({
+  args: {},
+  handler: async (ctx) => {
+    const items = await ctx.db.query("feedback").order("desc").take(100);
+    const users = await ctx.db.query("users").collect();
+    const byId = new Map(users.map((u) => [u._id, u]));
+
+    return items.map((f) => {
+      const user = byId.get(f.userId);
+      return {
+        _id: f._id,
+        type: f.type,
+        message: f.message,
+        carSlug: f.carSlug ?? null,
+        createdAt: f.createdAt,
+        authorName: user?.name ?? "Anonymous",
+      };
+    });
+  },
+});
+
 export const setFeedbackStatus = mutation({
   args: {
     feedbackId: v.id("feedback"),

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import {
   Lightbulb,
@@ -13,9 +13,10 @@ import {
   Loader2,
   Car,
   ArrowRight,
+  ArrowUpRight,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { CARS } from "@/data/cars";
+import { CARS, carBySlug } from "@/data/cars";
 import { cn } from "@/lib/utils";
 
 const FEEDBACK_TYPES = [
@@ -25,6 +26,29 @@ const FEEDBACK_TYPES = [
   { key: "praise", label: "Praise", hint: "What you love", icon: Heart },
   { key: "other", label: "Other", hint: "Anything else", icon: MessageSquare },
 ] as const;
+
+const FEEDBACK_BADGE: Record<
+  string,
+  { label: string; className: string }
+> = {
+  idea: { label: "Idea", className: "border-amber-300/30 bg-amber-300/10 text-amber-300" },
+  suggestion: { label: "Suggestion", className: "border-sky-300/30 bg-sky-300/10 text-sky-300" },
+  bug: { label: "Bug", className: "border-rose-300/30 bg-rose-300/10 text-rose-300" },
+  praise: { label: "Praise", className: "border-emerald-300/30 bg-emerald-300/10 text-emerald-300" },
+  other: { label: "Other", className: "border-white/20 bg-white/5 text-white/70" },
+};
+
+function timeAgo(ts: number) {
+  const diff = Date.now() - ts;
+  const m = Math.floor(diff / 60_000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  if (d < 7) return `${d}d ago`;
+  return new Date(ts).toLocaleDateString();
+}
 
 const QUICK_IDEAS = [
   "Add a compare mode where I can battle three cars side by side.",
@@ -36,6 +60,7 @@ const QUICK_IDEAS = [
 export default function Feedback() {
   const { user } = useAuth();
   const submitFeedback = useMutation(api.feedback.submitFeedback);
+  const publicFeedback = useQuery(api.feedback.listPublicFeedback);
 
   const [type, setType] = useState<(typeof FEEDBACK_TYPES)[number]["key"]>("idea");
   const [carSlug, setCarSlug] = useState("");
@@ -255,7 +280,8 @@ export default function Feedback() {
               <ul className="mt-4 flex flex-col gap-3 text-sm leading-6 text-white/50">
                 <li className="flex gap-2.5">
                   <span className="mt-2 size-1.5 shrink-0 rounded-full bg-apex-red" />
-                  Your note lands in the admin inbox with your name attached.
+                  Your note appears on the community wall below — everyone can
+                  see it, with your name attached.
                 </li>
                 <li className="flex gap-2.5">
                   <span className="mt-2 size-1.5 shrink-0 rounded-full bg-apex-red" />
@@ -270,6 +296,76 @@ export default function Feedback() {
           </aside>
         </div>
       )}
+
+      {/* Community wall — everything people have submitted */}
+      <section className="mt-14">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="inline-flex items-center gap-1.5 font-display text-[11px] font-semibold uppercase tracking-[0.28em] text-apex-red">
+              <span className="inline-block size-1.5 rounded-full bg-apex-red" />
+              From the community
+            </p>
+            <h2 className="mt-2 font-display text-2xl font-black tracking-tight text-white sm:text-3xl">
+              WHAT PEOPLE WANT
+            </h2>
+          </div>
+          {publicFeedback && (
+            <span className="font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-white/40">
+              {publicFeedback.length} note
+              {publicFeedback.length === 1 ? "" : "s"} on the wall
+            </span>
+          )}
+        </div>
+
+        {publicFeedback === undefined ? (
+          <div className="mt-6 flex items-center gap-2 text-sm text-white/50">
+            <Loader2 className="size-4 animate-spin" /> Loading the wall…
+          </div>
+        ) : publicFeedback.length === 0 ? (
+          <div className="mt-6 rounded-lg border border-dashed border-apex-line px-6 py-12 text-center text-sm text-white/35">
+            No notes yet. Be the first to put an idea on the wall.
+          </div>
+        ) : (
+          <ul className="mt-6 grid gap-3 md:grid-cols-2">
+            {publicFeedback.map((f) => {
+              const badge = FEEDBACK_BADGE[f.type] ?? FEEDBACK_BADGE.other;
+              const car = f.carSlug ? carBySlug(f.carSlug) : undefined;
+              return (
+                <li
+                  key={f._id}
+                  className="flex flex-col rounded-lg border border-apex-line bg-apex-panel p-5"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <span
+                      className={cn(
+                        "inline-flex shrink-0 items-center rounded-sm border px-2 py-1 text-[9px] font-bold uppercase tracking-[0.12em]",
+                        badge.className,
+                      )}
+                    >
+                      {badge.label}
+                    </span>
+                    <span className="truncate text-[11px] text-white/35">
+                      {f.authorName} · {timeAgo(f.createdAt)}
+                    </span>
+                  </div>
+                  <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-white/80">
+                    {f.message}
+                  </p>
+                  {car && (
+                    <Link
+                      to={`/cars/${car.slug}`}
+                      className="mt-3 inline-flex items-center gap-1 self-start font-display text-[10px] font-semibold uppercase tracking-[0.14em] text-apex-red transition-colors hover:text-white"
+                    >
+                      About: {car.brand} {car.model}{" "}
+                      <ArrowUpRight className="size-3" />
+                    </Link>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }
