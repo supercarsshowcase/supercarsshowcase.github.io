@@ -19,8 +19,34 @@ describe("game car images", () => {
     }
   });
 
-  test("returns the generated scene (empty) for brands outside the archive", () => {
-    const cases = ["rusty-hatch-91", "civic-lx-95", "crystal-one-24"];
+  test("daily drivers and JDM cars now resolve direct photos", () => {
+    const cases = [
+      "civic-lx-95",
+      "corolla-se-97",
+      "golf-mk3-94",
+      "mx5-nb-00",
+      "gti-mk2-90",
+      "civic-si-99",
+      "supra-mk3-88",
+      "skyline-gts-92",
+      "brz-13",
+      "golf-r-16",
+      "type-r-17",
+      "supra-mk4-97",
+      "skyline-r34-99",
+      "amg-a45-19",
+      "mustang-gt-15",
+      "camaro-ss-16",
+      "corvette-c6-08",
+    ];
+    for (const id of cases) {
+      const img = gameCarImage(GAME_CAR_MAP[id]);
+      expect(img, `${id} should resolve a real photo`).not.toBe("");
+    }
+  });
+
+  test("returns the generated scene for fictional cars with no photo", () => {
+    const cases = ["rusty-hatch-91", "beater-sedan-87", "crystal-one-24"];
     for (const id of cases) {
       expect(gameCarImage(GAME_CAR_MAP[id]), `${id} should stay on the scene`).toBe("");
     }

@@ -679,6 +679,30 @@ export function fmtNum(n: number): string {
   return Math.round(n).toLocaleString();
 }
 
+/**
+ * Direct Wikimedia photos for game cars the archive doesn't cover at all
+ * (daily drivers & JDM icons). All URLs verified to serve HTTP 200.
+ */
+const GAME_CAR_IMAGES: Record<string, string> = {
+  "civic-lx-95": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/96-98_Honda_Civic_LX_sedan.jpg/960px-96-98_Honda_Civic_LX_sedan.jpg",
+  "corolla-se-97": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/1995-1997_Toyota_Corolla.jpg/960px-1995-1997_Toyota_Corolla.jpg",
+  "golf-mk3-94": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/da/1996-1998_Volkswagen_Golf_%281H%29_CL_5-door_hatchback_03.jpg/960px-1996-1998_Volkswagen_Golf_%281H%29_CL_5-door_hatchback_03.jpg",
+  "mx5-nb-00": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0a/1999_Mazda_MX-5_Miata_Base_in_Highlight_Silver_Metallic%2C_Front_Left%2C_08-06-2022.jpg/960px-1999_Mazda_MX-5_Miata_Base_in_Highlight_Silver_Metallic%2C_Front_Left%2C_08-06-2022.jpg",
+  "gti-mk2-90": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e8/VW_Golf_II_front_20080206.jpg/960px-VW_Golf_II_front_20080206.jpg",
+  "civic-si-99": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4f/Philippine-Market_Honda_Civic_SiR_%28EK%29.jpg/960px-Philippine-Market_Honda_Civic_SiR_%28EK%29.jpg",
+  "supra-mk3-88": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/94/Toyota_Supra_%28A70%2C_pre-facelift%29_1X7A2556.jpg/960px-Toyota_Supra_%28A70%2C_pre-facelift%29_1X7A2556.jpg",
+  "skyline-gts-92": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/42/Nissan_Skyline_R32_GT-R_001.jpg/960px-Nissan_Skyline_R32_GT-R_001.jpg",
+  "brz-13": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/96/Subaru_BRZ_%2C_Toronto.jpg/960px-Subaru_BRZ_%2C_Toronto.jpg",
+  "golf-r-16": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2e/VOLKSWAGEN_GOLF_R-LINE_%28Mk7%2C_Typ_5G%29_China_%282%29.jpg/960px-VOLKSWAGEN_GOLF_R-LINE_%28Mk7%2C_Typ_5G%29_China_%282%29.jpg",
+  "type-r-17": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Honda_CIVIC_TYPE_R_%28DBA-FK8%29.jpg/960px-Honda_CIVIC_TYPE_R_%28DBA-FK8%29.jpg",
+  "supra-mk4-97": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/1996-2002_Toyota_Supra_rear.jpg/960px-1996-2002_Toyota_Supra_rear.jpg",
+  "skyline-r34-99": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/06/Nissan_Skyline_GT-R_R34_V_Spec_II.jpg/960px-Nissan_Skyline_GT-R_R34_V_Spec_II.jpg",
+  "amg-a45-19": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/71/Mercedes-AMG_A_45_S_4MATIC%2B_%28W177%29_1X7A0310.jpg/960px-Mercedes-AMG_A_45_S_4MATIC%2B_%28W177%29_1X7A0310.jpg",
+  "mustang-gt-15": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/2019_Ford_Mustang_GT_5.0_facelift.jpg/960px-2019_Ford_Mustang_GT_5.0_facelift.jpg",
+  "camaro-ss-16": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/2019_Chevrolet_Camaro_2SS_6.2L_front_3.16.19.jpg/960px-2019_Chevrolet_Camaro_2SS_6.2L_front_3.16.19.jpg",
+  "corvette-c6-08": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4f/Chevrolet_Corvette_Z06_-_Flickr_-_Alexandre_Pr%C3%A9vot_%287%29_%28cropped%29.jpg/960px-Chevrolet_Corvette_Z06_-_Flickr_-_Alexandre_Pr%C3%A9vot_%287%29_%28cropped%29.jpg",
+};
+
 /** Manual image overrides for game cars whose archive twin uses a different slug. */
 const GAME_IMAGE_ALIASES: Record<string, string> = {
   "ferrari-458-12": "ferrari-488-gtb",
@@ -696,6 +720,8 @@ const normTokens = (s: string): string[] =>
  * Resolves exact slug → manual alias → best brand+model fuzzy match.
  */
 export function gameCarImage(def: GameCarDef): string {
+  const direct = GAME_CAR_IMAGES[def.id];
+  if (direct) return direct;
   const archive = carsList();
   const targetSlug = def.gallerySlug || GAME_IMAGE_ALIASES[def.id];
   if (targetSlug) {
