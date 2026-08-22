@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { paletteFromSeed } from "@/lib/seed";
 
@@ -9,9 +9,7 @@ interface SmartImageProps {
   sublabel?: string;
   accent?: string;
   className?: string;
-  /** Deterministic seed that makes the fallback scene unique per car/view. */
   seed?: string;
-  /** Short caption shown in the corner of a generated scene. */
   viewLabel?: string;
 }
 
@@ -30,13 +28,7 @@ function CarSilhouette({ className }: { className?: string }) {
       <circle cx="80" cy="94" r="6" fill="#050505" />
       <circle cx="244" cy="94" r="14" fill="currentColor" />
       <circle cx="244" cy="94" r="6" fill="#050505" />
-      <path
-        d="M30 100 H290"
-        stroke="currentColor"
-        strokeOpacity="0.4"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
+      <path d="M30 100 H290" stroke="currentColor" strokeOpacity="0.4" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }
@@ -55,13 +47,10 @@ function GeneratedScene({
   viewLabel?: string;
 }) {
   const palette = useMemo(() => paletteFromSeed(seed), [seed]);
-
   return (
     <div
       className="relative flex h-full w-full items-end justify-center overflow-hidden"
-      style={{
-        background: `linear-gradient(135deg, ${palette.from} 0%, ${palette.to} 100%)`,
-      }}
+      style={{ background: `linear-gradient(135deg, ${palette.from} 0%, ${palette.to} 100%)` }}
       role="img"
       aria-label={[label, sublabel, viewLabel].filter(Boolean).join(" ")}
     >
@@ -74,13 +63,9 @@ function GeneratedScene({
       <div className="pointer-events-none absolute inset-0 opacity-[0.14] [background:repeating-linear-gradient(115deg,transparent_0,transparent_42px,rgba(255,255,255,0.7)_43px,transparent_44px)]" />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(90%_70%_at_50%_45%,transparent_0%,rgba(0,0,0,0.55)_100%)]" />
       <CarSilhouette className="relative z-10 mb-2 h-[52%] w-[78%] text-white/85 drop-shadow-[0_10px_30px_rgba(0,0,0,0.5)]" />
-
       {label && (
         <div className="absolute left-3 top-3 z-10">
-          <span
-            className="font-display text-[11px] font-bold uppercase tracking-[0.18em]"
-            style={{ color: accent ?? "#ff2e00" }}
-          >
+          <span className="font-display text-[11px] font-bold uppercase tracking-[0.18em]" style={{ color: accent ?? "#ff2e00" }}>
             {label}
           </span>
         </div>
@@ -92,9 +77,7 @@ function GeneratedScene({
       )}
       {sublabel && (
         <div className="absolute bottom-3 left-3 z-10 max-w-[80%]">
-          <span className="font-display text-sm font-extrabold uppercase tracking-tight text-white/90">
-            {sublabel}
-          </span>
+          <span className="font-display text-sm font-extrabold uppercase tracking-tight text-white/90">{sublabel}</span>
         </div>
       )}
     </div>
@@ -102,52 +85,36 @@ function GeneratedScene({
 }
 
 /**
- * Renders a real photo when `src` is provided and loads successfully.
- * Falls back to a deterministic, unique generated "studio" scene so every
- * car and gallery view looks distinct — never a broken-image icon.
+ * Renders a real photo when `src` is provided. Falls back to a deterministic
+ * generated scene on error. Resets error state when `src` changes.
  */
-export function SmartImage({
-  src,
-  alt,
-  label,
-  sublabel,
-  accent = "#ff2e00",
-  className,
-  seed,
-  viewLabel,
-}: SmartImageProps) {
+export function SmartImage({ src, alt, label, sublabel, accent = "#ff2e00", className, seed, viewLabel }: SmartImageProps) {
   const [errored, setErrored] = useState(false);
-  const fallbackSeed = seed ?? alt ?? "machine";
 
-  // When the src changes, reset the error state so we try the new image.
-  const [prevSrc, setPrevSrc] = useState(src);
-  if (prevSrc !== src) {
-    setPrevSrc(src);
+  // Reset error state when src changes
+  useEffect(() => {
     setErrored(false);
-  }
+  }, [src]);
+
+  const fallbackSeed = seed ?? alt ?? "machine";
 
   if (!src || errored) {
     return (
       <div className={cn("overflow-hidden bg-apex-ink", className)}>
-        <GeneratedScene
-          label={label}
-          sublabel={sublabel}
-          accent={accent}
-          seed={fallbackSeed}
-          viewLabel={viewLabel}
-        />
+        <GeneratedScene label={label} sublabel={sublabel} accent={accent} seed={fallbackSeed} viewLabel={viewLabel} />
       </div>
     );
   }
 
   return (
-    <img
-      src={src}
-      alt={alt}
-      referrerPolicy="no-referrer"
-      loading="lazy"
-      onError={() => setErrored(true)}
-      className={cn("object-cover", className)}
-    />
+    <div className={cn("relative overflow-hidden bg-apex-ink", className)}>
+      <img
+        src={src}
+        alt={alt}
+        referrerPolicy="no-referrer"
+        className="h-full w-full object-cover"
+        onError={() => setErrored(true)}
+      />
+    </div>
   );
 }
