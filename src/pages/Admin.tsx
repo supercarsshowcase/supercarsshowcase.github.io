@@ -35,7 +35,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { Id } from "@/convex/_generated/dataModel";
 import { carsList, mergedCarBySlug } from "@/data/cars";
-import { HOME_COPY, GARAGE_COPY } from "@/data/page-copy";
+import { HOME_COPY, GARAGE_COPY, NAV_COPY } from "@/data/page-copy";
 import { PageEditor, type PageField } from "@/components/PageEditor";
 
 const FEEDBACK_META: Record<
@@ -141,6 +141,24 @@ const GARAGE_FIELDS: PageField[] = [
   { key: "emptyTitle", label: "Empty state — title" },
   { key: "emptyBody", label: "Empty state — text" },
   { key: "clearLbl", label: "Empty state — button" },
+];
+
+const NAV_FIELDS: PageField[] = [
+  { key: "home", label: "Home link" },
+  { key: "garage", label: "Garage link" },
+  { key: "rankings", label: "Rankings link" },
+  { key: "favorites", label: "Favorites link" },
+  { key: "myGarage", label: "My Garage link" },
+  { key: "feedback", label: "Feedback link" },
+  { key: "admin", label: "Admin link" },
+  { key: "compare", label: "Compare link" },
+  { key: "surprise", label: "Surprise button" },
+  { key: "signIn", label: "Sign-in button" },
+  { key: "signOut", label: "Sign-out button" },
+  { key: "myFavorites", label: "Dropdown — My favorites" },
+  { key: "editProfile", label: "Dropdown — Edit profile" },
+  { key: "compareMachines", label: "Dropdown — Compare machines" },
+  { key: "adminPanel", label: "Footer — Admin panel link" },
 ];
 
 type Settings = {
@@ -874,6 +892,13 @@ export default function Admin() {
           description="The browse archive — sidebar headings, search placeholder and empty state."
           fields={GARAGE_FIELDS}
           defaults={GARAGE_COPY}
+        />
+        <PageEditor
+          page="nav"
+          title="Navigation labels"
+          description="Rename every link and button in the header, mobile menu, account dropdown and footer. The site logo name is set separately under Quick UI settings."
+          fields={NAV_FIELDS}
+          defaults={NAV_COPY}
         />
       </div>
     </div>

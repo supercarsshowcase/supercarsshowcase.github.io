@@ -26,6 +26,24 @@ export const HOME_COPY: Record<string, string> = {
     "bugatti-tourbillon,koenigsegg-jesko-absolut,ferrari-daytona-sp3,rimac-nevera-r,lamborghini-revuelto,mclaren-p1",
 };
 
+export const NAV_COPY: Record<string, string> = {
+  home: "Home",
+  garage: "Garage",
+  rankings: "Rankings",
+  favorites: "Favorites",
+  myGarage: "My Garage",
+  feedback: "Feedback",
+  admin: "Admin",
+  compare: "Compare",
+  surprise: "Surprise",
+  signIn: "Sign in",
+  signOut: "Sign out",
+  myFavorites: "My favorites",
+  editProfile: "Edit profile",
+  compareMachines: "Compare machines",
+  adminPanel: "Admin panel",
+};
+
 export const GARAGE_COPY: Record<string, string> = {
   filtersLbl: "FILTERS",
   resetLbl: "Reset",

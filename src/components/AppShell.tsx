@@ -29,16 +29,17 @@ import {
 import { CURRENCIES } from "@/lib/format";
 import { carsList } from "@/data/cars";
 import { BRANDS } from "@/data/brands";
+import { NAV_COPY } from "@/data/page-copy";
 import type { CurrencyCode } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-const NAV_LINKS = [
-  { to: "/", label: "Home", end: true },
-  { to: "/garage", label: "Garage" },
-  { to: "/rankings", label: "Rankings" },
-  { to: "/favorites", label: "Favorites" },
-  { to: "/my-garage", label: "My Garage" },
-  { to: "/feedback", label: "Feedback" },
+const NAV_LINKS: { to: string; label: string; key: keyof typeof NAV_COPY; end?: boolean }[] = [
+  { to: "/", label: "Home", key: "home", end: true },
+  { to: "/garage", label: "Garage", key: "garage" },
+  { to: "/rankings", label: "Rankings", key: "rankings" },
+  { to: "/favorites", label: "Favorites", key: "favorites" },
+  { to: "/my-garage", label: "My Garage", key: "myGarage" },
+  { to: "/feedback", label: "Feedback", key: "feedback" },
 ];
 
 const REGIONS = ["GB EN", "US EN", "DE DE", "FR FR", "IT IT", "AE EN"];
@@ -71,6 +72,10 @@ export function AppShell() {
 
   // Site settings (banner + accent) from the admin panel.
   const settings = useQuery(api.site.getSiteSettings);
+
+  // Owner-editable navigation labels.
+  const navContent = useQuery(api.pages.getPageContent, { page: "nav" });
+  const nav = { ...NAV_COPY, ...(navContent ?? {}) };
 
   useEffect(() => {
     if (!settings) return;
@@ -125,7 +130,7 @@ export function AppShell() {
                 >
                   {({ isActive }) => (
                     <>
-                      {link.label}
+                      {nav[link.key] ?? link.label}
                       {isActive && (
                         <span className="absolute inset-x-3 -bottom-[1px] h-0.5 bg-apex-red" />
                       )}
@@ -146,7 +151,7 @@ export function AppShell() {
                   }
                 >
                   <Shield className="size-3.5" />
-                  Admin
+                  {nav.admin}
                 </NavLink>
               )}
             </nav>
@@ -159,7 +164,7 @@ export function AppShell() {
               className="hidden items-center gap-2 rounded-md border border-white/15 px-3 py-2 font-display text-[12px] font-semibold uppercase tracking-[0.14em] text-white/80 transition-colors hover:border-apex-red hover:text-white md:flex"
             >
               <Shuffle className="size-3.5" />
-              Surprise
+              {nav.surprise}
             </button>
 
             {/* Region selector */}
@@ -261,28 +266,28 @@ export function AppShell() {
                     className="cursor-pointer"
                   >
                     <Heart className="mr-2 size-4" />
-                    My favorites
+                    {nav.myFavorites}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => navigate("/my-garage")}
                     className="cursor-pointer"
                   >
                     <Warehouse className="mr-2 size-4" />
-                    My garage
+                    {nav.myGarage}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => navigate("/profile")}
                     className="cursor-pointer"
                   >
                     <UserRound className="mr-2 size-4" />
-                    Edit profile
+                    {nav.editProfile}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => navigate("/compare")}
                     className="cursor-pointer"
                   >
                     <Shuffle className="mr-2 size-4" />
-                    Compare machines
+                    {nav.compareMachines}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
@@ -290,7 +295,7 @@ export function AppShell() {
                     className="cursor-pointer text-apex-red focus:text-apex-red"
                   >
                     <LogOut className="mr-2 size-4" />
-                    Sign out
+                    {nav.signOut}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -300,7 +305,7 @@ export function AppShell() {
                 className="inline-flex items-center gap-2 rounded-md border border-apex-red/50 bg-apex-red/10 px-3 py-2 font-display text-[12px] font-semibold uppercase tracking-[0.12em] text-white transition-colors hover:bg-apex-red hover:text-white"
               >
                 <LogIn className="size-3.5" />
-                <span className="hidden sm:inline">Sign in</span>
+                <span className="hidden sm:inline">{nav.signIn}</span>
               </Link>
             )}
 
@@ -331,7 +336,7 @@ export function AppShell() {
                     )
                   }
                 >
-                  {link.label}
+                  {nav[link.key] ?? link.label}
                 </NavLink>
               ))}
               <NavLink
@@ -339,7 +344,7 @@ export function AppShell() {
                 onClick={() => setMobileOpen(false)}
                 className="border-b border-apex-line py-3 font-display text-sm font-semibold uppercase tracking-[0.16em] text-white/70"
               >
-                Compare
+                {nav.compare}
               </NavLink>
               {isAdmin && (
                 <NavLink
@@ -347,7 +352,7 @@ export function AppShell() {
                   onClick={() => setMobileOpen(false)}
                   className="border-b border-apex-line py-3 font-display text-sm font-semibold uppercase tracking-[0.16em] text-apex-red"
                 >
-                  <Shield className="mr-2 inline size-4" /> Admin
+                  <Shield className="mr-2 inline size-4" /> {nav.admin}
                 </NavLink>
               )}
               {!isAuthenticated && (
@@ -356,7 +361,7 @@ export function AppShell() {
                   onClick={() => setMobileOpen(false)}
                   className="border-b border-apex-line py-3 font-display text-sm font-semibold uppercase tracking-[0.16em] text-apex-red"
                 >
-                  Sign in
+                  {nav.signIn}
                 </NavLink>
               )}
               <button
@@ -411,14 +416,14 @@ export function AppShell() {
                     to={l.to}
                     className="text-sm text-white/70 transition-colors hover:text-apex-red"
                   >
-                    {l.label}
+                    {nav[l.key] ?? l.label}
                   </Link>
                 ))}
                 <Link
                   to="/compare"
                   className="text-sm text-white/70 transition-colors hover:text-apex-red"
                 >
-                  Compare
+                  {nav.compare}
                 </Link>
               </div>
               <div className="flex flex-col gap-2">
@@ -445,28 +450,28 @@ export function AppShell() {
                     onClick={handleSignOut}
                     className="text-left text-sm text-white/70 transition-colors hover:text-apex-red"
                   >
-                    Sign out
+                    {nav.signOut}
                   </button>
                 ) : (
                   <Link
                     to="/auth"
                     className="text-sm text-white/70 transition-colors hover:text-apex-red"
                   >
-                    Sign in
+                    {nav.signIn}
                   </Link>
                 )}
                 <Link
                   to="/favorites"
                   className="text-sm text-white/70 transition-colors hover:text-apex-red"
                 >
-                  My favorites
+                  {nav.myFavorites}
                 </Link>
                 {isAdmin && (
                   <Link
                     to="/admin"
                     className="text-sm text-white/70 transition-colors hover:text-apex-red"
                   >
-                    Admin panel
+                    {nav.adminPanel}
                   </Link>
                 )}
               </div>
