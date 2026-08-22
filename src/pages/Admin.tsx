@@ -374,37 +374,6 @@ export default function Admin() {
 
         {/* Site settings */}
         <CollapsibleSection title="Quick UI Settings" icon={Palette} defaultOpen={true}>
-          <div className="flex items-center justify-end border-b border-apex-line px-5 py-4">
-            {hydrated && (
-              <span
-                className={cn(
-                  "inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em]",
-                  saveStatus === "error"
-                    ? "text-apex-red"
-                    : dirty
-                      ? "text-white/40"
-                      : "text-white/40",
-                )}
-              >
-                {saveStatus === "error" ? (
-                  <><AlertTriangle className="size-3.5" /> Save failed</>
-                ) : dirty ? (
-                  <><Loader2 className="size-3.5 animate-spin" /> Saving…</>
-                ) : (
-                  <><Check className="size-3.5" /> Saved</>
-                )}
-              </span>
-            )}
-            <button
-              type="button"
-              onClick={() => void persist(accent, siteName)}
-              disabled={!hydrated}
-              className="inline-flex items-center gap-1.5 rounded-md bg-apex-red px-3 py-1.5 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-white transition-opacity hover:opacity-90 disabled:opacity-40"
-            >
-              <Save className="size-3.5" /> Save
-            </button>
-          </div>
-
           {settings === undefined ? (
             <div className="flex items-center gap-2 px-5 py-8 text-sm text-white/50">
               <Loader2 className="size-4 animate-spin" /> Loading settings…
