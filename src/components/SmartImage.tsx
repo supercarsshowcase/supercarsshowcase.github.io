@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { paletteFromSeed } from "@/lib/seed";
 
@@ -12,6 +12,13 @@ interface SmartImageProps {
   seed?: string;
   viewLabel?: string;
 }
+
+/** Total <img> attempts before giving up to the generated scene. */
+const MAX_ATTEMPTS = 3;
+/** If a request neither loads nor errors this long, assume it stalled and retry. */
+const HANG_TIMEOUT_MS = 8000;
+/** Load images this far outside the viewport so scrolling feels instant. */
+const VIEW_MARGIN = "400px 0px";
 
 function CarSilhouette({ className }: { className?: string }) {
   return (
@@ -85,32 +92,75 @@ function GeneratedScene({
 }
 
 /**
- * Renders a real photo on top of a deterministic generated-scene background.
- * When the image loads, it covers the scene. When it fails, the browser hides
- * the img element inline and the scene shows through — no React error state,
- * no stale-error trap, no flash.
+ * Reliable photo-with-placeholder. The generated scene always renders behind;
+ * the real photo mounts only once the container is near the viewport (no
+ * `loading="lazy"`, which can defer requests indefinitely inside embedded
+ * previews). Failures are retried a few times — a transient rate-limit or
+ * dropped connection recovers instead of leaving a permanent silhouette.
  */
 export function SmartImage({ src, alt, label, sublabel, accent = "#ff2e00", className, seed, viewLabel }: SmartImageProps) {
   const fallbackSeed = seed ?? alt ?? "machine";
 
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [inView, setInView] = useState(() => typeof IntersectionObserver === "undefined");
+  const [attempt, setAttempt] = useState(0);
+  const [loaded, setLoaded] = useState(false);
+
+  // Reset when the requested image changes (render-time adjust, not an effect).
+  const [prevSrc, setPrevSrc] = useState(src);
+  if (prevSrc !== src) {
+    setPrevSrc(src);
+    setAttempt(0);
+    setLoaded(false);
+  }
+
+  // Watch the container: once it nears the viewport, mount the <img> eagerly.
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setInView(true);
+            io.disconnect();
+          }
+        }
+      },
+      { rootMargin: VIEW_MARGIN },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  const giveUp = attempt >= MAX_ATTEMPTS;
+  const showImg = inView && src.length > 0 && !giveUp;
+  const hanging = showImg && !loaded;
+
+  // If a mounted request neither loads nor errors (stalled connection,
+  // throttled request), retry it so the photo can't stay stuck behind the
+  // placeholder.
+  useEffect(() => {
+    if (!hanging) return;
+    const t = setTimeout(() => setAttempt((a) => a + 1), HANG_TIMEOUT_MS);
+    return () => clearTimeout(t);
+  }, [hanging, attempt, src]);
+
   return (
-    <div className={cn("relative overflow-hidden bg-apex-ink", className)}>
-      {/* Scene always renders as the background layer */}
+    <div ref={wrapRef} className={cn("relative overflow-hidden bg-apex-ink", className)}>
+      {/* Placeholder layer — always present, covered by the photo when it loads */}
       <GeneratedScene label={label} sublabel={sublabel} accent={accent} seed={fallbackSeed} viewLabel={viewLabel} />
 
-      {/* If src is empty, just the scene. Otherwise try to load the photo. */}
-      {src ? (
+      {showImg ? (
         <img
-          key={src}
+          key={`${src}:${attempt}`}
           src={src}
           alt={alt}
           referrerPolicy="no-referrer"
-          loading="lazy"
+          decoding="async"
           className="absolute inset-0 z-10 h-full w-full object-cover"
-          onError={(e) => {
-            // Hide the broken img so the scene underneath shows through
-            (e.target as HTMLImageElement).style.display = "none";
-          }}
+          onLoad={() => setLoaded(true)}
+          onError={() => setAttempt((a) => a + 1)}
         />
       ) : null}
     </div>
