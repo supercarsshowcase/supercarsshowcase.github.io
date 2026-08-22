@@ -300,7 +300,7 @@ export default function Admin() {
       {/* ── Users & Roles + Quick UI Settings ───────────────────────────── */}
       <div className="mt-12 grid gap-8 lg:grid-cols-2">
         {/* Users */}
-        <CollapsibleSection title="Users & Roles" icon={Shield} defaultOpen={true}>
+        <CollapsibleSection key="users-roles" title="Users & Roles" icon={Shield} defaultOpen={true}>
           {users === undefined ? (
             <div className="flex items-center gap-2 px-5 py-8 text-sm text-white/50">
               <Loader2 className="size-4 animate-spin" /> Loading users…
@@ -373,7 +373,7 @@ export default function Admin() {
         </CollapsibleSection>
 
         {/* Site settings */}
-        <CollapsibleSection title="Quick UI Settings" icon={Palette} defaultOpen={true}>
+        <CollapsibleSection key="quick-ui" title="Quick UI Settings" icon={Palette} defaultOpen={true}>
           {settings === undefined ? (
             <div className="flex items-center gap-2 px-5 py-8 text-sm text-white/50">
               <Loader2 className="size-4 animate-spin" /> Loading settings…
