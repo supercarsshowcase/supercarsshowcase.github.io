@@ -371,8 +371,10 @@ export default function Admin() {
             </ul>
           )}
         </CollapsibleSection>
+      </div>
 
-        {/* Site settings */}
+      {/* Quick UI Settings — full width */}
+      <div className="mt-12">
         <CollapsibleSection title="Quick UI Settings" icon={Palette} defaultOpen={false}>
           <div className="flex items-center justify-end border-b border-apex-line px-5 py-4">
             {hydrated && (
