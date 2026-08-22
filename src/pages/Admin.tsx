@@ -612,6 +612,7 @@ export default function Admin() {
                       <option value="user">User</option>
                       <option value="moderator">Moderator</option>
                       <option value="admin">Admin</option>
+                      <option value="owner">Owner</option>
                     </select>
                     <button
                       type="button"
