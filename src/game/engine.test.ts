@@ -17,7 +17,7 @@ describe("daily reward", () => {
     const reward = dailyReward(s, T0);
     s = gameReducer(s, { type: "CLAIM_DAILY", reward, now: T0 });
     const cashAfterFirst = s.cash;
-    expect(s.cash).toBe(120 + reward);
+    expect(s.cash).toBe(reward); // starts at $0 now
     expect(s.daily.nextClaimAt).toBe(T0 + 12 * 3_600_000);
     // Immediate second claim is rejected.
     s = gameReducer(s, { type: "CLAIM_DAILY", reward, now: T0 + 5000 });

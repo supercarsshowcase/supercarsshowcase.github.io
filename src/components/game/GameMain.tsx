@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   Boxes,
   Car as CarIcon,
+  CircleDollarSign,
   Coins,
   Gift,
   MousePointerClick,
@@ -43,6 +44,7 @@ import { GamePanels } from "./GamePanels";
 
 const NAV: { id: TabId; label: string; icon: LucideIcon }[] = [
   { id: "earn", label: "Earn", icon: MousePointerClick },
+  { id: "spin", label: "Spin", icon: CircleDollarSign },
   { id: "garage", label: "Garage", icon: CarIcon },
   { id: "dealer", label: "Dealers", icon: Store },
   { id: "crates", label: "Crates", icon: Package },
@@ -52,7 +54,16 @@ const NAV: { id: TabId; label: string; icon: LucideIcon }[] = [
   { id: "prestige", label: "Prestige", icon: Sparkles },
 ];
 
-type TabId = "earn" | "garage" | "dealer" | "crates" | "upgrades" | "inventory" | "achievements" | "prestige";
+type TabId =
+  | "earn"
+  | "spin"
+  | "garage"
+  | "dealer"
+  | "crates"
+  | "upgrades"
+  | "inventory"
+  | "achievements"
+  | "prestige";
 
 interface Popup {
   id: number;

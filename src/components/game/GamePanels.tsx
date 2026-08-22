@@ -47,10 +47,13 @@ import {
   carValue,
   rollCrate,
   rollDealerStock,
+  rollSpin,
+  spinCashSlices,
+  spinReadyAt,
   upgradeCost,
   type Action,
 } from "@/game/engine";
-import type { CrateResult, GameState } from "@/game/types";
+import type { CrateResult, GameState, SpinResult } from "@/game/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -94,6 +97,7 @@ export function GamePanels({
   state: GameState;
   dispatch: React.Dispatch<Action>;
 }) {
+  if (tab === "spin") return <SpinPanel state={state} dispatch={dispatch} />;
   if (tab === "dealer") return <DealerPanel state={state} dispatch={dispatch} />;
   if (tab === "crates") return <CratesPanel state={state} dispatch={dispatch} />;
   if (tab === "upgrades") return <UpgradesPanel state={state} dispatch={dispatch} />;
@@ -125,6 +129,163 @@ function RarityChip({ rarity }: { rarity: string }) {
     >
       {meta.label}
     </span>
+  );
+}
+
+// ── Lucky Spin ────────────────────────────────────────────────────────────────
+
+const SLICE_COUNT = 12;
+const SLICE_DEG = 360 / SLICE_COUNT;
+const WHEEL_COLORS = [
+  "#b45309", // supercar (gold)
+  "#1f1f24",
+  "#2d2d33",
+  "#1f1f24",
+  "#2d2d33",
+  "#1f1f24",
+  "#2d2d33",
+  "#1f1f24",
+  "#2d2d33",
+  "#1f1f24",
+  "#2d2d33",
+  "#1f1f24",
+];
+
+function SpinPanel({ state, dispatch }: { state: GameState; dispatch: React.Dispatch<Action> }) {
+  const [rotation, setRotation] = useState(0);
+  const [spinning, setSpinning] = useState(false);
+  const [result, setResult] = useState<SpinResult | null>(null);
+
+  const now = state.lastTick;
+  const readyAt = spinReadyAt(state);
+  const canSpin = now >= readyAt && !spinning;
+  const waitMin = Math.max(1, Math.ceil((readyAt - now) / 60000));
+  const waitLabel = waitMin >= 60 ? `${Math.floor(waitMin / 60)}h ${waitMin % 60}m` : `${waitMin}m`;
+  const cashSlices = spinCashSlices(state);
+
+  const spin = () => {
+    if (!canSpin) return;
+    const r = rollSpin(state);
+    setResult(r);
+    setSpinning(true);
+    // Land the winning slice's center exactly at the top pointer.
+    const targetMod = (SLICE_DEG - (r.slice * SLICE_DEG + SLICE_DEG / 2) + 360) % 360;
+    setRotation((prev) => {
+      const prevMod = ((prev % 360) + 360) % 360;
+      const delta = ((targetMod - prevMod + 360) % 360) + 360 * 5;
+      return prev + delta;
+    });
+  };
+
+  const wonCar = result?.kind === "car" && result.carId ? GAME_CAR_MAP[result.carId] : null;
+
+  const stops = WHEEL_COLORS.map(
+    (c, i) => `${c} ${(i * SLICE_DEG).toFixed(1)}deg ${((i + 1) * SLICE_DEG).toFixed(1)}deg`,
+  ).join(", ");
+
+  return (
+    <div>
+      <PanelHeader
+        eyebrow="Lucky Spin"
+        title="SPIN THE WHEEL"
+        hint="Free every 15 minutes. Cash on 99% of the wheel — and a supercar on 1%."
+      />
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="relative mx-auto aspect-square w-full max-w-[420px]">
+          {/* Pointer */}
+          <div className="absolute left-1/2 top-0 z-20 -translate-x-1/2 -translate-y-1/2">
+            <svg width="34" height="30" viewBox="0 0 34 30" className="drop-shadow-[0_4px_10px_rgba(0,0,0,0.7)]">
+              <path d="M17 30 L4 6 A17 17 0 0 1 30 6 Z" fill="#ff2e00" />
+              <circle cx="17" cy="8" r="3" fill="#0b0b0c" />
+            </svg>
+          </div>
+          {/* Wheel */}
+          <motion.div
+            className="absolute inset-0 rounded-full border-[3px] border-[#3a3a40]"
+            style={{ background: `conic-gradient(${stops})` }}
+            animate={{ rotate: rotation }}
+            transition={{ duration: 4.5, ease: [0.12, 0.75, 0.2, 1] }}
+            onAnimationComplete={() => {
+              if (result) {
+                dispatch({ type: "SPIN", now: Date.now(), result });
+                setSpinning(false);
+              }
+            }}
+          >
+            {/* Slice labels */}
+            {Array.from({ length: SLICE_COUNT }, (_, i) => {
+              const angle = ((i * SLICE_DEG + SLICE_DEG / 2) * Math.PI) / 180;
+              const r = 37;
+              const x = 50 + r * Math.sin(angle);
+              const y = 50 - r * Math.cos(angle);
+              const compact =
+                cashSlices[i - 1] >= 1000
+                  ? `$${(cashSlices[i - 1] / 1000).toFixed(1)}K`
+                  : `$${cashSlices[i - 1]}`;
+              const label = i === 0 ? "★ 1%" : compact;
+              return (
+                <span
+                  key={i}
+                  className="absolute -translate-x-1/2 -translate-y-1/2 font-display text-[10px] font-black uppercase tracking-tight text-white/85"
+                  style={{ left: `${x}%`, top: `${y}%`, textShadow: "0 1px 4px rgba(0,0,0,0.9)" }}
+                >
+                  {label}
+                </span>
+              );
+            })}
+            {/* Hub */}
+            <div className="absolute left-1/2 top-1/2 z-10 flex size-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-[#3a3a40] bg-[#0b0b0c]">
+              <span className="font-display text-[9px] font-black uppercase tracking-[0.1em] text-apex-red">
+                Spin
+              </span>
+            </div>
+          </motion.div>
+        </div>
+
+        <div className="flex flex-col justify-center">
+          <button
+            type="button"
+            disabled={!canSpin}
+            onClick={spin}
+            className="rounded-md bg-apex-red py-3 font-display text-sm font-black uppercase tracking-[0.2em] text-white transition-colors hover:bg-apex-red/80 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/30"
+          >
+            {spinning ? "Spinning…" : canSpin ? "SPIN — FREE" : `Next spin in ${waitLabel}`}
+          </button>
+          <p className="mt-2 text-center text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">
+            1% chance of a supercar · free every 15 minutes
+          </p>
+
+          <div className="mt-6 rounded-xl border border-apex-line bg-apex-panel p-5 text-center">
+            {result ? (
+              wonCar ? (
+                <div>
+                  <p className="font-display text-[10px] font-semibold uppercase tracking-[0.28em] text-amber-300">
+                    🏆 Supercar won!
+                  </p>
+                  <p className="mt-2 font-display text-2xl font-black text-white">{wonCar.name}</p>
+                  <p className="mt-1 text-xs text-white/40">
+                    {wonCar.brand} · {fmtMoney(wonCar.value)} · {fmtNum(wonCar.hp)} hp — added to your garage
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <p className="font-display text-[10px] font-semibold uppercase tracking-[0.28em] text-white/40">
+                    You won
+                  </p>
+                  <p className="mt-2 font-display text-4xl font-black text-apex-red">
+                    +{fmtMoney(result.amount ?? 0)}
+                  </p>
+                </div>
+              )
+            ) : (
+              <p className="font-display text-[10px] font-semibold uppercase tracking-[0.28em] text-white/40">
+                Good luck — the wheel is rigged in your favour… barely.
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 

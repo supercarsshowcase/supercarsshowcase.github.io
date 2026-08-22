@@ -123,6 +123,16 @@ export interface GameState {
   daily: { nextClaimAt: number; lastClaimAt: number; streak: number };
   clicksOnStarter: number;
   lastTick: number;
+  /** Timestamp of the last Lucky Spin; the wheel is free every 15 minutes. */
+  lastSpinAt: number;
+}
+
+export interface SpinResult {
+  kind: "cash" | "car";
+  amount?: number;
+  carId?: string;
+  /** Winning slice index on the 12-slice wheel (0 = supercar). */
+  slice: number;
 }
 
 export interface CrateResult {

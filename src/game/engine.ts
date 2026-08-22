@@ -11,10 +11,15 @@ import {
   levelFrom,
   rarityIndex,
 } from "./data";
-import type { CrateResult, DealerDef, GameState } from "./types";
+import type { CrateResult, DealerDef, GameState, SpinResult } from "./types";
 
 const SAVE_KEY = "supercars.game.v1";
 const STORAGE_VERSION = 1;
+
+/** The Lucky Spin wheel is free once every 15 minutes. */
+export const SPIN_COOLDOWN_MS = 15 * 60_000;
+/** Chance the wheel lands on a supercar (1%). */
+export const SPIN_CAR_CHANCE = 0.01;
 
 // ── Initial state ─────────────────────────────────────────────────────────────
 
@@ -43,7 +48,7 @@ export function initialGameState(): GameState {
   for (const d of DEALERS) dealerStock[d.id] = rollDealerStock(d);
   return {
     version: STORAGE_VERSION,
-    cash: 120,
+    cash: 0,
     reputation: 0,
     prestigeLevel: 0,
     activeCarId: STARTER_ID,
@@ -58,6 +63,7 @@ export function initialGameState(): GameState {
     daily: { nextClaimAt: 0, lastClaimAt: 0, streak: 0 },
     clicksOnStarter: 0,
     lastTick: now,
+    lastSpinAt: 0,
   };
 }
 
@@ -235,6 +241,41 @@ export function rollCrate(state: GameState, crateId: string): CrateResult {
   return { kind: "cash", cash };
 }
 
+// ── Lucky Spin wheel ──────────────────────────────────────────────────────────
+
+/** Cash values on the wheel, growing with player level (slice 0 is the car). */
+const SPIN_CASH_BASE = [25, 50, 100, 150, 250, 400, 650, 1000, 1600, 2500, 4000];
+
+export function spinCashSlices(state: GameState): number[] {
+  const scale = 1 + (levelFrom(state) - 1) * 0.15;
+  return SPIN_CASH_BASE.map((v) => Math.round(v * scale));
+}
+
+/** When the wheel becomes free to spin again. */
+export function spinReadyAt(state: GameState): number {
+  return state.lastSpinAt + SPIN_COOLDOWN_MS;
+}
+
+/**
+ * Roll the wheel: 1% supercar (random legendary+ non-secret), otherwise one of
+ * the 11 cash slices. The winning slice index is returned so the animation can
+ * land the pointer exactly on the prize.
+ */
+export function rollSpin(state: GameState): SpinResult {
+  if (Math.random() < SPIN_CAR_CHANCE) {
+    const pool = Object.values(GAME_CAR_MAP).filter(
+      (c) => !c.secret && rarityIndex(c.rarity) >= 4,
+    );
+    if (pool.length > 0) {
+      const pick = pool[Math.floor(Math.random() * pool.length)];
+      return { kind: "car", carId: pick.id, slice: 0 };
+    }
+  }
+  const slices = spinCashSlices(state);
+  const idx = Math.floor(Math.random() * slices.length);
+  return { kind: "cash", amount: slices[idx], slice: idx + 1 };
+}
+
 // ── Daily reward ──────────────────────────────────────────────────────────────
 
 export function dailyReward(state: GameState, now: number): number {
@@ -269,6 +310,7 @@ export type Action =
   | { type: "OPEN_CRATE"; crateId: string; result: CrateResult }
   | { type: "SELL_PART"; partId: string }
   | { type: "CLAIM_DAILY"; reward: number; now?: number }
+  | { type: "SPIN"; now: number; result: SpinResult }
   | { type: "REFRESH_DEALER"; dealerId: string; stock: string[]; refreshAt: number; cost: number }
   | { type: "PRESTIGE" }
   | { type: "HARD_RESET" }
@@ -427,6 +469,31 @@ export function gameReducer(state: GameState, action: Action): GameState {
           streak,
         },
       };
+    }
+    case "SPIN": {
+      if (action.now < state.lastSpinAt + SPIN_COOLDOWN_MS) return state;
+      const r = action.result;
+      if (r.kind === "car" && r.carId) {
+        const def = GAME_CAR_MAP[r.carId];
+        if (!def) return { ...state, lastSpinAt: action.now };
+        if (state.ownedCars[r.carId]) {
+          return applyAchievements({
+            ...state,
+            cash: state.cash + Math.round(def.value * 0.3),
+            lastSpinAt: action.now,
+          });
+        }
+        return applyAchievements({
+          ...state,
+          ownedCars: { ...state.ownedCars, [r.carId]: { upgrades: {} } },
+          lastSpinAt: action.now,
+        });
+      }
+      return applyAchievements({
+        ...state,
+        cash: state.cash + (r.amount ?? 0),
+        lastSpinAt: action.now,
+      });
     }
     case "REFRESH_DEALER":
       return {

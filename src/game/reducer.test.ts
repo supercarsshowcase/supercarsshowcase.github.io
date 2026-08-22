@@ -5,6 +5,10 @@ import {
   gameReducer,
   initialGameState,
   rollDealerStock,
+  rollSpin,
+  SPIN_COOLDOWN_MS,
+  spinCashSlices,
+  spinReadyAt,
 } from "./engine";
 import type { GameState } from "./types";
 
@@ -35,7 +39,7 @@ describe("dealer stock", () => {
 
 describe("reducer: buying and selling", () => {
   test("BUY_CAR is rejected without enough cash", () => {
-    const s = initialGameState(); // $120 cash
+    const s = initialGameState(); // $0 cash
     const next = gameReducer(s, { type: "BUY_CAR", id: "civic-lx-95" }); // $2,600
     expect(next.cash).toBe(s.cash);
     expect(next.ownedCars["civic-lx-95"]).toBeUndefined();
@@ -143,6 +147,89 @@ describe("reducer: tick and prestige", () => {
     expect(Object.keys(next.ownedCars)).toEqual(["rusty-hatch-91"]);
     expect(next.achievements).toContain("first-click");
     expect(next.totalEarned).toBe(90_000);
+  });
+});
+
+describe("reducer: lucky spin", () => {
+  test("new players start with zero cash", () => {
+    expect(initialGameState().cash).toBe(0);
+  });
+
+  test("SPIN is free initially and pays the rolled cash", () => {
+    const s = initialGameState();
+    const next = gameReducer(s, { type: "SPIN", now: T0, result: { kind: "cash", amount: 400, slice: 4 } });
+    expect(next.cash).toBe(400);
+    expect(next.lastSpinAt).toBe(T0);
+  });
+
+  test("SPIN adds a won supercar to the garage", () => {
+    const s = initialGameState();
+    const next = gameReducer(s, {
+      type: "SPIN",
+      now: T0,
+      result: { kind: "car", carId: "ferrari-458-12", slice: 0 },
+    });
+    expect(next.ownedCars["ferrari-458-12"]).toBeDefined();
+  });
+
+  test("SPIN is blocked during the 15-minute cooldown", () => {
+    const s = { ...initialGameState(), lastSpinAt: T0 };
+    const next = gameReducer(s, {
+      type: "SPIN",
+      now: T0 + 60_000, // 1 minute later
+      result: { kind: "cash", amount: 999, slice: 5 },
+    });
+    expect(next.cash).toBe(0);
+    expect(next.lastSpinAt).toBe(T0);
+  });
+
+  test("SPIN works again after the cooldown passes", () => {
+    const s = { ...initialGameState(), lastSpinAt: T0 };
+    const next = gameReducer(s, {
+      type: "SPIN",
+      now: T0 + SPIN_COOLDOWN_MS + 1,
+      result: { kind: "cash", amount: 250, slice: 3 },
+    });
+    expect(next.cash).toBe(250);
+  });
+
+  test("spinReadyAt is lastSpinAt plus the cooldown", () => {
+    const s = { ...initialGameState(), lastSpinAt: T0 };
+    expect(spinReadyAt(s)).toBe(T0 + SPIN_COOLDOWN_MS);
+  });
+
+  test("spin cash slices scale with level", () => {
+    const low = spinCashSlices(initialGameState()); // level 1
+    const leveled = spinCashSlices({ ...initialGameState(), totalEarned: 50_000 });
+    expect(leveled[0]).toBeGreaterThan(low[0]);
+  });
+
+  test("rollSpin always returns a valid slice on the wheel", () => {
+    const s = initialGameState();
+    for (let i = 0; i < 50; i++) {
+      const r = rollSpin(s);
+      expect(r.slice).toBeGreaterThanOrEqual(0);
+      expect(r.slice).toBeLessThan(12);
+      if (r.kind === "cash") {
+        expect(r.amount).toBeGreaterThan(0);
+        expect(r.slice).toBeGreaterThan(0);
+      } else {
+        expect(r.carId).toBeDefined();
+        expect(r.slice).toBe(0);
+      }
+    }
+  });
+
+  test("rollSpin only ever picks supercar-tier cars", () => {
+    const s = initialGameState();
+    for (let i = 0; i < 200; i++) {
+      const r = rollSpin(s);
+      if (r.kind !== "car" || !r.carId) continue;
+      const def = GAME_CAR_MAP[r.carId];
+      expect(def).toBeDefined();
+      expect(def!.secret).not.toBe(true);
+      expect(["legendary", "exotic", "hyper", "mythic", "ultimate"]).toContain(def!.rarity);
+    }
   });
 });
 
