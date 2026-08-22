@@ -26,7 +26,8 @@ export function RequireAdmin({ children }: { children: ReactNode }) {
     );
   }
 
-  if (user?.role !== "admin") {
+  const isAllowed = user?.role === "owner" || user?.role === "admin" || user?.role === "moderator";
+  if (!isAllowed) {
     return (
       <div className="mx-auto flex max-w-lg flex-col items-center px-4 py-32 text-center">
         <span className="flex size-14 items-center justify-center rounded-full bg-apex-red/10">

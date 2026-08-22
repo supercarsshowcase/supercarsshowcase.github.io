@@ -6,7 +6,8 @@ async function requireAdmin(ctx: MutationCtx | QueryCtx) {
   const userId = await getAuthUserId(ctx);
   if (userId === null) throw new Error("Not authenticated.");
   const user = await ctx.db.get(userId);
-  if (!user || user.role !== "admin") throw new Error("Admin access required.");
+  if (!user || (user.role !== "owner" && user.role !== "admin" && user.role !== "moderator"))
+    throw new Error("Admin access required.");
   return user;
 }
 

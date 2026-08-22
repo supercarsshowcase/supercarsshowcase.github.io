@@ -25,7 +25,7 @@ async function getAdmin(ctx: QueryCtx | MutationCtx) {
   const userId = await getAuthUserId(ctx);
   if (userId === null) return null;
   const user = await ctx.db.get(userId);
-  return user && user.role === "admin" ? user : null;
+  return user && (user.role === "owner" || user.role === "admin") ? user : null;
 }
 
 // ── Site settings ────────────────────────────────────────────────────────────
@@ -209,15 +209,22 @@ export const listUsers = query({
         image: u.image ?? "",
         role: u.role ?? "user",
         isAnonymous: u.isAnonymous ?? false,
-      }))
-      .sort((a, b) => (a.role === "admin" ? -1 : 1) - (b.role === "admin" ? -1 : 1));
+      }))        .sort((a, b) => {
+          const rank = { owner: 0, admin: 1, moderator: 2, user: 3, member: 4 } as const;
+          return (rank[a.role as keyof typeof rank] ?? 5) - (rank[b.role as keyof typeof rank] ?? 5);
+        });
   },
 });
 
 export const setUserRole = mutation({
   args: {
     userId: v.id("users"),
-    role: v.union(v.literal("admin"), v.literal("user")),
+    role: v.union(
+      v.literal("owner"),
+      v.literal("admin"),
+      v.literal("moderator"),
+      v.literal("user"),
+    ),
   },
   handler: async (ctx, args) => {
     const admin = await getAdmin(ctx);
@@ -225,6 +232,18 @@ export const setUserRole = mutation({
 
     const target = await ctx.db.get(args.userId);
     if (!target) throw new Error("User not found.");
+
+    // Only the owner can promote someone to owner.
+    if (args.role === "owner" && admin.role !== "owner") {
+      throw new Error("Only the owner can promote someone to owner.");
+    }
+
+    // Never demote the last remaining owner.
+    if (target.role === "owner" && args.role !== "owner") {
+      const owners = await ctx.db.query("users").collect();
+      const ownerCount = owners.filter((u) => u.role === "owner").length;
+      if (ownerCount <= 1) throw new Error("Cannot demote the last owner.");
+    }
 
     // Never demote the last remaining admin (avoids locking everyone out).
     if (target.role === "admin" && args.role !== "admin") {
@@ -245,6 +264,18 @@ export const deleteUser = mutation({
 
     const target = await ctx.db.get(args.userId);
     if (!target) throw new Error("User not found.");
+
+    // Only the owner can delete other owners.
+    if (target.role === "owner" && admin.role !== "owner") {
+      throw new Error("Only the owner can delete another owner.");
+    }
+
+    // Never delete the last remaining owner.
+    if (target.role === "owner") {
+      const owners = await ctx.db.query("users").collect();
+      const ownerCount = owners.filter((u) => u.role === "owner").length;
+      if (ownerCount <= 1) throw new Error("Cannot delete the last owner.");
+    }
 
     // Never delete the last remaining admin.
     if (target.role === "admin") {

@@ -69,7 +69,7 @@ export function AppShell() {
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const isAdmin = user?.role === "admin";
+  const isAdmin = user?.role === "owner" || user?.role === "admin" || user?.role === "moderator";
 
   // Site settings (banner + accent) from the admin panel.
   const settings = useQuery(api.site.getSiteSettings);

@@ -479,10 +479,20 @@ export default function Admin() {
       siteName.trim() !== settings.siteName);
 
   const toggleRole = async (userId: string, currentRole: string) => {
-    const next = currentRole === "admin" ? "user" : "admin";
+    const cycle: Record<string, string> = { user: "moderator", moderator: "admin", admin: "user" };
+    const next = cycle[currentRole] ?? "user";
     try {
-      await setUserRole({ userId: userId as unknown as Id<"users">, role: next });
-      toast.success(next === "admin" ? "Promoted to admin" : "Demoted to user");
+      await setUserRole({ userId: userId as unknown as Id<"users">, role: next as "owner" | "admin" | "moderator" | "user" });
+      toast.success(`Role changed to ${next}`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not update role");
+    }
+  };
+
+  const setRole = async (userId: string, role: "owner" | "admin" | "moderator" | "user") => {
+    try {
+      await setUserRole({ userId: userId as unknown as Id<"users">, role });
+      toast.success(`Role changed to ${role}`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not update role");
     }
@@ -576,9 +586,19 @@ export default function Admin() {
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold text-white">
                         {u.name}
+                        {u.role === "owner" && (
+                          <span className="ml-2 inline-flex items-center gap-1 rounded-sm bg-amber-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em] text-amber-400">
+                            <ShieldCheck className="size-3" /> Owner
+                          </span>
+                        )}
                         {u.role === "admin" && (
                           <span className="ml-2 inline-flex items-center gap-1 rounded-sm bg-apex-red/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em] text-apex-red">
                             <ShieldCheck className="size-3" /> Admin
+                          </span>
+                        )}
+                        {u.role === "moderator" && (
+                          <span className="ml-2 inline-flex items-center gap-1 rounded-sm bg-blue-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em] text-blue-400">
+                            <ShieldCheck className="size-3" /> Moderator
                           </span>
                         )}
                       </p>
@@ -588,18 +608,16 @@ export default function Admin() {
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => void toggleRole(u._id, u.role)}
-                      className={cn(
-                        "rounded-md border px-3 py-1.5 font-display text-[10px] font-bold uppercase tracking-[0.12em] transition-colors",
-                        u.role === "admin"
-                          ? "border-white/15 text-white/50 hover:border-apex-red hover:text-apex-red"
-                          : "border-apex-red/40 bg-apex-red/10 text-apex-red hover:bg-apex-red hover:text-white",
-                      )}
+                    <select
+                      value={u.role ?? "user"}
+                      onChange={(e) => void setRole(u._id, e.target.value as "owner" | "admin" | "moderator" | "user")}
+                      className="cursor-pointer rounded-md border border-white/[0.08] bg-[#0b0b0c] px-2 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-white outline-none focus:border-apex-red"
                     >
-                      {u.role === "admin" ? "Demote" : "Make admin"}
-                    </button>
+                      <option value="user">User</option>
+                      <option value="moderator">Moderator</option>
+                      <option value="admin">Admin</option>
+                      <option value="owner">Owner</option>
+                    </select>
                     <button
                       type="button"
                       onClick={() => {
