@@ -144,6 +144,8 @@ export function SmartImage({
     <img
       src={src}
       alt={alt}
+      referrerPolicy="no-referrer"
+      loading="lazy"
       onError={() => setErrored(true)}
       className={cn("object-cover", className)}
     />
