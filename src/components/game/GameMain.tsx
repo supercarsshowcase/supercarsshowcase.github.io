@@ -131,7 +131,7 @@ export function GameMain({
   };
 
   return (
-    <div className="mx-auto max-w-[1500px] px-4 py-6 sm:px-6">
+    <div className="mx-auto max-w-[1180px] px-4 py-6 sm:px-6">
       {/* ── Header ── */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
@@ -184,7 +184,7 @@ export function GameMain({
 
       <div className="flex items-start gap-5">
         {/* ── Left sidebar (desktop) ── */}
-        <aside className="sticky top-20 hidden w-72 shrink-0 flex-col gap-3 lg:flex">
+        <aside className="sticky top-20 hidden w-80 shrink-0 flex-col gap-3 lg:flex">
           {/* Balance */}
           <div className="rounded-xl border border-apex-line bg-apex-panel p-4">
             <p className="text-[9px] font-semibold uppercase tracking-[0.24em] text-white/40">
@@ -390,7 +390,7 @@ function EarnZone({
             background: `radial-gradient(80% 90% at 50% 40%, ${rarityMeta.glow} 0%, transparent 60%), #050505`,
           }}
         />
-        <div className="relative flex min-h-[420px] flex-col items-center justify-center p-6 sm:min-h-[480px]">
+        <div className="relative flex min-h-[460px] flex-col items-center justify-center p-6 sm:min-h-[540px]">
           <div className="mb-3 flex items-center gap-2">
             <span
               className="rounded-sm border px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.14em]"
@@ -406,15 +406,15 @@ function EarnZone({
               {active.brand} · {active.year}
             </span>
           </div>
-          <h2 className="font-display text-2xl font-black tracking-tight text-white sm:text-4xl">
+          <h2 className="font-display text-3xl font-black tracking-tight text-white sm:text-5xl">
             {active.name}
           </h2>
 
-          <motion.div whileTap={{ scale: 0.97 }} className="relative mt-5 w-full max-w-2xl">
+          <motion.div whileTap={{ scale: 0.97 }} className="relative mt-6 w-full max-w-3xl">
             <SmartImage
               src={gameCarImage(active)}
               alt={active.name}
-              className="mx-auto w-full max-h-[280px] object-contain drop-shadow-[0_20px_60px_rgba(0,0,0,0.8)]"
+              className="mx-auto w-full max-h-[400px] object-contain drop-shadow-[0_20px_60px_rgba(0,0,0,0.8)]"
             />
             <div
               className="pointer-events-none absolute inset-x-10 bottom-2 h-8 rounded-[100%] opacity-60 blur-xl"
@@ -422,7 +422,7 @@ function EarnZone({
             />
           </motion.div>
 
-          <div className="mt-6 grid w-full max-w-2xl grid-cols-2 gap-px overflow-hidden rounded-lg border border-apex-line bg-apex-line sm:grid-cols-4">
+          <div className="mt-6 grid w-full max-w-3xl grid-cols-2 gap-px overflow-hidden rounded-lg border border-apex-line bg-apex-line sm:grid-cols-4">
             <EarnStat value={fmtMoney(perClick)} label="Per click" accent />
             <EarnStat value={fmtMoney(income)} label="Per second" />
             <EarnStat value={fmtMoney(carValue(state, state.activeCarId))} label="Value" />
@@ -478,8 +478,8 @@ function EarnZone({
 
 function EarnStat({ value, label, accent }: { value: string; label: string; accent?: boolean }) {
   return (
-    <div className="bg-apex-panel px-3 py-3 text-center">
-      <p className={cn("font-display text-lg font-black", accent ? "text-apex-red" : "text-white")}>
+    <div className="bg-apex-panel px-3 py-3.5 text-center">
+      <p className={cn("font-display text-xl font-black", accent ? "text-apex-red" : "text-white")}>
         {value}
       </p>
       <p className="mt-0.5 text-[8px] font-semibold uppercase tracking-[0.2em] text-white/35">
