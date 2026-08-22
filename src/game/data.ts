@@ -734,8 +734,10 @@ const GAME_CAR_IMAGES: Record<string, string> = {
 /** Manual image overrides for game cars whose archive twin uses a different slug. */
 const GAME_IMAGE_ALIASES: Record<string, string> = {
   "ferrari-458-12": "ferrari-488-gtb",
-  "mclaren-540c-15": "mclaren-600lt",
-  "911-carrera-97": "porsche-911-gt3",
+  "mclaren-540c-15": "mclaren-765lt",
+  "mclaren-720s-17": "mclaren-765lt",
+  "911-carrera-97": "porsche-911-gt3-rs",
+  "rs3-19": "audi-r8-gt",
   "imola-20": "pagani-huayra",
   "veneno-14": "lamborghini-aventador-svj",
 };
