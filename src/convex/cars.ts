@@ -42,12 +42,12 @@ export const getCarOverrides = query({
     const edits = await ctx.db.query("carEdits").collect();
     const map: Record<string, Record<string, unknown>> = {};
     for (const e of edits) {
-      const { slug, updatedAt, ...fields } = e;
       const cleaned: Record<string, unknown> = {};
-      for (const [key, value] of Object.entries(fields)) {
-        if (value !== undefined) cleaned[key] = value;
+      for (const [key, value] of Object.entries(e)) {
+        if (key === "slug" || key === "updatedAt" || value === undefined) continue;
+        cleaned[key] = value;
       }
-      map[slug] = cleaned;
+      map[e.slug] = cleaned;
     }
     return map;
   },

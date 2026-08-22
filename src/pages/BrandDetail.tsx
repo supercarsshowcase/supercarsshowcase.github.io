@@ -108,7 +108,7 @@ export default function BrandDetail() {
         </div>
 
         <div className="relative ml-2 border-l border-apex-line-strong pl-8 sm:ml-6 sm:pl-12">
-          {brand.milestones.map((m, i) => (
+          {brand.milestones.map((m) => (
             <div key={`${m.year}-${m.title}`} className="relative pb-10 last:pb-0">
               <span
                 className="absolute -left-[41px] top-1.5 flex size-4 items-center justify-center rounded-full border-2 sm:-left-[57px]"

@@ -54,7 +54,8 @@ export function PageEditor({
 
   const changed = hydrated
     ? fields.some(
-        (f) => (content?.[f.key] ?? defaults[f.key] ?? "") !== (draft[f.key] ?? ""),
+        (f) =>
+          (content?.[f.key] ?? defaults[f.key] ?? "") !== (draft[f.key] ?? "").trim(),
       )
     : false;
 
@@ -183,7 +184,15 @@ export function PageEditor({
                   <textarea
                     value={draft[f.key] ?? ""}
                     onChange={(e) =>
-                      setDraft((d) => ({ ...d, [f.key]: e.target.value }))
+                      setDraft((d) => ({
+                        ...d,
+                        // Clearing a field restores its default instead of
+                        // leaving an empty draft (which would re-save forever).
+                        [f.key]:
+                          e.target.value === ""
+                            ? (defaults[f.key] ?? "")
+                            : e.target.value,
+                      }))
                     }
                     rows={3}
                     maxLength={600}
@@ -195,7 +204,15 @@ export function PageEditor({
                     type="text"
                     value={draft[f.key] ?? ""}
                     onChange={(e) =>
-                      setDraft((d) => ({ ...d, [f.key]: e.target.value }))
+                      setDraft((d) => ({
+                        ...d,
+                        // Clearing a field restores its default instead of
+                        // leaving an empty draft (which would re-save forever).
+                        [f.key]:
+                          e.target.value === ""
+                            ? (defaults[f.key] ?? "")
+                            : e.target.value,
+                      }))
                     }
                     maxLength={120}
                     placeholder={defaults[f.key]}

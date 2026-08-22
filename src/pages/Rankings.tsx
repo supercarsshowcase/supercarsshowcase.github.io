@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Link } from "react-router";
 import { Gauge, Zap, Banknote, ArrowRight } from "lucide-react";
 import { carsList } from "@/data/cars";
-import { getCarImage, carWikiTitle } from "@/data/images";
+import { getCarImage } from "@/data/images";
 import { useApp } from "@/context/app-context";
 import { formatNumber, formatPriceCompact } from "@/lib/format";
 import { SmartImage } from "@/components/SmartImage";

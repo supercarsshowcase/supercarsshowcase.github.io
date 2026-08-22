@@ -331,7 +331,9 @@ export default function Admin() {
   useEffect(() => {
     if (!hydrated) return;
     const unchanged =
-      settings && accent === settings.accent && siteName === settings.siteName;
+      settings &&
+      accent === settings.accent &&
+      siteName.trim() === settings.siteName;
     if (unchanged) return;
     const timer = setTimeout(() => void persist(accent, siteName), 700);
     return () => clearTimeout(timer);
@@ -339,7 +341,9 @@ export default function Admin() {
 
   const dirty =
     hydrated &&
-    (!settings || accent !== settings.accent || siteName !== settings.siteName);
+    (!settings ||
+      accent !== settings.accent ||
+      siteName.trim() !== settings.siteName);
 
   const toggleRole = async (userId: string, currentRole: string) => {
     const next = currentRole === "admin" ? "user" : "admin";
