@@ -26,6 +26,7 @@ import Rankings from "./pages/Rankings.tsx";
 import Favorites from "./pages/Favorites.tsx";
 import Compare from "./pages/Compare.tsx";
 import AuthPage from "./pages/Auth.tsx";
+import Game from "./pages/Game.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
@@ -65,6 +66,7 @@ createRoot(document.getElementById("root")!).render(
               <Route element={<AppShell />}>
                 <Route path="/" element={<Landing />} />
                 <Route path="/garage" element={<Garage />} />
+                <Route path="/game" element={<Game />} />
                 <Route path="/cars/:slug" element={<CarDetail />} />
                 <Route path="/brands/:slug" element={<BrandDetail />} />
                 <Route path="/rankings" element={<Rankings />} />

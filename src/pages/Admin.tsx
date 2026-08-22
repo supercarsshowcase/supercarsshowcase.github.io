@@ -147,6 +147,7 @@ const GARAGE_FIELDS: PageField[] = [
 const NAV_FIELDS: PageField[] = [
   { key: "home", label: "Home link" },
   { key: "garage", label: "Garage link" },
+  { key: "game", label: "Game link" },
   { key: "rankings", label: "Rankings link" },
   { key: "favorites", label: "Favorites link" },
   { key: "myGarage", label: "My Garage link" },

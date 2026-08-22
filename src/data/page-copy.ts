@@ -29,6 +29,7 @@ export const HOME_COPY: Record<string, string> = {
 export const NAV_COPY: Record<string, string> = {
   home: "Home",
   garage: "Machines",
+  game: "Game",
   rankings: "Rankings",
   favorites: "Favorites",
   myGarage: "My Garage",
