@@ -39,10 +39,12 @@ export function PageEditor({
   const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
   const [busy, setBusy] = useState(false);
 
-  // Hydrate the form when the page content first arrives (render-time pattern).
-  const [prevContent, setPrevContent] = useState<Record<string, string> | undefined>(content);
-  if (content && content !== prevContent) {
-    setPrevContent(content);
+  // Hydrate the form exactly once when the page content first arrives. After
+  // that the draft is only ever changed by the user — server updates can never
+  // clobber what you're typing.
+  const [didHydrate, setDidHydrate] = useState(false);
+  if (content && !didHydrate) {
+    setDidHydrate(true);
     const next: Record<string, string> = {};
     for (const f of fields) next[f.key] = content[f.key] ?? defaults[f.key] ?? "";
     setDraft(next);

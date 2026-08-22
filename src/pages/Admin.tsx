@@ -162,13 +162,6 @@ const NAV_FIELDS: PageField[] = [
   { key: "adminPanel", label: "Footer — Admin panel link" },
 ];
 
-type Settings = {
-  bannerText: string;
-  bannerEnabled: boolean;
-  accent: string;
-  siteName: string;
-} | undefined;
-
 export default function Admin() {
   const stats = useQuery(api.site.getAdminStats);
   const users = useQuery(api.site.listUsers);
@@ -305,15 +298,15 @@ export default function Admin() {
     }
   };
 
-  // Sync the form when settings first load (render-time pattern).
-  const [prevSettings, setPrevSettings] = useState<Settings>(settings);
-  if (settings && settings !== prevSettings) {
-    setPrevSettings(settings);
-    if (!hydrated) {
-      setHydrated(true);
-      setAccent(settings.accent);
-      setSiteName(settings.siteName);
-    }
+  // Hydrate the form exactly once when settings first load. After that the
+  // fields are only changed by the user — server updates can never clobber
+  // what you're typing.
+  const [didHydrateSettings, setDidHydrateSettings] = useState(false);
+  if (settings && !didHydrateSettings) {
+    setDidHydrateSettings(true);
+    setHydrated(true);
+    setAccent(settings.accent);
+    setSiteName(settings.siteName);
   }
 
   const persist = useCallback(
