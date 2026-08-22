@@ -237,6 +237,26 @@ export const setUserRole = mutation({
   },
 });
 
+export const deleteUser = mutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const admin = await getAdmin(ctx);
+    if (!admin) throw new Error("Admin access required.");
+
+    const target = await ctx.db.get(args.userId);
+    if (!target) throw new Error("User not found.");
+
+    // Never delete the last remaining admin.
+    if (target.role === "admin") {
+      const admins = await ctx.db.query("users").collect();
+      const adminCount = admins.filter((u) => u.role === "admin").length;
+      if (adminCount <= 1) throw new Error("Cannot delete the last admin.");
+    }
+
+    await ctx.db.delete(args.userId);
+  },
+});
+
 // ── Stats ────────────────────────────────────────────────────────────────────
 
 export const getAdminStats = query({

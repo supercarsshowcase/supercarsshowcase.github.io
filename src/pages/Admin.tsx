@@ -227,6 +227,7 @@ export default function Admin() {
   const clearMultiplierEvent = useMutation(api.adminAbuse.clearMultiplierEvent);
   const activeEvent = useQuery(api.adminAbuse.getActiveEvent);
   const users_list = users; // alias to avoid shadowing
+  const deleteUser = useMutation(api.site.deleteUser);
 
   const [abuseUserId, setAbuseUserId] = useState("");
   const [abuseAmount, setAbuseAmount] = useState("1000000");
@@ -585,18 +586,33 @@ export default function Admin() {
                       )}
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => void toggleRole(u._id, u.role)}
-                    className={cn(
-                      "shrink-0 rounded-md border px-3 py-1.5 font-display text-[10px] font-bold uppercase tracking-[0.12em] transition-colors",
-                      u.role === "admin"
-                        ? "border-white/15 text-white/50 hover:border-apex-red hover:text-apex-red"
-                        : "border-apex-red/40 bg-apex-red/10 text-apex-red hover:bg-apex-red hover:text-white",
-                    )}
-                  >
-                    {u.role === "admin" ? "Demote" : "Make admin"}
-                  </button>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void toggleRole(u._id, u.role)}
+                      className={cn(
+                        "rounded-md border px-3 py-1.5 font-display text-[10px] font-bold uppercase tracking-[0.12em] transition-colors",
+                        u.role === "admin"
+                          ? "border-white/15 text-white/50 hover:border-apex-red hover:text-apex-red"
+                          : "border-apex-red/40 bg-apex-red/10 text-apex-red hover:bg-apex-red hover:text-white",
+                      )}
+                    >
+                      {u.role === "admin" ? "Demote" : "Make admin"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!window.confirm(`Permanently delete ${u.name}'s account? This cannot be undone.`)) return;
+                        void deleteUser({ userId: u._id }).catch((e: unknown) => {
+                          toast.error(e instanceof Error ? e.message : "Could not delete user");
+                        });
+                      }}
+                      aria-label={`Delete ${u.name}'s account`}
+                      className="inline-flex size-7 items-center justify-center rounded-md border border-white/15 text-white/40 transition-colors hover:border-apex-red hover:text-apex-red"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>
