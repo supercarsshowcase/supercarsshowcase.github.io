@@ -104,8 +104,6 @@ function CollapsibleSection({
   badge?: string;
 }) {
   const [open, setOpen] = useState(defaultOpen);
-  const [everOpened, setEverOpened] = useState(defaultOpen);
-  if (open && !everOpened) setEverOpened(true);
   return (
     <section className="rounded-lg border border-apex-line bg-apex-panel">
       <button
@@ -131,7 +129,7 @@ function CollapsibleSection({
           )}
         />
       </button>
-      {everOpened && <div className={open ? "" : "hidden"}>{children}</div>}
+      {open && <div>{children}</div>}
     </section>
   );
 }

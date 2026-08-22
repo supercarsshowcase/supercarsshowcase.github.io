@@ -189,8 +189,22 @@ export const ensureAdmin = mutation({
     if (!user) return false;
 
     await ctx.db.insert("counters", { key: ADMIN_CLAIM_KEY, value: 1 });
-    await ctx.db.patch(userId, { role: "admin" });
+    await ctx.db.patch(userId, { role: "owner" });
     return true;
+  },
+});
+
+/** Bootstrap: promote the first signed-in user to owner (idempotent). */
+export const bootstrapOwner = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Not authenticated.");
+    const user = await ctx.db.get(userId);
+    if (!user) throw new Error("User not found.");
+    if (user.role === "owner") return { already: true };
+    await ctx.db.patch(userId, { role: "owner" });
+    return { promoted: true };
   },
 });
 
