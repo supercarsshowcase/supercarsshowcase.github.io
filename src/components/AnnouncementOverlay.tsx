@@ -17,7 +17,16 @@ function durationFor(message: string): number {
   return Math.min(base + message.length * perChar, max);
 }
 
-type Item = { id: string; name: string; message: string; expiresAt: number };
+type Item = { id: string; name: string; message: string; expiresAt: number; colorIdx: number };
+
+// Preset colors for stacked announcements
+const ANNOUNCE_COLORS = [
+  { border: "rgba(255,46,0,0.65)", glow: "rgba(255,46,0,0.65)", text: "text-apex-red" },
+  { border: "rgba(255,149,0,0.65)", glow: "rgba(255,149,0,0.65)", text: "text-amber-400" },
+  { border: "rgba(34,197,94,0.55)", glow: "rgba(34,197,94,0.55)", text: "text-emerald-400" },
+  { border: "rgba(56,189,248,0.55)", glow: "rgba(56,189,248,0.55)", text: "text-sky-400" },
+  { border: "rgba(167,139,250,0.55)", glow: "rgba(167,139,250,0.55)", text: "text-violet-400" },
+];
 
 /**
  * Shows admin broadcasts at the top-center of the page, just below the header.
@@ -44,6 +53,7 @@ export function AnnouncementOverlay() {
           name: latest.authorName,
           message,
           expiresAt: now + durationFor(message),
+          colorIdx: (stack.length + i) % ANNOUNCE_COLORS.length,
         }))
       : [];
     setStack((prev) => [...prev, ...incoming]);
@@ -69,12 +79,18 @@ export function AnnouncementOverlay() {
             exit={{ opacity: 0, y: -8, scale: 0.98 }}
             transition={{ duration: 0.25, ease: "easeOut" }}
           >
-            <div className="flex items-start gap-3 rounded-lg border border-apex-red/50 bg-black/92 px-4 py-3 shadow-[0_0_45px_-6px_rgba(255,46,0,0.65)] backdrop-blur-md">
-              <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md bg-apex-red/15">
-                <Megaphone className="size-3.5 text-apex-red" />
+            <div
+              className="flex items-start gap-3 rounded-lg border bg-black/92 px-4 py-3 backdrop-blur-md"
+              style={{
+                borderColor: ANNOUNCE_COLORS[item.colorIdx].border,
+                boxShadow: `0 0 45px -6px ${ANNOUNCE_COLORS[item.colorIdx].glow}`,
+              }}
+            >
+              <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md bg-white/5">
+                <Megaphone className={`size-3.5 ${ANNOUNCE_COLORS[item.colorIdx].text}`} />
               </span>
               <p className="text-sm leading-6 text-white/90">
-                <span className="font-display text-[13px] font-bold uppercase tracking-wide text-apex-red">
+                <span className={`font-display text-[13px] font-bold uppercase tracking-wide ${ANNOUNCE_COLORS[item.colorIdx].text}`}>
                   {item.name}:
                 </span>{" "}
                 {item.message}

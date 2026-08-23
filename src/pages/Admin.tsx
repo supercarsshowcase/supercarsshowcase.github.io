@@ -31,6 +31,7 @@ import {
   Gift,
   Zap,
 } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 import { carsList } from "@/data/cars";
 import { BRANDS } from "@/data/brands";
 import { getBrandImage } from "@/data/images";
@@ -112,6 +113,10 @@ const CAR_EDIT_FIELDS = [
 
 // ── Main Admin Component ─────────────────────────────────────────────────────
 export default function Admin() {
+  const { user } = useAuth();
+  const isOwner = user?.role === "owner";
+  const isModOrAdmin = user?.role === "moderator" || user?.role === "admin";
+
   // ── Announcements ──
   const [announce, setAnnounce] = useState("");
   const broadcastAnnouncement = useMutation(api.site.postAnnouncement);
@@ -298,6 +303,7 @@ export default function Admin() {
       </div>
 
       {/* ── Users & Roles + Quick UI Settings ───────────────────────────── */}
+      {isOwner && (
       <div className="mt-12 grid gap-8 lg:grid-cols-2">
         {/* Users */}
         <CollapsibleSection key="users-roles" title="Users & Roles" icon={Shield} defaultOpen={true}>
@@ -323,6 +329,11 @@ export default function Admin() {
                         {u.role === "owner" && (
                           <span className="ml-2 inline-flex items-center gap-1 rounded-sm bg-amber-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em] text-amber-400">
                             <Crown className="size-3" /> Owner
+                          </span>
+                        )}
+                        {u.role === "owner" && (
+                          <span className="ml-1 inline-flex items-center justify-center" title="Verified Owner">
+                            <svg className="size-3.5 text-blue-400" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
                           </span>
                         )}
                         {u.role === "admin" && (
@@ -438,6 +449,8 @@ export default function Admin() {
         </CollapsibleSection>
       </div>
 
+      )}
+
       {/* ── Announcements ───────────────────────────────────────────────── */}
       <div className="mt-12">
         <CollapsibleSection
@@ -481,6 +494,7 @@ export default function Admin() {
       </div>
 
       {/* ── Admin Abuse ─────────────────────────────────────────────────── */}
+      {isOwner && (
       <div className="mt-12">
         <CollapsibleSection
           title="Admin Abuse"
@@ -710,7 +724,10 @@ export default function Admin() {
         </CollapsibleSection>
       </div>
 
+      )}
+
       {/* ── Feedback Inbox ──────────────────────────────────────────────── */}
+      {isOwner && (
       <div className="mt-12">
         <CollapsibleSection
           title="Feedback Inbox"
@@ -770,7 +787,10 @@ export default function Admin() {
         </CollapsibleSection>
       </div>
 
+      )}
+
       {/* ── Site Updates ────────────────────────────────────────────────── */}
+      {isOwner && (
       <div className="mt-12">
         <CollapsibleSection
           title="Site Updates"
@@ -799,7 +819,10 @@ export default function Admin() {
         </CollapsibleSection>
       </div>
 
+      )}
+
       {/* ── Cars Editor ─────────────────────────────────────────────────── */}
+      {isOwner && (
       <div className="mt-12">
         <CollapsibleSection
           title="Cars Editor"
@@ -913,7 +936,10 @@ export default function Admin() {
         </CollapsibleSection>
       </div>
 
+      )}
+
       {/* ── Page Copy Editors ───────────────────────────────────────────── */}
+      {isOwner && (
       <div className="mt-12">
         <CollapsibleSection title="Page Copy" icon={Pencil} defaultOpen={false}>
           <div className="px-5 py-5">
@@ -961,6 +987,7 @@ export default function Admin() {
           </div>
         </CollapsibleSection>
       </div>
+      )}
     </div>
   );
 }

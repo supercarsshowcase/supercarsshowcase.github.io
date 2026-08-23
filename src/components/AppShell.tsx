@@ -253,8 +253,13 @@ export function AppShell() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <div className="px-3 py-2">
-                    <p className="truncate text-sm font-semibold text-white">
+                    <p className="flex items-center gap-1 truncate text-sm font-semibold text-white">
                       {user?.name ?? "Signed in"}
+                      {user?.role === "owner" && (
+                        <span title="Verified Owner">
+                          <svg className="size-3.5 text-blue-400" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                        </span>
+                      )}
                     </p>
                     {user?.email && (
                       <p className="truncate text-xs text-white/50">
