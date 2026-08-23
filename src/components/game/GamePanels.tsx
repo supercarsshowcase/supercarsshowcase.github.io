@@ -164,6 +164,8 @@ function SpinPanel({ state, dispatch }: { state: GameState; dispatch: React.Disp
 
   const now = state.lastTick;
   const previewCar = hourlySupercar(now);
+  const previewCar01 = hourlySupercar01(now);
+  const previewCar001 = hourlySupercar001(now);
   const swapAt = nextSupercarSwapAt(now);
   const swapMin = Math.max(1, Math.ceil((swapAt - now) / 60000));
   const swapLabel = swapMin >= 60 ? `${Math.floor(swapMin / 60)}h ${swapMin % 60}m` : `${swapMin}m`;
@@ -222,27 +224,36 @@ function SpinPanel({ state, dispatch }: { state: GameState; dispatch: React.Disp
               }
             }}
           >
-            {/* Supercar photo riding on the gold slice (rotates with the wheel) */}
-            {previewCar && (
+            {/* All 3 tier car photos on the gold slice (rotates with the wheel) */}
+            {[
+              { car: previewCar, tier: 1, border: "border-amber-300/70", labelColor: "bg-amber-400 text-amber-900" },
+              { car: previewCar01, tier: 2, border: "border-purple-400/70", labelColor: "bg-purple-400 text-purple-900" },
+              { car: previewCar001, tier: 3, border: "border-yellow-300/70", labelColor: "bg-yellow-300 text-yellow-900" },
+            ].map(({ car, tier, border, labelColor }) => car && (
               <div
-                className="absolute overflow-hidden rounded-md border-2 border-amber-300/70"
+                key={tier}
+                className={`absolute overflow-hidden rounded-md border-2 ${border}`}
                 style={{
-                  left: `${50 + 30 * Math.sin((SLICE_DEG / 2 * Math.PI) / 180)}%`,
-                  top: `${50 - 30 * Math.cos((SLICE_DEG / 2 * Math.PI) / 180)}%`,
+                  left: `${50 + 30 * Math.sin((SLICE_DEG / 2 * Math.PI) / 180) + (tier - 1) * 4}%`,
+                  top: `${50 - 30 * Math.cos((SLICE_DEG / 2 * Math.PI) / 180) + (tier - 1) * 5}%`,
                   width: "21%",
                   aspectRatio: "16/10",
-                  transform: "translate(-50%, -50%) rotate(15deg)",
+                  transform: `translate(-50%, -50%) rotate(${15 + (tier - 1) * 5}deg)`,
                   boxShadow: "0 4px 18px rgba(0,0,0,0.55)",
+                  zIndex: 10 - tier,
                 }}
               >
                 <SmartImage
-                  src={gameCarImage(previewCar)}
-                  alt={previewCar.name}
-                  seed={previewCar.id}
+                  src={gameCarImage(car)}
+                  alt={car.name}
+                  seed={car.id}
                   className="h-full w-full object-cover"
                 />
+                <span className={`absolute left-1 top-1 rounded px-1 py-0.5 text-[7px] font-black uppercase ${labelColor}`}>
+                  {tier === 1 ? "1%" : tier === 2 ? "0.01%" : "0.001%"}
+                </span>
               </div>
-            )}
+            ))}
             {/* Slice labels */}
             {Array.from({ length: SLICE_COUNT }, (_, i) => {
               const angle = ((i * SLICE_DEG + SLICE_DEG / 2) * Math.PI) / 180;
