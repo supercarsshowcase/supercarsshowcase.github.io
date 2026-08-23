@@ -96,6 +96,17 @@ const CASINO_PRIZE_CARS = [
   { id: "casino-amg-gt", brand: "Mercedes-AMG", name: "AMG GT Casino Edition", value: 400000, rarity: "legendary" as const, chance: 0.30 },
 ];
 
+/** Roll a casino prize car. Returns the car name if won, null otherwise. */
+function checkCasinoPrize(dispatch: React.Dispatch<Action>): string | null {
+  for (const prize of CASINO_PRIZE_CARS) {
+    if (Math.random() < prize.chance) {
+      dispatch({ type: "ADD_CAR", carId: prize.id });
+      return `${prize.brand} ${prize.name}`;
+    }
+  }
+  return null;
+}
+
 /* ── Custom Styled Icon Components ─────────────────────────────────────── */
 function CoinIcon({ side, size = "md" }: { side: "heads" | "tails" | "unknown"; size?: "sm" | "md" | "lg" }) {
   const sizes = { sm: "size-8 text-[10px]", md: "size-12 text-sm", lg: "size-16 text-lg" };
@@ -344,10 +355,15 @@ function CoinflipGame({ state, dispatch }: { state: GameState; dispatch: React.D
     setSpinning(true); setResult(null); setWon(null); setCarPrize(null); setWonCar(null); setLostCar(null);
     setTimeout(() => {
       const r: "heads" | "tails" = Math.random() < 0.45 ? "heads" : "tails";
-      setResult(r); const wonGame = r === pick; setWon(wonGame);
+      setResult(r); const wonGame = r === pick;      setWon(wonGame);
       if (mode === "cash") {
-        if (wonGame) { dispatch({ type: "ADD_CASH", amount: bet }); }
-        else { dispatch({ type: "ADD_CASH", amount: -bet }); }
+        if (wonGame) {
+          dispatch({ type: "ADD_CASH", amount: bet });
+          const cp = checkCasinoPrize(dispatch);
+          if (cp) { setCarPrize(cp); toast.success(`Won a car: ${cp}`); }
+        } else {
+          dispatch({ type: "ADD_CASH", amount: -bet });
+        }
       } else {
         if (wonGame) {
           const betCar = GAME_CAR_MAP[selectedCar!]; const betValue = betCar?.value ?? 0;
@@ -491,9 +507,14 @@ function RouletteGame({ state, dispatch }: { state: GameState; dispatch: React.D
       if (b.kind === "number" && b.value === num) { wonGame = true; multiplier = 36; }
       else if (b.kind === "color" && b.value === color) { wonGame = true; multiplier = color === "green" ? 14 : 2; }
       else if (b.kind === "parity") { if (b.value === "even" && num !== 0 && num % 2 === 0) { wonGame = true; multiplier = 2; } if (b.value === "odd" && num % 2 === 1) { wonGame = true; multiplier = 2; } }
-      else if (b.kind === "range") { if (b.value === "1-18" && num >= 1 && num <= 18) { wonGame = true; multiplier = 2; } if (b.value === "19-36" && num >= 19) { wonGame = true; multiplier = 2; } if (b.value === "1st" && num >= 1 && num <= 12) { wonGame = true; multiplier = 3; } if (b.value === "2nd" && num >= 13 && num <= 24) { wonGame = true; multiplier = 3; } if (b.value === "3rd" && num >= 25 && num <= 36) { wonGame = true; multiplier = 3; } }
-      setWon(wonGame); const winAmt = wonGame ? bet * multiplier : 0; setWinAmount(winAmt);
-      if (wonGame) { dispatch({ type: "ADD_CASH", amount: winAmt }); } setSpinning(false);
+      else if (b.kind === "range") { if (b.value === "1-18" && num >= 1 && num <= 18) { wonGame = true; multiplier = 2; } if (b.value === "19-36" && num >= 19) { wonGame = true; multiplier = 2; } if (b.value === "1st" && num >= 1 && num <= 12) { wonGame = true; multiplier = 3; } if (b.value === "2nd" && num >= 13 && num <= 24) { wonGame = true; multiplier = 3; } if (b.value === "3rd" && num >= 25 && num <= 36) { wonGame = true; multiplier = 3; } }    setWon(wonGame);
+    const winAmt = wonGame ? bet * multiplier : 0;
+    setWinAmount(winAmt);
+    if (wonGame) {
+      dispatch({ type: "ADD_CASH", amount: winAmt });
+      const cp = checkCasinoPrize(dispatch);
+      if (cp) { setCarPrize(cp); toast.success(`Won a car: ${cp}`); }
+    } setSpinning(false);
     }, 2500);
   }, [bet, currentBet, state.cash, dispatch]);
 
@@ -591,8 +612,12 @@ function CrashGame({ state, dispatch }: { state: GameState; dispatch: React.Disp
   }, [bet, state.cash, dispatch]);
 
   const cashOut = useCallback(() => {
-    if (!playing || crashed) return; if (timerRef.current) clearInterval(timerRef.current);
-    const win = Math.floor(bet * multiplier); dispatch({ type: "ADD_CASH", amount: win }); setCashedOut(true); setCashedAt(multiplier); setPlaying(false);
+    if (!playing || crashed) return; if (timerRef.current) clearInterval(timerRef.current);    const win = Math.floor(bet * multiplier);
+    dispatch({ type: "ADD_CASH", amount: win });
+    const cp = checkCasinoPrize(dispatch);
+    if (cp) { setCarPrize(cp); toast.success(`Won a car: ${cp}`); }
+    setCashedOut(true);
+    setCashedAt(multiplier); setPlaying(false);
     toast.success(`Cashed out at ${multiplier.toFixed(2)}× — +$${win.toLocaleString()}`);
   }, [playing, crashed, bet, multiplier, dispatch]);
 
@@ -657,13 +682,13 @@ function MinesGame({ state, dispatch }: { state: GameState; dispatch: React.Disp
     else {
       const nr = new Set(revealed); nr.add(idx); setRevealed(nr);
       const safe = ROWS * COLS - mineCount; const mult = 1 + (nr.size / safe) * (mineCount * 1.2); setCurrentMult(mult);
-      if (nr.size === safe) { const win = Math.floor(bet * mult); dispatch({ type: "ADD_CASH", amount: win }); setPlaying(false); setWon(win); toast.success(`All clear! +$${win.toLocaleString()}`); }
+      if (nr.size === safe) {        const win = Math.floor(bet * mult); dispatch({ type: "ADD_CASH", amount: win }); setPlaying(false); setWon(win); toast.success(`All clear! +$${win.toLocaleString()}`); const cp = checkCasinoPrize(dispatch); if (cp) { setCarPrize(cp); toast.success(`Won a car: ${cp}`); } }
     }
   }, [playing, revealed, mines, bet, mineCount, dispatch]);
 
   const cashOut = useCallback(() => {
     if (!playing || revealed.size === 0) return;
-    const win = Math.floor(bet * currentMult); dispatch({ type: "ADD_CASH", amount: win }); setPlaying(false); setWon(win); setGameOver(true);
+    const win = Math.floor(bet * currentMult); dispatch({ type: "ADD_CASH", amount: win }); setPlaying(false); setWon(win); setGameOver(true); const cp = checkCasinoPrize(dispatch); if (cp) { setCarPrize(cp); toast.success(`Won a car: ${cp}`); }
   }, [playing, revealed, bet, currentMult, dispatch]);
 
   return (
@@ -740,7 +765,7 @@ function JackpotGame({ state, dispatch }: { state: GameState; dispatch: React.Di
 
   const draw = useCallback(() => {
     if (pool.length === 0) return toast.error("Pool is empty!"); setSpinning(true); setWinner(null); setCarPrize(null);
-    setTimeout(() => { const playerWins = Math.random() < 0.4; if (playerWins) { dispatch({ type: "ADD_CASH", amount: totalPool }); setWinner("YOU WON THE JACKPOT!"); } else { setWinner("House wins the jackpot"); } setPool([]); setSpinning(false); }, 3000);
+    setTimeout(() => { const playerWins = Math.random() < 0.4; if (playerWins) { dispatch({ type: "ADD_CASH", amount: totalPool }); const cp = checkCasinoPrize(dispatch); if (cp) { setCarPrize(cp); } setWinner("YOU WON THE JACKPOT!"); } else { setWinner("House wins the jackpot"); } setPool([]); setSpinning(false); }, 3000);
   }, [pool, totalPool, dispatch]);
 
   return (
@@ -816,6 +841,7 @@ function OnlineCoinflip({ state, dispatch }: { state: GameState; dispatch: React
     setTimeout(() => {
       const won = Math.random() < 0.45; if (won) { dispatch({ type: "ADD_CASH", amount: bet }); } else { dispatch({ type: "ADD_CASH", amount: -bet }); }
       setResult({ myPick: won ? pick : pick === "heads" ? "tails" : "heads", oppPick: Math.random() < 0.5 ? "heads" : "tails", won }); setFinding(false);
+      if (won) { const cp = checkCasinoPrize(dispatch); if (cp) { setCarPrize(cp); toast.success("Won a car: " + cp); } }
       toast[won ? "success" : "error"](won ? `Won $${bet.toLocaleString()}!` : `Lost $${bet.toLocaleString()}`);
     }, 2500);
   }, [bet, pick, state.cash, dispatch]);
@@ -863,6 +889,7 @@ function OnlineJackpot({ state, dispatch }: { state: GameState; dispatch: React.
   const [players, setPlayers] = useState<{ name: string; amount: number }[]>([]);
   const [round, setRound] = useState(false);
   const [winner, setWinner] = useState<string | null>(null);
+  const [carPrize, setCarPrize] = useState<string | null>(null);
 
   const join = useCallback(() => {
     if (state.cash < bet) return toast.error("Not enough cash!"); dispatch({ type: "ADD_CASH", amount: -bet });
@@ -870,7 +897,7 @@ function OnlineJackpot({ state, dispatch }: { state: GameState; dispatch: React.
     const opps = Array.from({ length: 2 + Math.floor(Math.random() * 4) }, () => ({ name: names[Math.floor(Math.random() * names.length)], amount: Math.floor(Math.random() * 1000000) + 10000 }));
     setPlayers([...opps, { name: "YOU", amount: bet }]); setRound(true); setWinner(null);
     setTimeout(() => { const all = [...opps, { name: "YOU", amount: bet }]; const total = all.reduce((s, p) => s + p.amount, 0);
-      const w = all[Math.floor(Math.random() * all.length)]; if (w.name === "YOU") { dispatch({ type: "ADD_CASH", amount: total }); toast.success(`JACKPOT! Won $${total.toLocaleString()}!`); }
+      const w = all[Math.floor(Math.random() * all.length)]; if (w.name === "YOU") { dispatch({ type: "ADD_CASH", amount: total }); const cp = checkCasinoPrize(dispatch); if (cp) { setCarPrize(cp); } toast.success(`JACKPOT! Won $${total.toLocaleString()}!`); }
       else { toast.error(`${w.name} won $${total.toLocaleString()}`); } setWinner(w.name); setRound(false); }, 4000);
   }, [bet, state.cash, dispatch]);
 
@@ -903,6 +930,11 @@ function OnlineJackpot({ state, dispatch }: { state: GameState; dispatch: React.
           </>
         )}
         {winner && <ResultBadge won={winner === "YOU"}>{winner === "YOU" ? "You Won the Jackpot!" : `${winner} won!`}</ResultBadge>}
+        {carPrize && (
+          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="flex items-center gap-3 rounded-xl border border-amber-500/50 bg-amber-500/20 px-6 py-4">
+            <Award className="size-6 text-amber-400 shrink-0" /><div><p className="text-xs font-bold uppercase tracking-wider text-amber-400">Casino Prize Won!</p><p className="mt-1 font-display text-lg font-black text-white">{carPrize}</p></div>
+          </motion.div>
+        )}
       </div>
     </GameLayout>
   );

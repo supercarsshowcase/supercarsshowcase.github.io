@@ -263,37 +263,71 @@ export function spinReadyAt(state: GameState): number {
   return state.lastSpinAt + SPIN_COOLDOWN_MS;
 }
 
-/** All cars the wheel's 1% supercar slice can drop (legendary+ non-secret). */
+/** Tier 1: Legendary+ non-secret cars worth $10M–$30M (1% chance) */
 export function spinSupercarPool() {
   return Object.values(GAME_CAR_MAP).filter(
-    (c) => !c.secret && rarityIndex(c.rarity) >= 4,
+    (c) => !c.secret && c.value >= 10_000_000 && c.value <= 30_000_000,
+  );
+}
+
+/** Tier 2: Mythic cars worth $100M–$300M (0.01% chance) */
+export function spinSupercarPool01() {
+  return Object.values(GAME_CAR_MAP).filter(
+    (c) => !c.secret && c.value >= 100_000_000 && c.value <= 300_000_000,
+  );
+}
+
+/** Tier 3: Ultra-rare $1B car (0.001% chance) */
+export function spinSupercarPool001() {
+  return Object.values(GAME_CAR_MAP).filter(
+    (c) => !c.secret && c.value >= 500_000_000,
   );
 }
 
 const HOUR_MS = 3_600_000;
 
-/**
- * The supercar up for grabs right now — fixed per hour, rotating on its own.
- * Deterministic, so everyone sees the same car and it swaps every hour.
- */
+/** Hourly featured car for each tier (deterministic, rotates every hour). */
 export function hourlySupercar(now: number) {
   const pool = spinSupercarPool();
   if (pool.length === 0) return undefined;
   return pool[Math.floor(now / HOUR_MS) % pool.length];
 }
 
-/** Next hour boundary — when the jackpot car rotates. */
+export function hourlySupercar01(now: number) {
+  const pool = spinSupercarPool01();
+  if (pool.length === 0) return undefined;
+  return pool[Math.floor(now / HOUR_MS) % pool.length];
+}
+
+export function hourlySupercar001(now: number) {
+  const pool = spinSupercarPool001();
+  if (pool.length === 0) return undefined;
+  return pool[Math.floor(now / HOUR_MS) % pool.length];
+}
+
+/** Next hour boundary — when all tier jackpot cars rotate. */
 export function nextSupercarSwapAt(now: number): number {
   return (Math.floor(now / HOUR_MS) + 1) * HOUR_MS;
 }
 
 /**
- * Roll the wheel: 1% for the hourly supercar, otherwise one of the 11 cash
- * slices. The winning slice index is returned so the animation can land the
- * pointer exactly on the prize.
+ * Roll the wheel with 3 car tiers:
+ *   0.001% → $1B+ tier 3 car
+ *   0.01%  → $100–300M tier 2 car
+ *   1%     → $10–30M tier 1 car
+ *   else   → cash slice
  */
 export function rollSpin(state: GameState, now = Date.now()): SpinResult {
-  if (Math.random() < SPIN_CAR_CHANCE) {
+  const roll = Math.random();
+  if (roll < 0.00001) {
+    const car = hourlySupercar001(now);
+    if (car) return { kind: "car", carId: car.id, slice: 0 };
+  }
+  if (roll < 0.00011) {
+    const car = hourlySupercar01(now);
+    if (car) return { kind: "car", carId: car.id, slice: 0 };
+  }
+  if (roll < 0.01011) {
     const car = hourlySupercar(now);
     if (car) return { kind: "car", carId: car.id, slice: 0 };
   }
