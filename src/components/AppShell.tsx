@@ -14,7 +14,7 @@ import {
   UserRound,
   Verified,
 } from "lucide-react";
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useApp } from "@/context/app-context";
 import { useAuth } from "@/hooks/use-auth";
@@ -92,6 +92,19 @@ export function AppShell() {
       `color-mix(in srgb, ${settings.accent}, black 30%)`,
     );
   }, [settings]);
+
+  // ── Online presence heartbeat ──
+  const heartbeat = useMutation(api.presence.heartbeat);
+  const removePresence = useMutation(api.presence.removePresence);
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    void heartbeat();
+    const id = setInterval(() => void heartbeat(), 30_000);
+    return () => {
+      clearInterval(id);
+      void removePresence();
+    };
+  }, [isAuthenticated, heartbeat, removePresence]);
 
   const surpriseMe = () => {
     const all = carsList();

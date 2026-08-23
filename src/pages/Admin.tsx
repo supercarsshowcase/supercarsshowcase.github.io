@@ -391,6 +391,7 @@ export default function Admin() {
 
   // ── Queries ──
   const stats = useQuery(api.site.getAdminStats);
+  const onlineNow = useQuery(api.presence.onlineCountAll);
   const users = useQuery(api.site.listUsers);
   const feedback = useQuery(api.feedback.listFeedback);
   const carOverrides = useQuery(api.cars.getCarOverrides);
@@ -497,6 +498,11 @@ export default function Admin() {
       label: "Visitors today",
       value: stats?.visitorsToday ?? 0,
       icon: CalendarDays,
+    },
+    {
+      label: "Online now",
+      value: onlineNow ?? 0,
+      icon: Activity,
     },
   ];
 

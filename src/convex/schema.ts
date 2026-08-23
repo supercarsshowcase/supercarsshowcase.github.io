@@ -153,6 +153,13 @@ const schema = defineSchema(
     })
       .index("by_user", ["userId"])
       .index("by_user_claimed", ["userId", "claimed"]),
+
+    // Online presence tracking — one row per user, updated on heartbeat.
+    presence: defineTable({
+      userId: v.id("users"),
+      lastSeen: v.number(),
+    }).index("by_user", ["userId"])
+      .index("by_lastSeen", ["lastSeen"]),
   },
   {
     schemaValidation: false,
