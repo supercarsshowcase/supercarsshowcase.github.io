@@ -143,19 +143,25 @@ function RarityChip({ rarity }: { rarity: string }) {
 const SLICE_COUNT = 12;
 const SLICE_DEG = 360 / SLICE_COUNT;
 const WHEEL_COLORS = [
-  "#b45309", // supercar (gold)
+  "#b45309", // slice 0: tier 1 gold
   "#1f1f24",
   "#2d2d33",
   "#1f1f24",
-  "#2d2d33",
+  "#7c3aed", // slice 4: tier 2 purple
   "#1f1f24",
   "#2d2d33",
   "#1f1f24",
-  "#2d2d33",
+  "#d4af37", // slice 8: tier 3 special gold
   "#1f1f24",
   "#2d2d33",
   "#1f1f24",
 ];
+
+const CAR_SLICE_META: Record<number, { tier: number; pct: string; borderClass: string; labelBg: string }> = {
+  0: { tier: 1, pct: "1%", borderClass: "border-amber-300/70", labelBg: "bg-amber-400 text-amber-900" },
+  4: { tier: 2, pct: "0.01%", borderClass: "border-purple-400/70", labelBg: "bg-purple-400 text-purple-900" },
+  8: { tier: 3, pct: "0.001%", borderClass: "border-yellow-300/70", labelBg: "bg-yellow-300 text-yellow-900" },
+};
 
 function SpinPanel({ state, dispatch }: { state: GameState; dispatch: React.Dispatch<Action> }) {
   const [rotation, setRotation] = useState(0);
@@ -181,7 +187,9 @@ function SpinPanel({ state, dispatch }: { state: GameState; dispatch: React.Disp
     setResult(r);
     setSpinning(true);
     // Land the winning slice's center exactly at the top pointer.
-    const targetMod = (SLICE_DEG - (r.slice * SLICE_DEG + SLICE_DEG / 2) + 360) % 360;
+    // Correct rotation: pointer at top (0°), conic-gradient starts at 0° clockwise.
+    // To land slice i at the pointer, rotate so gradient angle (i*DEG + DEG/2) aligns with top.
+    const targetMod = (360 - (r.slice * SLICE_DEG + SLICE_DEG / 2)) % 360;
     setRotation((prev) => {
       const prevMod = ((prev % 360) + 360) % 360;
       const delta = ((targetMod - prevMod + 360) % 360) + 360 * 5;
@@ -224,47 +232,59 @@ function SpinPanel({ state, dispatch }: { state: GameState; dispatch: React.Disp
               }
             }}
           >
-            {/* All 3 tier car photos on the gold slice (rotates with the wheel) */}
-            {[
-              { car: previewCar, tier: 1, border: "border-amber-300/70", labelColor: "bg-amber-400 text-amber-900" },
-              { car: previewCar01, tier: 2, border: "border-purple-400/70", labelColor: "bg-purple-400 text-purple-900" },
-              { car: previewCar001, tier: 3, border: "border-yellow-300/70", labelColor: "bg-yellow-300 text-yellow-900" },
-            ].map(({ car, tier, border, labelColor }) => car && (
-              <div
-                key={tier}
-                className={`absolute overflow-hidden rounded-md border-2 ${border}`}
-                style={{
-                  left: `${50 + 30 * Math.sin((SLICE_DEG / 2 * Math.PI) / 180) + (tier - 1) * 4}%`,
-                  top: `${50 - 30 * Math.cos((SLICE_DEG / 2 * Math.PI) / 180) + (tier - 1) * 5}%`,
-                  width: "21%",
-                  aspectRatio: "16/10",
-                  transform: `translate(-50%, -50%) rotate(${15 + (tier - 1) * 5}deg)`,
-                  boxShadow: "0 4px 18px rgba(0,0,0,0.55)",
-                  zIndex: 10 - tier,
-                }}
-              >
-                <SmartImage
-                  src={gameCarImage(car)}
-                  alt={car.name}
-                  seed={car.id}
-                  className="h-full w-full object-cover"
-                />
-                <span className={`absolute left-1 top-1 rounded px-1 py-0.5 text-[7px] font-black uppercase ${labelColor}`}>
-                  {tier === 1 ? "1%" : tier === 2 ? "0.01%" : "0.001%"}
-                </span>
-              </div>
-            ))}
+            {/* Each car tier on its own slice (rotates with the wheel) */}
+            {([
+              { car: previewCar, sliceIdx: 0 },
+              { car: previewCar01, sliceIdx: 4 },
+              { car: previewCar001, sliceIdx: 8 },
+            ]).map(({ car, sliceIdx }) => {
+              if (!car) return null;
+              const meta = CAR_SLICE_META[sliceIdx];
+              const angle = ((sliceIdx * SLICE_DEG + SLICE_DEG / 2) * Math.PI) / 180;
+              const radius = 30;
+              return (
+                <div
+                  key={meta.tier}
+                  className={`absolute overflow-hidden rounded-md border-2 ${meta.borderClass}`}
+                  style={{
+                    left: `${50 + radius * Math.sin(angle)}%`,
+                    top: `${50 - radius * Math.cos(angle)}%`,
+                    width: "21%",
+                    aspectRatio: "16/10",
+                    transform: "translate(-50%, -50%)",
+                    boxShadow: "0 4px 18px rgba(0,0,0,0.55)",
+                    zIndex: 10,
+                  }}
+                >
+                  <SmartImage
+                    src={gameCarImage(car)}
+                    alt={car.name}
+                    seed={car.id}
+                    className="h-full w-full object-cover"
+                  />
+                  <span className={`absolute left-1 top-1 rounded px-1 py-0.5 text-[7px] font-black uppercase ${meta.labelBg}`}>
+                    {meta.pct}
+                  </span>
+                </div>
+              );
+            })}
             {/* Slice labels */}
             {Array.from({ length: SLICE_COUNT }, (_, i) => {
               const angle = ((i * SLICE_DEG + SLICE_DEG / 2) * Math.PI) / 180;
-              const r = i === 0 ? 43 : 37;
+              const r = 37;
               const x = 50 + r * Math.sin(angle);
               const y = 50 - r * Math.cos(angle);
-              const compact =
-                cashSlices[i - 1] >= 1000
-                  ? `$${(cashSlices[i - 1] / 1000).toFixed(1)}K`
-                  : `$${cashSlices[i - 1]}`;
-              const label = i === 0 ? "★ 1%" : compact;
+              const isCarSlice = CAR_SLICE_META[i];
+              let label: string;
+              if (isCarSlice) {
+                label = `★ ${isCarSlice.pct}`;
+              } else {
+                // Map physical slice index to cashSlices array index
+                const CASH_SLICES = [1, 2, 3, 5, 6, 7, 9, 10, 11];
+                const cashIdx = CASH_SLICES.indexOf(i);
+                const val = cashSlices[cashIdx] ?? 0;
+                label = val >= 1000 ? `$${(val / 1000).toFixed(1)}K` : `$${val}`;
+              }
               return (
                 <span
                   key={i}

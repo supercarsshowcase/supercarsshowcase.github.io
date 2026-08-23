@@ -251,7 +251,7 @@ export function rollCrate(state: GameState, crateId: string): CrateResult {
 // ── Lucky Spin wheel ──────────────────────────────────────────────────────────
 
 /** Cash values on the wheel, growing with player level (slice 0 is the car). */
-const SPIN_CASH_BASE = [25, 50, 100, 150, 250, 400, 650, 1000, 1600, 2500, 4000];
+const SPIN_CASH_BASE = [25, 50, 100, 200, 400, 800, 1600, 3000, 5000];
 
 export function spinCashSlices(state: GameState): number[] {
   const scale = 1 + (levelFrom(state) - 1) * 0.15;
@@ -317,23 +317,29 @@ export function nextSupercarSwapAt(now: number): number {
  *   1%     → $10–30M tier 1 car
  *   else   → cash slice
  */
+/** Physical slice indices reserved for cash (not car slices 0, 4, 8). */
+const CASH_SLICE_INDICES = [1, 2, 3, 5, 6, 7, 9, 10, 11];
+
 export function rollSpin(state: GameState, now = Date.now()): SpinResult {
   const roll = Math.random();
+  // Tier 3 (0.001%) → slice 8 (special gold)
   if (roll < 0.00001) {
     const car = hourlySupercar001(now);
-    if (car) return { kind: "car", carId: car.id, slice: 0, tier: 3 };
+    if (car) return { kind: "car", carId: car.id, slice: 8, tier: 3 };
   }
+  // Tier 2 (0.01%) → slice 4 (purple)
   if (roll < 0.00011) {
     const car = hourlySupercar01(now);
-    if (car) return { kind: "car", carId: car.id, slice: 0, tier: 2 };
+    if (car) return { kind: "car", carId: car.id, slice: 4, tier: 2 };
   }
+  // Tier 1 (1%) → slice 0 (gold)
   if (roll < 0.01011) {
     const car = hourlySupercar(now);
     if (car) return { kind: "car", carId: car.id, slice: 0, tier: 1 };
   }
   const slices = spinCashSlices(state);
   const idx = Math.floor(Math.random() * slices.length);
-  return { kind: "cash", amount: slices[idx], slice: idx + 1 };
+  return { kind: "cash", amount: slices[idx], slice: CASH_SLICE_INDICES[idx] };
 }
 
 // ── Daily reward ──────────────────────────────────────────────────────────────
