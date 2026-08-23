@@ -205,11 +205,14 @@ function BetInput({ value, onChange, max }: { value: number; onChange: (v: numbe
       <div className="flex items-center gap-3">
         <button type="button" onClick={() => onChange(Math.max(1, Math.floor(value / 2)))}
           className="rounded-lg bg-white/5 px-5 py-3 text-sm font-bold text-white/50 hover:bg-white/10 transition-colors">½ ←</button>
-        <input type="number" value={value} onChange={(e) => onChange(Math.max(1, Math.min(max, Number(e.target.value) || 1)))}
+        <input type="number" value={value} max={max}
+          onChange={(e) => onChange(Math.max(1, Math.min(max, Number(e.target.value) || 1)))}
+          onBlur={() => onChange(Math.max(1, Math.min(max, value)))}
           className="flex-1 rounded-xl border-2 border-white/15 bg-[#0a0a0c] px-5 py-3.5 text-xl font-bold text-white text-center outline-none focus:border-apex-red transition-colors" />
         <button type="button" onClick={() => onChange(Math.min(max, value * 2))}
           className="rounded-lg bg-white/5 px-5 py-3 text-sm font-bold text-white/50 hover:bg-white/10 transition-colors">→ 2×</button>
       </div>
+      <p className="text-right text-xs font-bold text-white/30">Max: ${max.toLocaleString()}</p>
       <div className="flex gap-2">
         {presets.filter((p) => p <= max).slice(0, 5).map((p) => (
           <button key={p} type="button" onClick={() => onChange(p)}
@@ -764,10 +767,11 @@ function JackpotGame({ state, dispatch }: { state: GameState; dispatch: React.Di
   const totalPool = pool.reduce((s, p) => s + p.value, 0);
 
   const addCash = useCallback(() => {
-    if (state.cash < bet) return toast.error("Not enough cash!");
-    dispatch({ type: "ADD_CASH", amount: -bet });
-    setPool((p) => [...p, { type: "cash", value: bet, label: `$${bet.toLocaleString()}` }]);
-    toast.success(`Added $${bet.toLocaleString()} to the pool`);
+    const actual = Math.min(bet, state.cash);
+    if (actual <= 0) return toast.error("Not enough cash!");
+    dispatch({ type: "ADD_CASH", amount: -actual });
+    setPool((p) => [...p, { type: "cash", value: actual, label: `$${actual.toLocaleString()}` }]);
+    toast.success(`Added $${actual.toLocaleString()} to the pool`);
   }, [bet, state.cash, dispatch]);
 
   const addCar = useCallback(() => {
