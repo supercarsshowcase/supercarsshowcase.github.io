@@ -272,7 +272,6 @@ function CoinflipGame({ state, dispatch }: { state: GameState; dispatch: React.D
   const play = useCallback(() => {
     if (mode === "cash") {
       if (state.cash < bet) return toast.error("Not enough cash!");
-      dispatch({ type: "ADD_CASH", amount: -bet }); // Deduct upfront
     } else {
       if (!selectedCar) return toast.error("Select a car to gamble!");
     }
@@ -284,15 +283,15 @@ function CoinflipGame({ state, dispatch }: { state: GameState; dispatch: React.D
       setWon(wonGame);
       if (mode === "cash") {
         if (wonGame) {
-          dispatch({ type: "ADD_CASH", amount: bet * 2 }); // Win: get bet back + profit
+          dispatch({ type: "ADD_CASH", amount: bet }); // Win: profit only
+        } else {
+          dispatch({ type: "ADD_CASH", amount: -bet }); // Lose: lose the bet
         }
-        // Lose: bet already deducted, nothing to do
       } else {
         // Car gambling: win = get similar-value car, lose = lose your car
         if (wonGame) {
           const betCar = GAME_CAR_MAP[selectedCar!];
           const betValue = betCar?.value ?? 0;
-          // Find house cars within 50% of bet car value
           const houseCars = ["ferrari-f8-19", "huracan-15", "911-turbo-s-19", "mclaren-720s-17", "amg-gt-black-18", "ferrari-458-12", "911-gt3-18", "amg-c63-18", "m4-18", "corvette-c6-08"]
             .map((id) => GAME_CAR_MAP[id])
             .filter((c) => c && Math.abs(c.value - betValue) < betValue * 0.5);
@@ -301,7 +300,6 @@ function CoinflipGame({ state, dispatch }: { state: GameState; dispatch: React.D
           setWonCar(`${prizeCar.brand} ${prizeCar.name}`);
           toast.success(`WON a ${prizeCar.name}!`);
         } else {
-          // Lose = always lose your car
           dispatch({ type: "REMOVE_CAR", carId: selectedCar! });
           const lost = GAME_CAR_MAP[selectedCar!];
           setLostCar(lost ? `${lost.brand} ${lost.name}` : selectedCar);
@@ -897,10 +895,12 @@ function OnlineCoinflip({ state, dispatch }: { state: GameState; dispatch: React
   const findMatch = useCallback(() => {
     if (state.cash < bet) return toast.error("Not enough cash!");
     setFinding(true); setResult(null); setCarPrize(null);
-    dispatch({ type: "ADD_CASH", amount: -bet });
     setTimeout(() => {
       const won = Math.random() < 0.45;
-      if (won) { dispatch({ type: "ADD_CASH", amount: bet * 2 });
+      if (won) {
+        dispatch({ type: "ADD_CASH", amount: bet });
+      } else {
+        dispatch({ type: "ADD_CASH", amount: -bet });
       }
       setResult({ myPick: won ? pick : (pick === "heads" ? "tails" : "heads"), oppPick: Math.random() < 0.5 ? "heads" : "tails", won });
       setFinding(false);
