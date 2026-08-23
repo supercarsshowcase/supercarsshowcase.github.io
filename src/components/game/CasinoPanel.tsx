@@ -193,10 +193,6 @@ function CasinoLobby({ state, dispatch, onSelect }: { state: GameState; dispatch
           className="inline-flex items-center gap-2 rounded-lg border border-white/20 bg-white/5 px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white/70 transition-all hover:bg-white/10 hover:text-white">
           <Car className="size-4" /> Trade in Cars to Chips
         </button>
-        <button type="button" onClick={() => { toast.info("Convert chips back to cash!"); dispatch({ type: "ADD_CASH", amount: 10000 }); }}
-          className="inline-flex items-center gap-2 rounded-lg border border-white/20 bg-white/5 px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white/70 transition-all hover:bg-white/10 hover:text-white">
-          <DollarSign className="size-4" /> Withdraw Chips to Cash
-        </button>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div>
