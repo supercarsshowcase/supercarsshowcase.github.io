@@ -288,18 +288,31 @@ function CoinflipGame({ state, dispatch }: { state: GameState; dispatch: React.D
         }
         // Lose: bet already deducted, nothing to do
       } else {
-        // Car gambling: win = get random car from house, lose = lose your car
+        // Car gambling: win = get similar-value car, lose = lose your car (25% keep)
         if (wonGame) {
-          const houseCars = ["ferrari-f8-19", "huracan-15", "911-turbo-s-19", "mclaren-720s-17", "amg-gt-black-18"];
-          const prizeCarId = houseCars[Math.floor(Math.random() * houseCars.length)];
-          dispatch({ type: "ADD_CAR", carId: prizeCarId });
-          const prizeCar = GAME_CAR_MAP[prizeCarId];
-          setWonCar(prizeCar ? `${prizeCar.brand} ${prizeCar.name}` : prizeCarId);
-          toast.success(`WON a ${prizeCar?.name}!`);
+          const betCar = GAME_CAR_MAP[selectedCar!];
+          const betValue = betCar?.value ?? 0;
+          // Find house cars within 50% of bet car value
+          const houseCars = ["ferrari-f8-19", "huracan-15", "911-turbo-s-19", "mclaren-720s-17", "amg-gt-black-18", "ferrari-458-12", "911-gt3-18", "amg-c63-18", "m4-18", "corvette-c6-08"]
+            .map((id) => GAME_CAR_MAP[id])
+            .filter((c) => c && Math.abs(c.value - betValue) < betValue * 0.5);
+          const prizeCar = houseCars.length > 0 ? houseCars[Math.floor(Math.random() * houseCars.length)] : GAME_CAR_MAP["ferrari-f8-19"]!;
+          dispatch({ type: "ADD_CAR", carId: prizeCar.id });
+          setWonCar(`${prizeCar.brand} ${prizeCar.name}`);
+          toast.success(`WON a ${prizeCar.name}!`);
         } else {
-          dispatch({ type: "REMOVE_CAR", carId: selectedCar! });
-          const lost = GAME_CAR_MAP[selectedCar!];
-          setLostCar(lost ? `${lost.brand} ${lost.name}` : selectedCar);
+          // 25% chance to keep your car on loss
+          const keepCar = Math.random() < 0.25;
+          if (keepCar) {
+            const kept = GAME_CAR_MAP[selectedCar!];
+            setLostCar(null);
+            setWonCar(null);
+            toast.success(`Lucky! You kept your ${kept?.name}!`);
+          } else {
+            dispatch({ type: "REMOVE_CAR", carId: selectedCar! });
+            const lost = GAME_CAR_MAP[selectedCar!];
+            setLostCar(lost ? `${lost.brand} ${lost.name}` : selectedCar);
+          }
         }
       }
       setSpinning(false);
@@ -766,15 +779,21 @@ function JackpotGame({ state, dispatch }: { state: GameState; dispatch: React.Di
     toast.success(`Added $${actual.toLocaleString()} to the pool`);
   }, [bet, state.cash, dispatch]);
 
-  const addCar = useCallback(() => {
-    const cars = Object.keys(state.ownedCars).filter((id) => id !== state.activeCarId).map((id) => GAME_CAR_MAP[id]).filter(Boolean);
-    if (cars.length === 0) return toast.error("No cars to gamble!");
-    // Pick a random car
-    const car = cars[Math.floor(Math.random() * cars.length)];
+  const [showCarPicker, setShowCarPicker] = useState(false);
+
+  const addCar = useCallback((carId: string) => {
+    const car = GAME_CAR_MAP[carId];
+    if (!car) return;
     dispatch({ type: "REMOVE_CAR", carId: car.id });
     setPool((p) => [...p, { type: "car", value: car.value, label: `${car.brand} ${car.name}` }]);
     toast.success(`Added ${car.brand} ${car.name} ($${car.value.toLocaleString()}) to pool`);
-  }, [state.ownedCars, state.activeCarId, dispatch]);
+    setShowCarPicker(false);
+  }, [dispatch]);
+
+  const gambleCars = useMemo(() =>
+    Object.keys(state.ownedCars).filter((id) => id !== state.activeCarId).map((id) => GAME_CAR_MAP[id]).filter(Boolean),
+    [state.ownedCars, state.activeCarId]
+  );
 
   const draw = useCallback(() => {
     if (pool.length === 0) return toast.error("Pool is empty!");
@@ -826,15 +845,36 @@ function JackpotGame({ state, dispatch }: { state: GameState; dispatch: React.Di
             className="rounded-2xl border-2 border-white/20 bg-white/5 px-8 py-4 font-display text-base font-bold uppercase tracking-wider text-white/70 transition-all hover:bg-white/10 hover:scale-105 disabled:opacity-40">
             💵 Add Cash
           </button>
-          <button type="button" onClick={addCar} disabled={spinning}
-            className="rounded-2xl border-2 border-purple-500/30 bg-purple-500/10 px-8 py-4 font-display text-base font-bold uppercase tracking-wider text-purple-400 transition-all hover:bg-purple-500/20 hover:scale-105 disabled:opacity-40">
-            🚗 Gamble Car
+          <button type="button" onClick={() => setShowCarPicker(!showCarPicker)} disabled={spinning || gambleCars.length === 0}
+            className={cn("rounded-2xl border-2 px-8 py-4 font-display text-base font-bold uppercase tracking-wider transition-all hover:scale-105 disabled:opacity-40",
+              showCarPicker ? "border-purple-500 bg-purple-500/20 text-purple-300" : "border-purple-500/30 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20"
+            )}>
+            🚗 Gamble Car {gambleCars.length > 0 && <span className="ml-1 text-xs opacity-60">({gambleCars.length})</span>}
           </button>
           <button type="button" onClick={draw} disabled={spinning || pool.length === 0}
             className="rounded-2xl bg-apex-red px-10 py-4 font-display text-base font-bold uppercase tracking-wider text-white transition-all hover:bg-apex-red/80 hover:scale-105 disabled:opacity-40 shadow-lg shadow-apex-red/30">
             Draw Winner
           </button>
         </div>
+
+        {/* Car picker */}
+        {showCarPicker && (
+          <div className="w-full max-w-lg rounded-2xl border-2 border-purple-500/30 bg-[#0a0a0c] p-4">
+            <p className="mb-3 text-sm font-bold text-purple-400">Select a car to add to the pool:</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-y-auto pr-2">
+              {gambleCars.map((car) => (
+                <button key={car.id} type="button" onClick={() => addCar(car.id)}
+                  className="flex items-center gap-3 rounded-xl border border-white/10 bg-[#111114] p-3 text-left transition-all hover:border-purple-500/50 hover:bg-purple-500/10">
+                  <div className="flex-1 min-w-0">
+                    <p className="truncate text-sm font-bold text-white">{car.brand} {car.name}</p>
+                    <p className="text-xs text-white/30">${car.value.toLocaleString()}</p>
+                  </div>
+                  <span className="text-purple-400 text-lg">+</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {winner && (
           <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className={cn("rounded-2xl px-10 py-6 font-display text-2xl font-black",
