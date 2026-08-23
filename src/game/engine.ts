@@ -371,8 +371,7 @@ export function gameReducer(state: GameState, action: Action): GameState {
       const amount = Math.max(1, Math.round(action.amount));
       const wasStarter = state.activeCarId === STARTER_ID;
       const nextClicks = state.clicksOnStarter + (wasStarter ? 1 : 0);
-      const foundSecret = wasStarter && nextClicks >= 300 && !state.ownedCars[SECRET_CAR_ID];
-      let next = {
+      const next = {
         ...state,
         cash: state.cash + amount,
         totalEarned: state.totalEarned + amount,
@@ -380,12 +379,6 @@ export function gameReducer(state: GameState, action: Action): GameState {
         clicksOnStarter: nextClicks,
         lastTick: Date.now(),
       };
-      if (foundSecret) {
-        next = {
-          ...next,
-          ownedCars: { ...next.ownedCars, [SECRET_CAR_ID]: { upgrades: {} } },
-        };
-      }
       return applyAchievements(next);
     }
     case "TICK": {

@@ -417,7 +417,7 @@ export default function Admin() {
   const [eventLabel, setEventLabel] = useState("100x EVENT");
 
   const sortedGameCars = Object.entries(GAME_CAR_MAP)
-    .filter(([, c]) => !c.secret)
+    
     .sort(([, a], [, b]) => b.value - a.value);
 
   const newFeedbackCount =

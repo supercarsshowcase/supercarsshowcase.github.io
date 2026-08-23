@@ -439,10 +439,7 @@ function EarnZone({
         <p className="font-display text-[10px] font-semibold uppercase tracking-[0.28em] text-apex-red">
           Earn
         </p>
-        <span className="inline-flex items-center gap-1.5 text-[10px] text-white/30">
-          <Sparkles className="size-3 text-apex-red" />
-          Click the starter 300× for a secret
-        </span>
+
       </div>
 
       <div
