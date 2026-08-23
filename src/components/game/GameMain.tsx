@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Boxes,
@@ -72,6 +72,33 @@ interface Popup {
   y: number;
   text: string;
   crit: boolean;
+}
+
+function CountdownTimer({ expiresAt }: { expiresAt: number }) {
+  const [remaining, setRemaining] = useState(Math.max(0, expiresAt - Date.now()));
+
+  useEffect(() => {
+    const tick = () => setRemaining(Math.max(0, expiresAt - Date.now()));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [expiresAt]);
+
+  if (remaining <= 0) return <span className="text-white/30">Expired</span>;
+
+  const totalSec = Math.ceil(remaining / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+
+  const parts: string[] = [];
+  if (h > 0) parts.push(`${h}h`);
+  if (m > 0 || h > 0) parts.push(`${m}m`);
+  parts.push(`${s}s`);
+
+  return (
+    <span className="font-mono text-apex-red tabular-nums">{parts.join(" ")}</span>
+  );
 }
 
 export function GameMain({
@@ -165,7 +192,7 @@ export function GameMain({
                   {activeEvent.label}
                 </p>
                 <p className="text-[11px] text-white/50">
-                  All earnings multiplied · Expires {new Date(activeEvent.expiresAt).toLocaleTimeString()}
+                  All earnings multiplied · Expires in <CountdownTimer expiresAt={activeEvent.expiresAt} />
                 </p>
               </div>
             </div>
