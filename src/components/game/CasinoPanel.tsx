@@ -188,12 +188,7 @@ function CasinoLobby({ state, dispatch, onSelect }: { state: GameState; dispatch
       <div className="mb-6 text-center">
         <h2 className="font-display text-4xl font-black text-white tracking-tight">Casino</h2>
       </div>
-      <div className="mb-6 flex justify-center gap-3">
-        <button type="button" onClick={() => onSelect("trade-cars")}
-          className="inline-flex items-center gap-2 rounded-lg border border-white/20 bg-white/5 px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white/70 transition-all hover:bg-white/10 hover:text-white">
-          <Car className="size-4" /> Trade in Cars to Chips
-        </button>
-      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div>
           <p className="mb-3 text-center font-display text-xs font-bold uppercase tracking-[0.25em] text-white/40">Games</p>
