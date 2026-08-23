@@ -58,11 +58,11 @@ function CollapsibleSection({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <section className="rounded-lg border border-apex-line bg-apex-panel">
+    <section className="rounded-xl border border-apex-line bg-apex-panel transition-colors hover:border-white/[0.12]">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center justify-between border-b border-apex-line px-5 py-4 text-left transition-colors hover:bg-white/[0.02]"
+        className="flex w-full items-center justify-between border-b border-apex-line px-5 py-4 text-left transition-colors hover:bg-white/[0.03]"
       >
         <div className="flex items-center gap-2">
           <Icon className="size-4 text-apex-red" />
@@ -503,31 +503,41 @@ export default function Admin() {
   return (
     <div className="mx-auto max-w-[1200px] px-4 py-12 sm:px-6">
       {/* Header */}
-      <div className="mb-10">
-        <p className="inline-flex items-center gap-1.5 font-display text-[11px] font-semibold uppercase tracking-[0.28em] text-apex-red">
-          <span className="inline-block size-1.5 rounded-full bg-apex-red" />{" "}
-          Control room
-        </p>
-        <h1 className="mt-2 font-display text-4xl font-black tracking-tight text-white sm:text-5xl">
-          Admin
-        </h1>
+      <div className="relative mb-10 overflow-hidden rounded-xl border border-apex-line bg-apex-panel px-6 py-8">
+        <div className="absolute inset-0 bg-gradient-to-r from-apex-red/10 via-transparent to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-apex-red/60 via-apex-red/20 to-transparent" />
+        <div className="relative">
+          <p className="inline-flex items-center gap-1.5 font-display text-[11px] font-semibold uppercase tracking-[0.28em] text-apex-red">
+            <span className="inline-block size-1.5 rounded-full bg-apex-red animate-pulse" />{" "}
+            Control room
+          </p>
+          <h1 className="mt-2 font-display text-4xl font-black tracking-tight text-white sm:text-5xl">
+            Admin Panel
+          </h1>
+          <p className="mt-2 text-sm text-white/40">
+            Manage users, announcements, and site settings from one place.
+          </p>
+        </div>
       </div>
 
       {/* Stats */}
       {isOwner && (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           {statCards.map((s) => (
             <div
               key={s.label}
-              className="rounded-lg border border-apex-line bg-apex-panel p-4"
+              className="group relative overflow-hidden rounded-xl border border-apex-line bg-apex-panel p-4 transition-all hover:border-white/[0.12] hover:shadow-[0_0_20px_-6px_rgba(255,46,0,0.15)]"
             >
-              <s.icon className="mb-2 size-4 text-apex-red" />
-              <p className="font-display text-2xl font-black text-white">
-                {(s.value ?? 0).toLocaleString()}
-              </p>
-              <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/40">
-                {s.label}
-              </p>
+              <div className="absolute inset-0 bg-gradient-to-br from-apex-red/5 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+              <div className="relative">
+                <s.icon className="mb-3 size-5 text-apex-red/80 transition-colors group-hover:text-apex-red" />
+                <p className="font-display text-2xl font-black tracking-tight text-white">
+                  {(s.value ?? 0).toLocaleString()}
+                </p>
+                <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/35">
+                  {s.label}
+                </p>
+              </div>
             </div>
           ))}
         </div>
@@ -591,16 +601,16 @@ export default function Admin() {
             badge="Powers"
             defaultOpen={false}
           >
-            <div className="space-y-6 px-5 py-5">
-              {/* Give Money */}
-              <div>
-                <h3 className="mb-2 font-display text-xs font-bold uppercase tracking-[0.16em] text-white/60">
-                  <Gift className="mr-1 inline size-3.5" /> Send Gift
-                </h3>
+            <div className="px-5 py-5">
+              {/* User selector */}
+              <div className="mb-5">
+                <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40">
+                  Target user
+                </label>
                 <select
                   value={abuseTarget}
                   onChange={(e) => setAbuseTarget(e.target.value)}
-                  className="mb-3 w-full rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3 py-2 text-sm text-white outline-none focus:border-apex-red"
+                  className="w-full rounded-lg border border-white/[0.08] bg-[#0b0b0c] px-3.5 py-2.5 text-sm text-white outline-none transition-colors focus:border-apex-red"
                 >
                   <option value="">Select a user…</option>
                   {users?.map((u) => (
@@ -609,6 +619,15 @@ export default function Admin() {
                     </option>
                   ))}
                 </select>
+              </div>
+
+              <div className="grid gap-5 lg:grid-cols-2">
+              {/* Send Gift Card */}
+              <div className="rounded-xl border border-apex-line bg-[#08080a] p-4">
+                <h3 className="mb-3 flex items-center gap-2 font-display text-xs font-bold uppercase tracking-[0.16em] text-white/70">
+                  <span className="flex size-6 items-center justify-center rounded-md bg-emerald-500/10"><Gift className="size-3.5 text-emerald-400" /></span>
+                  Send Gift
+                </h3>
 
                 {/* Give Cash */}
                 <div className="flex items-end gap-2">
@@ -729,13 +748,11 @@ export default function Admin() {
                 </div>
               </div>
 
-              {/* Divider */}
-              <div className="border-t border-apex-line" />
-
-              {/* Multiplier Event */}
-              <div>
-                <h3 className="mb-2 font-display text-xs font-bold uppercase tracking-[0.16em] text-white/60">
-                  <Flame className="mr-1 inline size-3.5" /> Multiplier Event
+              {/* Multiplier Event Card */}
+              <div className="rounded-xl border border-apex-line bg-[#08080a] p-4">
+                <h3 className="mb-3 flex items-center gap-2 font-display text-xs font-bold uppercase tracking-[0.16em] text-white/70">
+                  <span className="flex size-6 items-center justify-center rounded-md bg-orange-500/10"><Flame className="size-3.5 text-orange-400" /></span>
+                  Multiplier Event
                 </h3>
 
                 {/* Multiplier presets */}
@@ -861,6 +878,7 @@ export default function Admin() {
                     End Event
                   </button>
                 </div>
+              </div>
               </div>
             </div>
           </CollapsibleSection>
