@@ -602,10 +602,10 @@ function CrashGame({ state, dispatch }: { state: GameState; dispatch: React.Disp
     dispatch({ type: "ADD_CASH", amount: -bet });
     setPlaying(true); setCrashed(false); setCashedOut(false); setCashedAt(0); setCarPrize(null);
     setMultiplier(1.0);
-    crashPoint.current = Math.max(1.01, Math.pow(Math.random(), 0.4) * 5 + 1);
+    crashPoint.current = Math.max(1.01, Math.pow(Math.random(), 0.3) * 3 + 1);
     let mult = 1.0;
     timerRef.current = setInterval(() => {
-      mult += 0.03 + mult * 0.008;
+      mult += 0.02 + mult * 0.005;
       setMultiplier(mult);
       if (mult >= crashPoint.current) {
         if (timerRef.current) clearInterval(timerRef.current);

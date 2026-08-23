@@ -550,12 +550,12 @@ export function gameReducer(state: GameState, action: Action): GameState {
     case "HARD_RESET":
       return initialGameState();
     case "ADD_CASH": {
-      const amount = Math.max(0, Math.round(action.amount));
-      if (amount <= 0) return state;
+      const amount = Math.round(action.amount);
+      const newCash = Math.max(0, state.cash + amount);
       return applyAchievements({
         ...state,
-        cash: state.cash + amount,
-        totalEarned: state.totalEarned + amount,
+        cash: newCash,
+        totalEarned: amount > 0 ? state.totalEarned + amount : state.totalEarned,
       });
     }
     case "ADD_CAR": {
