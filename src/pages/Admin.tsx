@@ -303,7 +303,7 @@ export default function Admin() {
       </div>
 
       {/* ── Users & Roles + Quick UI Settings ───────────────────────────── */}
-      {isOwner && (
+      {isOwner ? (
       <div className="mt-12 grid gap-8 lg:grid-cols-2">
         {/* Users */}
         <CollapsibleSection key="users-roles" title="Users & Roles" icon={Shield} defaultOpen={true}>
@@ -449,7 +449,7 @@ export default function Admin() {
         </CollapsibleSection>
       </div>
 
-      )}
+      ) : null}
 
       {/* ── Announcements ───────────────────────────────────────────────── */}
       <div className="mt-12">
