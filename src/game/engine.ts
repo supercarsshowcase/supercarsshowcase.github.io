@@ -332,6 +332,7 @@ export type Action =
   | { type: "BUY_CAR"; id: string }
   | { type: "ADD_CASH"; amount: number }
   | { type: "ADD_CAR"; carId: string }
+  | { type: "REMOVE_CAR"; carId: string }
   | { type: "SELL_CAR"; id: string }
   | { type: "SET_ACTIVE"; id: string }
   | { type: "BUY_UPGRADE"; upgradeId: string }
@@ -406,6 +407,15 @@ export function gameReducer(state: GameState, action: Action): GameState {
         cash: state.cash - price,
         ownedCars: { ...state.ownedCars, [action.id]: { upgrades: {} } },
       });
+    }
+    case "REMOVE_CAR": {
+      if (!state.ownedCars[action.carId]) return state;
+      if (isSecretCar(action.carId)) return state;
+      if (Object.keys(state.ownedCars).length <= 1) return state;
+      const ownedCars = { ...state.ownedCars };
+      delete ownedCars[action.carId];
+      const activeCarId = state.activeCarId === action.carId ? (Object.keys(ownedCars)[0] ?? STARTER_ID) : state.activeCarId;
+      return { ...state, ownedCars, activeCarId };
     }
     case "SELL_CAR": {
       if (!state.ownedCars[action.id]) return state;
