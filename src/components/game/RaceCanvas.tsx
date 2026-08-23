@@ -1,159 +1,349 @@
 /**
- * RaceCanvas — Professional top-down racer with self-contained game loop.
- * Countdown, physics, AI, HUD — all internal. No external timer dependencies.
- * Mode: "multiplayer" reads positions from props; "computer" runs AI locally.
+ * RaceCanvas — Pseudo-3D racing game (OutRun / Pole Position style).
+ *
+ * Road renders with perspective: bands from bottom → horizon narrow and shift.
+ * Player car drawn large at bottom. AI cars scale by distance.
+ * WASD / Arrow keys. Self-contained countdown + physics.
  */
-import { useCallback, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 
-const MAX_SPEED = 5.5;
-const ACCEL = 0.14;
-const BRAKE = 0.22;
-const FRICTION = 0.025;
-const TURN = 0.052;
-const CP_RADIUS = 70;
+// ══════════════════════════════════════════════════════════════
+// TRACK
+// ══════════════════════════════════════════════════════════════
 
-interface TrackDef {
-  id: string;
-  name: string;
-  checkpoints: { x: number; y: number }[];
-  spawns: { x: number; y: number; angle: number }[];
-  bounds: { minX: number; minY: number; maxX: number; maxY: number };
-  laps: number;
+function buildTrack(): number[] {
+  const t: number[] = [];
+  const s = (n: number, c: number) => t.push(...Array(n).fill(c));
+  s(80, 0);       // start straight
+  s(35, 0.0035);  // gentle right
+  s(18, 0);       // short straight
+  s(45, -0.005);  // medium left
+  s(14, 0);
+  s(28, 0.0045);  // right bend
+  s(28, -0.0045); // left bend (S-curve)
+  s(20, 0);
+  s(35, 0.007);   // sharp right
+  s(18, 0);
+  s(40, -0.0025); // long gentle left
+  s(55, 0);       // back straight
+  return t;
 }
+const TRACK = buildTrack();
+const TL = TRACK.length;
 
-interface PlayerState {
-  id: string;
-  name: string;
-  x: number; y: number; angle: number; speed: number;
-  lap: number; finished: boolean; finishTime?: number; placement?: number;
-}
+// ══════════════════════════════════════════════════════════════
+// CONSTANTS
+// ══════════════════════════════════════════════════════════════
 
-interface AiCar {
-  id: string; name: string;
-  x: number; y: number; angle: number; speed: number;
-  lap: number; lastCp: number; finished: boolean; finishTime?: number; placement?: number;
+const SEG = 200;
+const MAX_SPD = 120;
+const ACC = 0.7;
+const BRK = 1.4;
+const STR = 2.2;
+const FRI = 0.28;
+const OFF_FRI = 1.8;
+const CENT = 0.38;
+const LAPS = 3;
+const VIEW = 6000;
+const BAND = 3;
+
+// ══════════════════════════════════════════════════════════════
+// TYPES
+// ══════════════════════════════════════════════════════════════
+
+interface Ai {
+  id: string; name: string; color: string;
+  z: number; x: number; spd: number;
   target: number; skill: number;
+  lap: number; done: boolean;
 }
 
-interface Props {
-  track: TrackDef;
-  myId: string;
-  players: PlayerState[];
-  /** "multiplayer" = positions from server props; "computer" = local AI */
-  mode: "multiplayer" | "computer";
-  /** For multiplayer: initial status from lobby */
-  lobbyStatus?: "waiting" | "countdown" | "racing" | "finished";
-  countdownSec?: number;
-  aiCount?: number;
-  onPositionUpdate?: (x: number, y: number, angle: number, speed: number, lap: number) => void;
-  onFinish?: (time: number) => void;
+interface St {
+  z: number; x: number; spd: number; steer: number;
+  lap: number; time: number;
+  ai: Ai[];
+  phase: "cd" | "race" | "done";
+  cdEnd: number; reported: boolean;
 }
 
-const AI_NAMES = ["Phantom", "Blitz", "Vortex", "Storm", "Ace", "Nova", "Turbo", "Ghost"];
+// ══════════════════════════════════════════════════════════════
+// AI
+// ══════════════════════════════════════════════════════════════
 
-function makeAi(track: TrackDef, count: number): AiCar[] {
-  return Array.from({ length: count }, (_, i) => {
-    const s = track.spawns[Math.min(i + 1, track.spawns.length - 1)];
-    return {
-      id: `ai${i}`, name: AI_NAMES[i % AI_NAMES.length],
-      x: s.x, y: s.y, angle: s.angle, speed: 0,
-      lap: 0, lastCp: -1, finished: false,
-      target: 2.8 + Math.random() * 2.2, skill: 0.45 + Math.random() * 0.35,
-    };
-  });
+const AI_NAMES = ["PHANTOM", "BLITZ", "VORTEX", "STORM"];
+const AI_COLORS = ["#3b82f6", "#22c55e", "#f59e0b", "#a855f7"];
+
+function makeAi(n: number): Ai[] {
+  return Array.from({ length: n }, (_, i) => ({
+    id: `a${i}`, name: AI_NAMES[i % 4], color: AI_COLORS[i % 4],
+    z: -(i + 1) * 2500, x: 0, spd: 0,
+    target: 65 + Math.random() * 35, skill: 0.45 + Math.random() * 0.35,
+    lap: 0, done: false,
+  }));
 }
 
-function tickAi(ai: AiCar, track: TrackDef, dt: number) {
-  if (ai.finished) return;
-  const ni = (ai.lastCp + 1) % track.checkpoints.length;
-  const cp = track.checkpoints[ni];
-  const dx = cp.x - ai.x, dy = cp.y - ai.y;
-  const dist = Math.sqrt(dx * dx + dy * dy);
-  const ta = Math.atan2(dy, dx);
-  let ad = ta - ai.angle;
-  while (ad > Math.PI) ad -= Math.PI * 2;
-  while (ad < -Math.PI) ad += Math.PI * 2;
-  ai.angle += ad * (0.07 + ai.skill * 0.06) * dt;
-  const sev = Math.abs(ad);
-  const want = sev > 0.8 ? ai.target * 0.45 : sev > 0.3 ? ai.target * 0.7 : ai.target;
-  if (ai.speed < want) ai.speed = Math.min(want, ai.speed + ACCEL * dt);
-  else ai.speed = Math.max(want, ai.speed - BRAKE * 0.4 * dt);
-  ai.speed *= 1 - FRICTION * dt;
-  ai.x += Math.cos(ai.angle) * ai.speed * dt;
-  ai.y += Math.sin(ai.angle) * ai.speed * dt;
-  ai.x = Math.max(track.bounds.minX, Math.min(track.bounds.maxX, ai.x));
-  ai.y = Math.max(track.bounds.minY, Math.min(track.bounds.maxY, ai.y));
-  if (dist < CP_RADIUS) {
-    ai.lastCp = ni;
-    if (ni === track.checkpoints.length - 1) {
-      ai.lap += 1;
-      if (ai.lap >= track.laps) ai.finished = true;
+// ══════════════════════════════════════════════════════════════
+// PHYSICS
+// ══════════════════════════════════════════════════════════════
+
+function physics(s: St, keys: Set<string>, dt: number) {
+  if (s.phase !== "race") return;
+
+  // Player accel / brake
+  if (keys.has("w") || keys.has("arrowup")) s.spd = Math.min(MAX_SPD, s.spd + ACC * dt);
+  else if (keys.has("s") || keys.has("arrowdown")) s.spd = Math.max(-MAX_SPD * 0.3, s.spd - BRK * dt);
+  else { if (s.spd > 0) s.spd = Math.max(0, s.spd - FRI * dt); else if (s.spd < 0) s.spd = Math.min(0, s.spd + FRI * dt); }
+
+  // Player steer
+  const sf = 1 - Math.abs(s.spd) / MAX_SPD * 0.45;
+  if (keys.has("a") || keys.has("arrowleft")) s.x -= STR * sf * dt * (s.spd >= 0 ? 1 : -1);
+  if (keys.has("d") || keys.has("arrowright")) s.x += STR * sf * dt * (s.spd >= 0 ? 1 : -1);
+  s.steer = (keys.has("a") || keys.has("arrowleft") ? -1 : 0) + (keys.has("d") || keys.has("arrowright") ? 1 : 0);
+
+  // Centrifugal
+  const si = ((Math.floor(s.z / SEG) % TL) + TL) % TL;
+  s.x += TRACK[si] * s.spd * CENT * dt;
+
+  // Off-road
+  if (Math.abs(s.x) > 1) { s.spd *= 1 - OFF_FRI * dt; s.x = Math.max(-1.4, Math.min(1.4, s.x)); }
+  s.x = Math.max(-1.2, Math.min(1.2, s.x));
+
+  // Move
+  s.z += s.spd * dt;
+
+  // Lap
+  if (s.z >= TL * SEG) { s.z -= TL * SEG; s.lap++; if (s.lap >= LAPS) s.phase = "done"; }
+
+  // AI
+  for (const a of s.ai) {
+    if (a.done) continue;
+    const ais = ((Math.floor(a.z / SEG) % TL) + TL) % TL;
+    const ac = TRACK[ais];
+    a.x += (0 - a.x) * 0.018 * a.skill * dt;
+    a.x += ac * a.spd * CENT * 0.5 * dt;
+    a.x = Math.max(-1, Math.min(1, a.x));
+    const want = Math.abs(ac) > 0.004 ? a.target * 0.55 : a.target;
+    if (a.spd < want) a.spd = Math.min(want, a.spd + ACC * 0.8 * dt);
+    else a.spd = Math.max(want, a.spd - BRK * 0.25 * dt);
+    a.z += a.spd * dt;
+    if (a.z >= TL * SEG) { a.z -= TL * SEG; a.lap++; if (a.lap >= LAPS) a.done = true; }
+  }
+
+  s.time += dt * 16.667;
+}
+
+// ══════════════════════════════════════════════════════════════
+// RENDERING
+// ══════════════════════════════════════════════════════════════
+
+function darken(hex: string, f: number) {
+  const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
+  return `rgb(${Math.round(r * f)},${Math.round(g * f)},${Math.round(b * f)})`;
+}
+
+function drawFormula(ctx: CanvasRenderingContext2D, x: number, y: number, sc: number, col: string, name: string, me: boolean, tilt: number) {
+  ctx.save(); ctx.translate(x, y); ctx.scale(sc, sc); ctx.rotate(tilt * 0.15);
+  // shadow
+  ctx.fillStyle = "rgba(0,0,0,0.35)"; ctx.beginPath(); ctx.ellipse(0, 20, 24, 7, 0, 0, Math.PI * 2); ctx.fill();
+  // rear wing
+  ctx.fillStyle = col; ctx.fillRect(-26, -7, 52, 5);
+  ctx.fillStyle = "#1a1a1a"; ctx.fillRect(-26, -2, 3, 12); ctx.fillRect(23, -2, 3, 12);
+  // body
+  ctx.fillStyle = col; ctx.beginPath();
+  ctx.moveTo(-20, 14); ctx.lineTo(-16, -18); ctx.lineTo(-6, -32); ctx.lineTo(6, -32); ctx.lineTo(16, -18); ctx.lineTo(20, 14);
+  ctx.closePath(); ctx.fill();
+  // nose
+  ctx.fillStyle = me ? darken(col, 0.75) : darken(col, 0.6);
+  ctx.beginPath(); ctx.moveTo(-6, -32); ctx.lineTo(0, -44); ctx.lineTo(6, -32); ctx.closePath(); ctx.fill();
+  // cockpit
+  ctx.fillStyle = "#111"; ctx.fillRect(-7, -26, 14, 12);
+  // front wing
+  ctx.fillStyle = col; ctx.fillRect(-24, -38, 48, 3);
+  // wheels
+  ctx.fillStyle = "#111";
+  ctx.fillRect(-24, -14, 5, 18); ctx.fillRect(19, -14, 5, 18);
+  ctx.fillRect(-22, 6, 4, 14); ctx.fillRect(18, 6, 4, 14);
+  ctx.fillStyle = "#333"; ctx.fillRect(-23, -13, 3, 16); ctx.fillRect(20, -13, 3, 16);
+  ctx.restore();
+  // name
+  ctx.fillStyle = me ? "#ff2e00" : "rgba(255,255,255,0.55)";
+  ctx.font = `bold ${Math.max(7, 9 * sc)}px sans-serif`;
+  ctx.textAlign = "center";
+  ctx.fillText(name, x, y - 48 * sc);
+}
+
+function render(ctx: CanvasRenderingContext2D, s: St, W: number, H: number) {
+  const HY = Math.round(H * 0.37);
+
+  // ── Sky ──
+  const sg = ctx.createLinearGradient(0, 0, 0, HY);
+  sg.addColorStop(0, "#080820"); sg.addColorStop(0.35, "#151540"); sg.addColorStop(1, "#2a2a5a");
+  ctx.fillStyle = sg; ctx.fillRect(0, 0, W, HY);
+
+  // hills
+  ctx.fillStyle = "#0f1f0f"; ctx.beginPath(); ctx.moveTo(0, HY);
+  for (let i = 0; i <= W; i += 8) ctx.lineTo(i, HY - 12 + Math.sin(i * 0.012 + s.z * 0.00008) * 10 + Math.sin(i * 0.005) * 6);
+  ctx.lineTo(W, HY); ctx.closePath(); ctx.fill();
+
+  // buildings silhouette
+  ctx.fillStyle = "#181830";
+  for (let i = 0; i < 20; i++) {
+    const bx = ((i * 73 + 20) % W);
+    const bw = 18 + (i * 7) % 20;
+    const bh = 15 + (i * 13) % 25;
+    ctx.fillRect(bx, HY - bh, bw, bh);
+  }
+
+  // ── Road ──
+  let cAcc = 0;
+  for (let y = H; y > HY; y -= BAND) {
+    const t = (H - y) / (H - HY);
+    const d = 1 + t * 28;
+    const wz = s.z + t * VIEW;
+    const si = ((Math.floor(wz / SEG) % TL) + TL) % TL;
+    const curv = TRACK[si];
+    cAcc += curv * BAND;
+
+    const rw = Math.min(W * 0.88, (W * 0.62) / d);
+    const cx = W / 2 + (cAcc * W * 0.13) / d - (s.x * W * 0.28) / d;
+
+    // grass
+    ctx.fillStyle = si % 2 === 0 ? "#16421a" : "#1a4c1e"; ctx.fillRect(0, y - BAND, W, BAND);
+    // shoulder
+    const sw = rw * 1.14; ctx.fillStyle = si % 2 === 0 ? "#484848" : "#525252"; ctx.fillRect(cx - sw / 2, y - BAND, sw, BAND);
+    // road
+    ctx.fillStyle = si % 2 === 0 ? "#252525" : "#2c2c2c"; ctx.fillRect(cx - rw / 2, y - BAND, rw, BAND);
+    // rumble
+    const rwm = Math.max(2, rw * 0.04); ctx.fillStyle = si % 4 < 2 ? "#cc2222" : "#eeeeee";
+    ctx.fillRect(cx - rw / 2 - rwm, y - BAND, rwm, BAND); ctx.fillRect(cx + rw / 2, y - BAND, rwm, BAND);
+    // lanes
+    if (si % 8 < 4) { ctx.fillStyle = "rgba(255,255,255,0.45)"; ctx.fillRect(cx - 1, y - BAND, 2, BAND); }
+    // roadside objects
+    if (si % 28 === 0 && d < 14) {
+      const ow = Math.max(3, 22 / d), oh = Math.max(3, 32 / d);
+      ctx.fillStyle = "#3a3a58";
+      ctx.fillRect(cx - rw / 2 - rwm - ow - 8 / d, y - BAND - oh, ow, oh);
+      ctx.fillRect(cx + rw / 2 + rwm + 8 / d, y - BAND - oh, ow, oh);
     }
+    // start/finish checkerboard
+    if (si === 0 && d < 6) {
+      for (let r = 0; r < 3; r++) for (let c = 0; c < 8; c++) {
+        if ((r + c) % 2 === 0) { ctx.fillStyle = "#fff"; ctx.fillRect(cx - rw * 0.3 + c * (rw * 0.6 / 8), y - BAND - r * 3, rw * 0.6 / 8, 3); }
+      }
+    }
+  }
+
+  // ── AI cars (back to front) ──
+  const vis: { a: Ai; sx: number; sy: number; sc: number }[] = [];
+  for (const a of s.ai) {
+    let dz = a.z - s.z; if (dz < 0) dz += TL * SEG;
+    if (dz > VIEW || dz < 50) continue;
+    const t = dz / VIEW;
+    const sy = H - (H - HY) * (1 - t);
+    const d = 1 + t * 28;
+    // approximate curve at AI position
+    const ais = ((Math.floor(a.z / SEG) % TL) + TL) % TL;
+    const ac = TRACK[ais];
+    const approxC = ac * t * 3000;
+    const cx = W / 2 + (approxC * W * 0.13) / d;
+    const sx = cx + (a.x * W * 0.28) / d;
+    const sc = Math.max(0.15, 1.4 / d);
+    vis.push({ a, sx, sy, sc });
+  }
+  vis.sort((a, b) => a.sy - b.sy);
+  for (const v of vis) drawFormula(ctx, v.sx, v.sy, v.sc, v.a.color, v.a.name, false, 0);
+
+  // ── Player car ──
+  drawFormula(ctx, W / 2, H - 75, 1.6, "#ff2e00", "YOU", true, s.steer);
+
+  // ── Vignette ──
+  const vig = ctx.createRadialGradient(W / 2, H / 2, W * 0.28, W / 2, H / 2, W * 0.72);
+  vig.addColorStop(0, "rgba(0,0,0,0)"); vig.addColorStop(1, "rgba(0,0,0,0.35)");
+  ctx.fillStyle = vig; ctx.fillRect(0, 0, W, H);
+
+  // ── HUD ──
+  const all = [{ n: "YOU", z: s.z, l: s.lap }, ...s.ai.map(a => ({ n: a.name, z: a.z, l: a.lap }))];
+  all.sort((a, b) => a.l !== b.l ? b.l - a.l : b.z - a.z);
+  const pos = all.findIndex(c => c.n === "YOU") + 1;
+
+  // POS + LAP
+  ctx.fillStyle = "rgba(0,0,0,0.78)"; ctx.beginPath(); ctx.roundRect(12, 10, 260, 64, 10); ctx.fill();
+  ctx.fillStyle = "#fff"; ctx.font = "bold 22px monospace"; ctx.textAlign = "left";
+  ctx.fillText(`POS ${pos}/${all.length}    LAP ${Math.min(s.lap + 1, LAPS)}/${LAPS}`, 24, 40);
+
+  // Timer
+  ctx.fillStyle = "rgba(0,0,0,0.78)"; ctx.beginPath(); ctx.roundRect(12, 82, 195, 32, 8); ctx.fill();
+  const sec = Math.floor(s.time / 1000), ms = Math.floor((s.time % 1000) / 10);
+  ctx.fillStyle = "#fff"; ctx.font = "bold 16px monospace";
+  ctx.fillText(`CURRENT ${String(sec).padStart(2, "0")}:${String(ms).padStart(2, "0")}`, 24, 103);
+
+  // Leaderboard
+  const lw = 200, lh = 30 + all.length * 30;
+  ctx.fillStyle = "rgba(0,0,0,0.78)"; ctx.beginPath(); ctx.roundRect(W - lw - 12, 10, lw, lh, 10); ctx.fill();
+  all.forEach((c, i) => {
+    const me = c.n === "YOU";
+    ctx.fillStyle = me ? "#ff2e00" : "#777"; ctx.font = `bold 12px monospace`; ctx.textAlign = "right";
+    ctx.fillText(`${i + 1}    ${c.n}`, W - 22, 36 + i * 30);
+  });
+
+  // Speed
+  const kmh = Math.round(s.spd * 2.8);
+  ctx.fillStyle = "rgba(0,0,0,0.78)"; ctx.beginPath(); ctx.roundRect(W / 2 - 58, H - 58, 116, 48, 10); ctx.fill();
+  ctx.fillStyle = kmh > 280 ? "#ff2e00" : kmh > 180 ? "#f59e0b" : "#22c55e";
+  ctx.font = "bold 26px monospace"; ctx.textAlign = "center";
+  ctx.fillText(String(kmh), W / 2, H - 28);
+  ctx.fillStyle = "#888"; ctx.font = "10px monospace"; ctx.fillText("KMPH", W / 2, H - 14);
+
+  // ── Countdown ──
+  if (s.phase === "cd") {
+    const rem = Math.max(0, Math.ceil((s.cdEnd - s.time) / 1000));
+    ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(0, 0, W, H);
+    if (rem > 0) {
+      ctx.fillStyle = "#ff2e00"; ctx.font = "bold 110px monospace"; ctx.textAlign = "center";
+      ctx.fillText(String(rem), W / 2, H / 2 + 35);
+    } else {
+      ctx.fillStyle = "#22c55e"; ctx.font = "bold 80px monospace"; ctx.textAlign = "center";
+      ctx.fillText("GO!", W / 2, H / 2 + 26);
+    }
+  }
+
+  // ── Finish ──
+  if (s.phase === "done") {
+    ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = "#fff"; ctx.font = "bold 48px monospace"; ctx.textAlign = "center";
+    ctx.fillText("RACE COMPLETE", W / 2, H / 2 - 10);
+    ctx.fillStyle = "#aaa"; ctx.font = "22px monospace";
+    ctx.fillText(`Time: ${(s.time / 1000).toFixed(1)}s`, W / 2, H / 2 + 28);
   }
 }
 
-export function RaceCanvas({
-  track, myId, players, mode, lobbyStatus, countdownSec = 3, aiCount = 3,
-  onPositionUpdate, onFinish,
-}: Props) {
-  const cvRef = useRef<HTMLCanvasElement>(null);
+// ══════════════════════════════════════════════════════════════
+// REACT COMPONENT
+// ══════════════════════════════════════════════════════════════
+
+interface Props {
+  mode: "computer";
+  aiCount?: number;
+  onFinish?: (time: number) => void;
+}
+
+export function RaceCanvas({ mode, aiCount = 3, onFinish }: Props) {
+  const cv = useRef<HTMLCanvasElement>(null);
   const keys = useRef(new Set<string>());
-  const m = useRef({ x: 0, y: 0, a: 0, s: 0, lap: 0, cp: -1, done: false });
-  const ais = useRef<AiCar[]>([]);
-  const rf = useRef(0);
-  const lt = useRef(0);
-  const raceT = useRef(0); // ms since race start
-  const cdEnd = useRef(0); // countdown end time (performance.now based)
-  const phase = useRef<"countdown" | "racing" | "finished">("countdown");
-  const myDone = useRef(false);
+  const st = useRef<St | null>(null);
+  const raf = useRef(0);
 
-  // Init AI
-  useEffect(() => { if (mode === "computer") ais.current = makeAi(track, aiCount); }, [mode, aiCount, track]);
-
-  // Init position from server
   useEffect(() => {
-    const me = players.find(p => p.id === myId);
-    if (me) { m.current.x = me.x; m.current.y = me.y; m.current.a = me.angle; m.current.s = me.speed; m.current.lap = me.lap; }
-  }, [players, myId]);
+    st.current = {
+      z: 0, x: 0, spd: 0, steer: 0, lap: 0, time: 0,
+      ai: makeAi(aiCount), phase: "cd", cdEnd: 3000, reported: false,
+    };
+  }, [aiCount]);
 
-  // Start countdown when lobbyStatus changes to countdown
-  useEffect(() => {
-    if (mode === "multiplayer" && lobbyStatus === "countdown") {
-      cdEnd.current = performance.now() + countdownSec * 1000;
-      phase.current = "countdown";
-      myDone.current = false;
-      raceT.current = 0;
-      m.current.cp = -1;
-      m.current.lap = 0;
-      m.current.done = false;
-      ais.current = makeAi(track, aiCount);
-    }
-    if (mode === "computer") {
-      cdEnd.current = performance.now() + countdownSec * 1000;
-      phase.current = "countdown";
-      myDone.current = false;
-      raceT.current = 0;
-      m.current.cp = -1;
-      m.current.lap = 0;
-      m.current.done = false;
-    }
-  }, [mode, lobbyStatus, countdownSec, track, aiCount]);
-
-  // Auto-start racing phase when multiplayer status says racing
-  useEffect(() => {
-    if (mode === "multiplayer" && lobbyStatus === "racing" && phase.current === "countdown") {
-      phase.current = "racing";
-      raceT.current = 0;
-    }
-  }, [mode, lobbyStatus]);
-
-  // Keys
   useEffect(() => {
     const d = (e: KeyboardEvent) => {
       const k = e.key.toLowerCase();
-      if (["w","a","s","d","arrowup","arrowdown","arrowleft","arrowright"].includes(k)) {
-        e.preventDefault(); keys.current.add(k);
-      }
+      if (["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright"].includes(k)) { e.preventDefault(); keys.current.add(k); }
     };
     const u = (e: KeyboardEvent) => keys.current.delete(e.key.toLowerCase());
     window.addEventListener("keydown", d, { passive: false });
@@ -161,196 +351,49 @@ export function RaceCanvas({
     return () => { window.removeEventListener("keydown", d); window.removeEventListener("keyup", u); };
   }, []);
 
-  // Auto focus
-  useEffect(() => { cvRef.current?.focus(); }, []);
+  useEffect(() => { cv.current?.focus(); }, []);
 
-  // ── GAME LOOP ──
   useEffect(() => {
-    const cv = cvRef.current;
-    if (!cv) return;
-    const ctx = cv.getContext("2d")!;
-    const W = 960, H = 600;
-    cv.width = W; cv.height = H;
-
-    const tW = track.bounds.maxX - track.bounds.minX + 200;
-    const tH = track.bounds.maxY - track.bounds.minY + 200;
-    const sc = Math.min(W / tW, H / tH) * 0.9;
-    const ox = (W - (track.bounds.maxX - track.bounds.minX) * sc) / 2 - track.bounds.minX * sc + 100 * sc;
-    const oy = (H - (track.bounds.maxY - track.bounds.minY) * sc) / 2 - track.bounds.minY * sc + 100 * sc;
-
-    let syncN = 0;
-    const p = m.current;
+    const c = cv.current; if (!c) return;
+    const ctx = c.getContext("2d")!;
+    const W = 960, H = 600; c.width = W; c.height = H;
+    let prev = 0;
 
     const loop = (ts: number) => {
-      const dt = lt.current ? Math.min((ts - lt.current) / 16.667, 3) : 1;
-      lt.current = ts;
+      const dt = prev ? Math.min((ts - prev) / 16.667, 3) : 1; prev = ts;
+      const s = st.current; if (!s) { raf.current = requestAnimationFrame(loop); return; }
 
-      // ── Phase logic ──
-      if (phase.current === "countdown" && performance.now() >= cdEnd.current) {
-        phase.current = "racing";
-        raceT.current = 0;
-      }
-      if (phase.current === "racing") raceT.current += dt * 16.667;
-
-      // ── Clear ──
-      const g = ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,W*0.7);
-      g.addColorStop(0,"#12121f"); g.addColorStop(1,"#08080e");
-      ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
-
-      ctx.save(); ctx.translate(ox,oy); ctx.scale(sc,sc);
-
-      // ── Track ──
-      ctx.strokeStyle="#1c1c2e"; ctx.lineWidth=92; ctx.lineCap="round"; ctx.lineJoin="round";
-      ctx.beginPath(); track.checkpoints.forEach((c,i)=>i===0?ctx.moveTo(c.x,c.y):ctx.lineTo(c.x,c.y)); ctx.closePath(); ctx.stroke();
-      ctx.strokeStyle="#222238"; ctx.lineWidth=80;
-      ctx.beginPath(); track.checkpoints.forEach((c,i)=>i===0?ctx.moveTo(c.x,c.y):ctx.lineTo(c.x,c.y)); ctx.closePath(); ctx.stroke();
-      ctx.strokeStyle="#2a2a45"; ctx.lineWidth=1.5; ctx.setLineDash([14,14]);
-      ctx.beginPath(); track.checkpoints.forEach((c,i)=>i===0?ctx.moveTo(c.x,c.y):ctx.lineTo(c.x,c.y)); ctx.closePath(); ctx.stroke(); ctx.setLineDash([]);
-
-      // ── Start/finish checkerboard ──
-      const fc=track.checkpoints[track.checkpoints.length-1], pc=track.checkpoints[track.checkpoints.length-2];
-      const fa=Math.atan2(fc.y-pc.y,fc.x-pc.x)+Math.PI/2;
-      ctx.save(); ctx.translate(fc.x,fc.y); ctx.rotate(fa);
-      for(let r=0;r<4;r++)for(let c=0;c<10;c++){if((r+c)%2===0){ctx.fillStyle="#ddd";ctx.fillRect(-50+c*10,-20+r*10,10,10);}}
-      ctx.restore();
-
-      // ── Checkpoint glow ──
-      const nc=(p.cp+1)%track.checkpoints.length;
-      track.checkpoints.forEach((cp,i)=>{
-        if(i===nc && phase.current==="racing"){
-          ctx.beginPath(); ctx.arc(cp.x,cp.y,CP_RADIUS,0,Math.PI*2);
-          ctx.fillStyle="rgba(255,46,0,0.06)"; ctx.fill();
-          ctx.strokeStyle="rgba(255,46,0,0.2)"; ctx.lineWidth=1.5; ctx.stroke();
-        }
-      });
-
-      // ── Physics ──
-      if (phase.current==="racing" && !p.done) {
-        const k=keys.current;
-        if(k.has("w")||k.has("arrowup")) p.s=Math.min(MAX_SPEED,p.s+ACCEL*dt);
-        if(k.has("s")||k.has("arrowdown")) p.s=Math.max(-MAX_SPEED*0.35,p.s-BRAKE*dt);
-        p.s*=1-FRICTION*dt;
-        if(Math.abs(p.s)<0.01)p.s=0;
-        if(Math.abs(p.s)>0.1){const tr=TURN*(1-Math.abs(p.s)/MAX_SPEED*0.35);if(k.has("a")||k.has("arrowleft"))p.a-=tr*Math.sign(p.s)*dt;if(k.has("d")||k.has("arrowright"))p.a+=tr*Math.sign(p.s)*dt;}
-        p.x+=Math.cos(p.a)*p.s*dt; p.y+=Math.sin(p.a)*p.s*dt;
-        p.x=Math.max(track.bounds.minX,Math.min(track.bounds.maxX,p.x));
-        p.y=Math.max(track.bounds.minY,Math.min(track.bounds.maxY,p.y));
-        const cdx=p.x-track.checkpoints[nc].x, cdy=p.y-track.checkpoints[nc].y;
-        if(Math.sqrt(cdx*cdx+cdy*cdy)<CP_RADIUS){
-          p.cp=nc;
-          if(nc===track.checkpoints.length-1){p.lap++;if(p.lap>=track.laps&&!myDone.current){p.done=true;myDone.current=true;phase.current="finished";onFinish?.(raceT.current/1000);}}
-        }
-        syncN++; if(syncN%6===0&&onPositionUpdate) onPositionUpdate(p.x,p.y,p.a,p.s,p.lap);
+      // Countdown
+      if (s.phase === "cd") {
+        s.time += dt * 16.667;
+        if (s.time >= s.cdEnd) { s.phase = "race"; s.time = 0; }
       }
 
-      // AI
-      if(mode==="computer"&&phase.current==="racing"){for(const ai of ais.current)tickAi(ai,track,dt);}
-
-      // ── Draw cars ──
-      const drawCar=(x:number,y:number,a:number,col:string,name:string,isMe:boolean,al:number)=>{
-        ctx.save(); ctx.translate(x,y); ctx.rotate(a);
-        ctx.fillStyle=`rgba(0,0,0,${0.5*al})`; ctx.beginPath(); ctx.roundRect(-15,-6+3,30,12,4); ctx.fill();
-        ctx.fillStyle=col.replace(/[\d.]+\)$/,`${al})`); ctx.beginPath(); ctx.roundRect(-15,-7,30,14,4); ctx.fill();
-        ctx.fillStyle=`rgba(0,0,0,${0.6*al})`; ctx.fillRect(5,-5,5,10);
-        ctx.fillStyle=`rgba(255,255,200,${0.9*al})`; ctx.fillRect(14,-5,2,3); ctx.fillRect(14,2,2,3);
-        ctx.fillStyle=`rgba(255,30,30,${0.7*al})`; ctx.fillRect(-15,-5,2,3); ctx.fillRect(-15,2,2,3);
-        ctx.restore();
-        ctx.fillStyle=isMe?"#ff2e00":`rgba(255,255,255,${0.7*al})`; ctx.font=`bold ${isMe?10:8}px sans-serif`; ctx.textAlign="center"; ctx.fillText(name,x,y-14);
-      };
-
-      // Draw AI
-      if(mode==="computer"){for(const ai of ais.current)drawCar(ai.x,ai.y,ai.angle,ai.finished?"rgba(100,100,180,1)":"rgba(59,130,246,1)",ai.name,false,ai.finished?0.5:1);}
-      // Draw others
-      if(mode==="multiplayer"){for(const pl of players){if(pl.id===myId)continue;drawCar(pl.x,pl.y,pl.angle,"rgba(59,130,246,1)",pl.name,false,pl.finished?0.5:1);}}
-      // Draw me
-      drawCar(p.x,p.y,p.a,"rgba(255,46,0,1)","YOU",true,1);
-
-      ctx.restore();
-
-      // ── HUD ──
-
-      // Top-left: POS + LAP
-      ctx.fillStyle="rgba(0,0,0,0.7)"; ctx.beginPath(); ctx.roundRect(12,10,200,56,10); ctx.fill();
-      ctx.fillStyle="#fff"; ctx.font="bold 18px monospace"; ctx.textAlign="left";
-      const allC=mode==="computer"
-        ?[{id:myId,lap:p.lap,d:p.done},...ais.current.map(a=>({id:a.id,lap:a.lap,d:a.finished}))]
-        :[{id:myId,lap:p.lap,d:p.done},...players.filter(q=>q.id!==myId).map(q=>({id:q.id,lap:q.lap,d:q.finished}))];
-      allC.sort((a,b)=>b.lap-a.lap);
-      const pos=allC.findIndex(c=>c.id===myId)+1;
-      ctx.fillText(`POS ${pos}/${allC.length}`,22,32);
-      ctx.fillStyle="#aaa"; ctx.font="14px monospace";
-      ctx.fillText(`LAP ${Math.min(p.lap+1,track.laps)}/${track.laps}`,22,52);
-
-      // Top-left: Timer
-      const secs=Math.floor(raceT.current/1000);
-      const ms=Math.floor((raceT.current%1000)/10);
-      ctx.fillStyle="rgba(0,0,0,0.7)"; ctx.beginPath(); ctx.roundRect(12,74,140,32,8); ctx.fill();
-      ctx.fillStyle="#fff"; ctx.font="bold 16px monospace"; ctx.textAlign="left";
-      ctx.fillText(`TIME ${String(secs).padStart(2,"0")}:${String(ms).padStart(2,"0")}`,22,95);
-
-      // Top-right: Leaderboard
-      const lb=allC.sort((a,b)=>b.lap-a.lap);
-      const lbW=180, lbH=30+lb.length*28;
-      ctx.fillStyle="rgba(0,0,0,0.7)"; ctx.beginPath(); ctx.roundRect(W-lbW-12,10,lbW,lbH,10); ctx.fill();
-      ctx.font="bold 11px monospace"; ctx.textAlign="right";
-      lb.forEach((c,i)=>{
-        const isMe=c.id===myId;
-        ctx.fillStyle=isMe?"#ff2e00":"#888";
-        const nm=isMe?"YOU":mode==="computer"?ais.current.find(a=>a.id===c.id)?.name??c.id:players.find(q=>q.id===c.id)?.name??c.id;
-        ctx.fillText(`${i+1}. ${nm.toUpperCase()}`,W-22,34+i*28);
-      });
-
-      // Bottom-center: Speed
-      const spd=Math.abs(Math.round(p.s*30));
-      ctx.fillStyle="rgba(0,0,0,0.7)"; ctx.beginPath(); ctx.roundRect(W/2-80,H-50,160,40,10); ctx.fill();
-      ctx.fillStyle=spd>120?"#ff2e00":spd>80?"#f59e0b":"#22c55e";
-      ctx.font="bold 22px monospace"; ctx.textAlign="center";
-      ctx.fillText(`${spd}`,W/2,H-24);
-      ctx.fillStyle="#888"; ctx.font="10px monospace";
-      ctx.fillText("KMPH",W/2,H-14);
-
-      // Bottom-left: Mini-map
-      const mmW=120,mmH=80,mmX=12,mmY=H-mmH-12;
-      ctx.fillStyle="rgba(0,0,0,0.6)"; ctx.beginPath(); ctx.roundRect(mmX-4,mmY-4,mmW+8,mmH+8,6); ctx.fill();
-      const ms2=Math.min(mmW/tW,mmH/tH)*0.85;
-      const mo2x=mmX+mmW/2-((track.bounds.minX+track.bounds.maxX)/2)*ms2;
-      const mo2y=mmY+mmH/2-((track.bounds.minY+track.bounds.maxY)/2)*ms2;
-      ctx.strokeStyle="#333"; ctx.lineWidth=1.5;
-      ctx.beginPath(); track.checkpoints.forEach((cp,i)=>i===0?ctx.moveTo(mo2x+cp.x*ms2,mo2y+cp.y*ms2):ctx.lineTo(mo2x+cp.x*ms2,mo2y+cp.y*ms2)); ctx.closePath(); ctx.stroke();
-      ctx.beginPath(); ctx.arc(mo2x+p.x*ms2,mo2y+p.y*ms2,3,0,Math.PI*2); ctx.fillStyle="#ff2e00"; ctx.fill();
-      if(mode==="computer"){for(const ai of ais.current){ctx.beginPath();ctx.arc(mo2x+ai.x*ms2,mo2y+ai.y*ms2,2,0,Math.PI*2);ctx.fillStyle="#3b82f6";ctx.fill();}}
-
-      // ── Overlays ──
-      if(phase.current==="countdown"){
-        const rem=Math.max(0,Math.ceil((cdEnd.current-performance.now())/1000));
-        ctx.fillStyle="rgba(0,0,0,0.6)"; ctx.fillRect(0,0,W,H);
-        if(rem>0){
-          ctx.fillStyle="#ff2e00"; ctx.font="bold 90px monospace"; ctx.textAlign="center"; ctx.fillText(String(rem),W/2,H/2+28);
-        }else{
-          ctx.fillStyle="#22c55e"; ctx.font="bold 60px monospace"; ctx.textAlign="center"; ctx.fillText("GO!",W/2,H/2+20);
-          if(performance.now()-cdEnd.current>1000) phase.current="racing";
-        }
+      // Physics
+      if (s.phase === "race") {
+        s.steer = 0;
+        if (keys.current.has("a") || keys.current.has("arrowleft")) s.steer = -1;
+        if (keys.current.has("d") || keys.current.has("arrowright")) s.steer = 1;
+        physics(s, keys.current, dt);
       }
 
-      if(phase.current==="finished"){
-        ctx.fillStyle="rgba(0,0,0,0.5)"; ctx.fillRect(0,0,W,H);
-        ctx.fillStyle="#fff"; ctx.font="bold 40px monospace"; ctx.textAlign="center"; ctx.fillText("RACE COMPLETE",W/2,H/2-10);
-        ctx.fillStyle="#aaa"; ctx.font="18px monospace"; ctx.fillText(`Time: ${(raceT.current/1000).toFixed(1)}s`,W/2,H/2+24);
-      }
+      // Finish callback
+      if (s.phase === "done" && !s.reported) { s.reported = true; onFinish?.(s.time / 1000); }
 
-      rf.current=requestAnimationFrame(loop);
+      render(ctx, s, W, H);
+      raf.current = requestAnimationFrame(loop);
     };
-    rf.current=requestAnimationFrame(loop);
-    return ()=>{cancelAnimationFrame(rf.current);lt.current=0;};
-  },[track,myId,players,mode,lobbyStatus,countdownSec,aiCount,onPositionUpdate,onFinish]);
+    raf.current = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf.current);
+  }, [onFinish]);
 
   return (
     <canvas
-      ref={cvRef}
+      ref={cv}
       className="block w-full rounded-xl border border-apex-line bg-[#08080e] outline-none"
-      style={{ maxWidth:960, aspectRatio:"960/600" }}
+      style={{ maxWidth: 960, aspectRatio: "960/600" }}
       tabIndex={0}
-      onFocus={(e)=>e.currentTarget.focus()}
+      onFocus={(e) => e.currentTarget.focus()}
     />
   );
 }
