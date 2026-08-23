@@ -5,6 +5,7 @@ import {
   Car as CarIcon,
   CircleDollarSign,
   Coins,
+  Dice5,
   Flame,
   Gift,
   MousePointerClick,
@@ -51,6 +52,7 @@ const NAV: { id: TabId; label: string; icon: LucideIcon }[] = [
   { id: "crates", label: "Crates", icon: Package },
   { id: "upgrades", label: "Upgrades", icon: Wrench },
   { id: "inventory", label: "Parts", icon: Boxes },
+  { id: "casino", label: "Casino", icon: Dice5 },
   { id: "achievements", label: "Achievements", icon: Trophy },
   { id: "prestige", label: "Prestige", icon: Sparkles },
 ];
@@ -63,6 +65,7 @@ type TabId =
   | "crates"
   | "upgrades"
   | "inventory"
+  | "casino"
   | "achievements"
   | "prestige";
 

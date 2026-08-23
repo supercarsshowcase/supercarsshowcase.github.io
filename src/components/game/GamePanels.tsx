@@ -58,6 +58,7 @@ import {
 import type { CrateResult, GameState, SpinResult } from "@/game/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { CasinoPanel } from "./CasinoPanel";
 
 const UPGRADE_ICONS: Record<string, LucideIcon> = {
   Brush,
@@ -105,6 +106,7 @@ export function GamePanels({
   if (tab === "upgrades") return <UpgradesPanel state={state} dispatch={dispatch} />;
   if (tab === "inventory") return <InventoryPanel state={state} dispatch={dispatch} />;
   if (tab === "achievements") return <AchievementsPanel state={state} />;
+  if (tab === "casino") return <CasinoPanel state={state} dispatch={dispatch} />;
   if (tab === "prestige") return <PrestigePanel state={state} dispatch={dispatch} />;
   return <GaragePanel state={state} dispatch={dispatch} />;
 }
