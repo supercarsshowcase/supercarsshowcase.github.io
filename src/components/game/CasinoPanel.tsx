@@ -174,19 +174,19 @@ function TradeCarsPanel({ state, dispatch }: { state: GameState; dispatch: React
 function BetInput({ value, onChange, max }: { value: number; onChange: (v: number) => void; max: number }) {
   const presets = [1000, 10000, 100000, 1000000, 10000000];
   return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-2">
+    <div className="space-y-3 w-full max-w-lg">
+      <div className="flex items-center gap-3">
         <button type="button" onClick={() => onChange(Math.max(1, Math.floor(value / 2)))}
-          className="rounded-md bg-white/5 px-3 py-2 text-xs font-bold text-white/50 hover:bg-white/10">½ &lt;--</button>
+          className="rounded-lg bg-white/5 px-5 py-3 text-sm font-bold text-white/50 hover:bg-white/10 transition-colors">½ ←</button>
         <input type="number" value={value} onChange={(e) => onChange(Math.max(1, Math.min(max, Number(e.target.value) || 1)))}
-          className="flex-1 rounded-lg border border-white/15 bg-[#0a0a0c] px-3 py-2 text-sm font-bold text-white text-center outline-none focus:border-apex-red" />
+          className="flex-1 rounded-xl border-2 border-white/15 bg-[#0a0a0c] px-5 py-3.5 text-xl font-bold text-white text-center outline-none focus:border-apex-red transition-colors" />
         <button type="button" onClick={() => onChange(Math.min(max, value * 2))}
-          className="rounded-md bg-white/5 px-3 py-2 text-xs font-bold text-white/50 hover:bg-white/10">--&gt; 2×</button>
+          className="rounded-lg bg-white/5 px-5 py-3 text-sm font-bold text-white/50 hover:bg-white/10 transition-colors">→ 2×</button>
       </div>
-      <div className="flex gap-1.5">
+      <div className="flex gap-2">
         {presets.filter((p) => p <= max).slice(0, 5).map((p) => (
           <button key={p} type="button" onClick={() => onChange(p)}
-            className={cn("rounded-md px-2 py-1 text-[10px] font-bold transition-colors", value === p ? "bg-apex-red text-white" : "bg-white/5 text-white/40 hover:bg-white/10")}>
+            className={cn("rounded-lg px-4 py-2 text-sm font-bold transition-colors", value === p ? "bg-apex-red text-white" : "bg-white/5 text-white/40 hover:bg-white/10")}>
             {p >= 1000000 ? `${(p / 1000000).toFixed(0)}M` : p >= 1000 ? `${(p / 1000).toFixed(0)}K` : p}
           </button>
         ))}
@@ -209,10 +209,10 @@ function checkCasinoPrize(dispatch: React.Dispatch<Action>): string | null {
 /* ── Helper: GameLayout ────────────────────────────────────────────────── */
 function GameLayout({ title, emoji, children }: { title: string; emoji: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-[#111114] p-6">
-      <div className="mb-6 flex items-center gap-3">
-        <span className="text-3xl">{emoji}</span>
-        <h3 className="font-display text-xl font-black text-white">{title}</h3>
+    <div className="rounded-2xl border border-white/10 bg-[#111114] p-8 lg:p-10">
+      <div className="mb-8 flex items-center gap-4">
+        <span className="text-5xl">{emoji}</span>
+        <h3 className="font-display text-3xl font-black text-white">{title}</h3>
       </div>
       {children}
     </div>
@@ -223,64 +223,167 @@ function GameLayout({ title, emoji, children }: { title: string; emoji: string; 
 /*  COINFLIP                                                                 */
 /* ══════════════════════════════════════════════════════════════════════════ */
 function CoinflipGame({ state, dispatch }: { state: GameState; dispatch: React.Dispatch<Action> }) {
-  const [bet, setBet] = useState(1000);
+  const [mode, setMode] = useState<"cash" | "car">("cash");
+  const [bet, setBet] = useState(10000);
   const [pick, setPick] = useState<"heads" | "tails">("heads");
   const [result, setResult] = useState<"heads" | "tails" | null>(null);
   const [spinning, setSpinning] = useState(false);
   const [won, setWon] = useState<boolean | null>(null);
   const [carPrize, setCarPrize] = useState<string | null>(null);
+  const [selectedCar, setSelectedCar] = useState<string | null>(null);
+  const [wonCar, setWonCar] = useState<string | null>(null);
+  const [lostCar, setLostCar] = useState<string | null>(null);
+
+  const gambleCars = useMemo(() =>
+    Object.keys(state.ownedCars).filter((id) => id !== state.activeCarId).map((id) => GAME_CAR_MAP[id]).filter(Boolean),
+    [state.ownedCars, state.activeCarId]
+  );
 
   const play = useCallback(() => {
-    if (state.cash < bet) return toast.error("Not enough cash!");
-    setSpinning(true); setResult(null); setWon(null); setCarPrize(null);
+    if (mode === "cash") {
+      if (state.cash < bet) return toast.error("Not enough cash!");
+    } else {
+      if (!selectedCar) return toast.error("Select a car to gamble!");
+    }
+    setSpinning(true); setResult(null); setWon(null); setCarPrize(null); setWonCar(null); setLostCar(null);
     setTimeout(() => {
       const r: "heads" | "tails" = Math.random() < 0.5 ? "heads" : "tails";
       setResult(r);
       const wonGame = r === pick;
       setWon(wonGame);
-      if (wonGame) {
-        dispatch({ type: "ADD_CASH", amount: bet });
-        const prize = checkCasinoPrize(dispatch);
-        if (prize) { setCarPrize(prize); toast.success(`🎰 CASINO PRIZE: ${prize}`); }
+      if (mode === "cash") {
+        if (wonGame) {
+          dispatch({ type: "ADD_CASH", amount: bet });
+          const prize = checkCasinoPrize(dispatch);
+          if (prize) { setCarPrize(prize); toast.success(`🎰 CASINO PRIZE: ${prize}`); }
+        } else {
+          dispatch({ type: "ADD_CASH", amount: -bet });
+        }
       } else {
-        dispatch({ type: "ADD_CASH", amount: -bet });
+        // Car gambling: win = get random car from house, lose = lose your car
+        if (wonGame) {
+          const houseCars = ["ferrari-f8-19", "huracan-15", "911-turbo-s-19", "mclaren-720s-17", "amg-gt-black-18"];
+          const prizeCarId = houseCars[Math.floor(Math.random() * houseCars.length)];
+          dispatch({ type: "ADD_CAR", carId: prizeCarId });
+          const prizeCar = GAME_CAR_MAP[prizeCarId];
+          setWonCar(prizeCar ? `${prizeCar.brand} ${prizeCar.name}` : prizeCarId);
+          toast.success(`WON a ${prizeCar?.name}!`);
+        } else {
+          dispatch({ type: "REMOVE_CAR", carId: selectedCar! });
+          const lost = GAME_CAR_MAP[selectedCar!];
+          setLostCar(lost ? `${lost.brand} ${lost.name}` : selectedCar);
+        }
       }
       setSpinning(false);
-    }, 1200);
-  }, [bet, pick, state.cash, dispatch]);
+    }, 1500);
+  }, [mode, bet, pick, selectedCar, state.cash, dispatch]);
 
   return (
     <GameLayout title="Coinflip" emoji="🪙">
-      <div className="flex flex-col items-center gap-6">
-        <div className={cn("size-32 rounded-full border-4 border-amber-500 flex items-center justify-center text-5xl font-bold transition-all",
-          spinning ? "animate-spin" : result === "heads" ? "bg-gradient-to-br from-amber-400 to-amber-600" : result === "tails" ? "bg-gradient-to-br from-gray-300 to-gray-500" : "bg-gradient-to-br from-amber-400 to-amber-600"
-        )}>
-          {spinning ? "🪙" : result === "heads" ? "H" : result === "tails" ? "T" : "?"}
-        </div>
+      <div className="flex flex-col items-center gap-8">
+        {/* Mode toggle */}
         <div className="flex gap-3">
-          {(["heads", "tails"] as const).map((s) => (
-            <button key={s} type="button" onClick={() => setPick(s)} className={cn(
-              "rounded-xl border-2 px-8 py-3 font-display text-sm font-bold uppercase tracking-wider transition-all",
-              pick === s ? "border-apex-red bg-apex-red/20 text-white" : "border-white/15 text-white/50 hover:border-white/30"
-            )}>{s === "heads" ? "👑 Heads" : "🔴 Tails"}</button>
+          {(["cash", "car"] as const).map((m) => (
+            <button key={m} type="button" onClick={() => setMode(m)}
+              className={cn("rounded-xl border-2 px-8 py-3 font-display text-base font-bold uppercase tracking-wider transition-all",
+                mode === m ? "border-amber-500 bg-amber-500/20 text-amber-400" : "border-white/15 text-white/50 hover:border-white/30"
+              )}>
+              {m === "cash" ? "💵 Cash" : "🚗 Gamble Car"}
+            </button>
           ))}
         </div>
-        <div className="w-full max-w-xs"><BetInput value={bet} onChange={setBet} max={state.cash} /></div>
-        <button type="button" onClick={play} disabled={spinning || state.cash < bet}
-          className="rounded-xl bg-apex-red px-12 py-3 font-display text-sm font-bold uppercase tracking-wider text-white transition-all hover:bg-apex-red/80 disabled:opacity-40">
-          {spinning ? "Flipping..." : `Flip — $${bet.toLocaleString()}`}
-        </button>
-        {won !== null && (
-          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className={cn("rounded-xl px-6 py-3 font-display text-lg font-bold",
-            won ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"
+
+        {/* HUGE Coin */}
+        <motion.div
+          animate={spinning ? { rotateY: [0, 1800] } : result === "heads" ? { rotateY: 0 } : result === "tails" ? { rotateY: 180 } : {}}
+          transition={{ duration: 1.5, ease: "easeInOut" }}
+          className="perspective-800"
+        >
+          <div className={cn(
+            "size-48 lg:size-56 rounded-full border-6 flex items-center justify-center text-7xl font-black shadow-2xl transition-all duration-500",
+            spinning ? "animate-pulse border-amber-400 bg-gradient-to-br from-amber-300 to-amber-500" :
+            result === "heads" ? "border-amber-500 bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 shadow-amber-500/40" :
+            result === "tails" ? "border-gray-400 bg-gradient-to-br from-gray-300 via-gray-400 to-gray-500 shadow-gray-400/40" :
+            "border-amber-500 bg-gradient-to-br from-amber-400 to-amber-600"
           )}>
-            {won ? `+$${bet.toLocaleString()} — ${result?.toUpperCase()}!` : `-$${bet.toLocaleString()} — ${result?.toUpperCase()}!`}
+            {spinning ? (
+              <span className="animate-spin text-8xl">🪙</span>
+            ) : result === "heads" ? (
+              <span className="text-amber-900 drop-shadow-lg">H</span>
+            ) : result === "tails" ? (
+              <span className="text-gray-800 drop-shadow-lg">T</span>
+            ) : (
+              <span className="text-amber-900">?</span>
+            )}
+          </div>
+        </motion.div>
+
+        {/* Heads/Tails buttons - BIG */}
+        <div className="flex gap-6">
+          {(["heads", "tails"] as const).map((s) => (
+            <button key={s} type="button" onClick={() => setPick(s)} className={cn(
+              "rounded-2xl border-3 px-12 py-5 font-display text-xl font-black uppercase tracking-wider transition-all transform hover:scale-105",
+              pick === s ? "border-apex-red bg-apex-red/20 text-white shadow-lg shadow-apex-red/20" : "border-white/20 text-white/50 hover:border-white/40 hover:text-white/70"
+            )}>
+              <span className="text-4xl block mb-1">{s === "heads" ? "👑" : "🔴"}</span>
+              {s}
+            </button>
+          ))}
+        </div>
+
+        {/* Bet or car selector */}
+        {mode === "cash" ? (
+          <BetInput value={bet} onChange={setBet} max={state.cash} />
+        ) : (
+          <div className="w-full max-w-lg space-y-3">
+            <p className="text-center text-sm font-bold text-white/50">Select a car to gamble:</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-2">
+              {gambleCars.length === 0 ? (
+                <p className="col-span-2 py-4 text-center text-sm text-white/30">No cars to gamble. Buy some first!</p>
+              ) : gambleCars.map((car) => (
+                <button key={car.id} type="button" onClick={() => setSelectedCar(car.id)}
+                  className={cn("flex items-center gap-3 rounded-xl border-2 p-4 transition-all",
+                    selectedCar === car.id ? "border-amber-500 bg-amber-500/15" : "border-white/10 bg-[#0a0a0c] hover:border-white/30"
+                  )}>
+                  <div className="flex-1 min-w-0 text-left">
+                    <p className="truncate text-sm font-bold text-white">{car.brand} {car.name}</p>
+                    <p className="text-xs text-white/30">${car.value.toLocaleString()}</p>
+                  </div>
+                  {selectedCar === car.id && <span className="text-amber-400 text-lg">✓</span>}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Flip button - BIG */}
+        <button type="button" onClick={play} disabled={spinning || (mode === "cash" ? state.cash < bet : !selectedCar)}
+          className="rounded-2xl bg-apex-red px-16 py-5 font-display text-xl font-black uppercase tracking-wider text-white transition-all hover:bg-apex-red/80 hover:scale-105 disabled:opacity-40 disabled:hover:scale-100 shadow-lg shadow-apex-red/30">
+          {spinning ? "Flipping..." : mode === "cash" ? `Flip — $${bet.toLocaleString()}` : "Flip for a Car!"}
+        </button>
+
+        {/* Result */}
+        {won !== null && !spinning && (
+          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className={cn("rounded-2xl px-10 py-5 font-display text-2xl font-black",
+            won ? "bg-green-500/20 text-green-400 border-2 border-green-500/30" : "bg-red-500/20 text-red-400 border-2 border-red-500/30"
+          )}>
+            {mode === "cash" ? (
+              won ? `+$${bet.toLocaleString()} — ${result?.toUpperCase()}!` : `-$${bet.toLocaleString()} — ${result?.toUpperCase()}!`
+            ) : (
+              won ? `WON! You got a new car!` : `LOST! Your car is gone! ${lostCar}`
+            )}
+          </motion.div>
+        )}
+        {wonCar && (
+          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="rounded-2xl border-2 border-green-500/50 bg-green-500/15 px-8 py-6 text-center">
+            <p className="text-sm font-bold uppercase tracking-wider text-green-400">🏆 YOU WON A CAR!</p>
+            <p className="mt-2 font-display text-2xl font-black text-white">{wonCar}</p>
           </motion.div>
         )}
         {carPrize && (
-          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="rounded-xl border border-amber-500/50 bg-amber-500/20 px-6 py-4 text-center">
-            <p className="text-xs font-bold uppercase tracking-wider text-amber-400">🎰 CASINO PRIZE WON!</p>
-            <p className="mt-1 font-display text-lg font-black text-white">{carPrize}</p>
+          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="rounded-2xl border-2 border-amber-500/50 bg-amber-500/15 px-8 py-6 text-center">
+            <p className="text-sm font-bold uppercase tracking-wider text-amber-400">🎰 CASINO PRIZE WON!</p>
+            <p className="mt-2 font-display text-2xl font-black text-white">{carPrize}</p>
           </motion.div>
         )}
       </div>
@@ -358,52 +461,52 @@ function RouletteGame({ state, dispatch }: { state: GameState; dispatch: React.D
         <BetInput value={bet} onChange={setBet} max={state.cash} />
 
         {/* Wheel strip */}
-        <div className="relative w-full overflow-hidden h-16 rounded-xl">
+        <div className="relative w-full overflow-hidden h-20 rounded-xl">
           <motion.div animate={spinning ? { x: [-wheelOffset, -wheelOffset - 2000] } : {}}
             transition={{ duration: 2.5, ease: "easeInOut" }}
-            className="absolute top-0 left-0 flex gap-1">
+            className="absolute top-0 left-0 flex gap-1.5">
             {[...ROULETTE_NUMS, ...ROULETTE_NUMS, ...ROULETTE_NUMS].map((n, i) => (
-              <div key={i} className={cn("flex size-12 items-center justify-center rounded-full text-xs font-bold text-white", numColor(n))}>{n}</div>
+              <div key={i} className={cn("flex size-14 items-center justify-center rounded-full text-sm font-bold text-white", numColor(n))}>{n}</div>
             ))}
           </motion.div>
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-0.5 h-full bg-white z-10" />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1 h-full bg-white z-10" />
         </div>
 
         {/* Result */}
         {landing !== null && !spinning && (
           <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}
-            className={cn("flex size-14 items-center justify-center rounded-full text-lg font-black text-white border-2", numColor(landing), "border-white")}>
+            className={cn("flex size-20 items-center justify-center rounded-full text-2xl font-black text-white border-3", numColor(landing), "border-white shadow-xl")}>
             {landing}
           </motion.div>
         )}
 
         {/* Number grid */}
-        <div className="overflow-x-auto w-full max-w-2xl">
-          <div className="flex gap-1 mb-1">
+        <div className="overflow-x-auto w-full max-w-3xl">
+          <div className="flex gap-1.5 mb-1.5">
             <button type="button" onClick={() => placeBet({ kind: "number", value: 0 })}
-              className={cn("size-10 rounded-lg text-xs font-bold text-white border transition-all", numColor(0), currentBet?.kind === "number" && currentBet.value === 0 ? "ring-2 ring-amber-400" : "border-white/20")}>0</button>
+              className={cn("size-14 rounded-xl text-base font-bold text-white border-2 transition-all", numColor(0), currentBet?.kind === "number" && currentBet.value === 0 ? "ring-3 ring-amber-400" : "border-white/20")}>0</button>
           </div>
           {GRID_ROWS.map((row, ri) => (
-            <div key={ri} className="flex gap-1 mb-1">
+            <div key={ri} className="flex gap-1.5 mb-1.5">
               {row.map((n) => (
                 <button key={n} type="button" onClick={() => placeBet({ kind: "number", value: n })}
-                  className={cn("size-10 rounded-lg text-xs font-bold text-white border transition-all",
-                    numColor(n), currentBet?.kind === "number" && currentBet.value === n ? "ring-2 ring-amber-400" : "border-white/20 hover:ring-2 hover:ring-white/30"
+                  className={cn("size-14 rounded-xl text-sm font-bold text-white border-2 transition-all",
+                    numColor(n), currentBet?.kind === "number" && currentBet.value === n ? "ring-3 ring-amber-400" : "border-white/20 hover:ring-2 hover:ring-white/30"
                   )}>{n}</button>
               ))}
               <button type="button" onClick={() => placeBet({ kind: "range", value: ri === 0 ? "3rd" : ri === 1 ? "2nd" : "1st" })}
-                className={cn("w-14 rounded-lg text-[10px] font-bold text-white bg-white/10 border border-white/20 hover:bg-white/20")}>2 to 1</button>
+                className={cn("w-20 rounded-xl text-xs font-bold text-white bg-white/10 border-2 border-white/20 hover:bg-white/20")}>2 to 1</button>
             </div>
           ))}
-          {/* Bottom row: doznes */}
-          <div className="flex gap-1 mb-1">
+          {/* Bottom row: dozens */}
+          <div className="flex gap-1.5 mb-1.5">
             {[{ l: "1st 12", v: "1st" as const }, { l: "2nd 12", v: "2nd" as const }, { l: "3rd 12", v: "3rd" as const }].map((d) => (
               <button key={d.v} type="button" onClick={() => placeBet({ kind: "range", value: d.v })}
-                className={cn("flex-1 h-8 rounded-lg text-[10px] font-bold text-white bg-white/10 border border-white/20 hover:bg-white/20")}>{d.l}</button>
+                className={cn("flex-1 h-12 rounded-xl text-sm font-bold text-white bg-white/10 border-2 border-white/20 hover:bg-white/20")}>{d.l}</button>
             ))}
           </div>
           {/* Bottom row: even/odd/color/etc */}
-          <div className="flex gap-1">
+          <div className="flex gap-1.5">
             {[
               { l: "1-18", b: { kind: "range" as const, value: "1-18" as const } },
               { l: "EVEN", b: { kind: "parity" as const, value: "even" as const } },
@@ -413,33 +516,33 @@ function RouletteGame({ state, dispatch }: { state: GameState; dispatch: React.D
               { l: "19-36", b: { kind: "range" as const, value: "19-36" as const } },
             ].map((opt) => (
               <button key={opt.l} type="button" onClick={() => placeBet(opt.b)}
-                className={cn("flex-1 h-8 rounded-lg text-[10px] font-bold text-white border border-white/20 transition-all",
+                className={cn("flex-1 h-12 rounded-xl text-sm font-bold text-white border-2 border-white/20 transition-all",
                   opt.cls ?? "bg-white/10 hover:bg-white/20",
-                  JSON.stringify(currentBet) === JSON.stringify(opt.b) && "ring-2 ring-amber-400"
+                  JSON.stringify(currentBet) === JSON.stringify(opt.b) && "ring-3 ring-amber-400"
                 )}>{opt.l}</button>
             ))}
           </div>
         </div>
 
         {/* Current bet display */}
-        {currentBet && <p className="text-xs text-white/40">Bet: ${bet.toLocaleString()} on {JSON.stringify(currentBet.value)}</p>}
+        {currentBet && <p className="text-base text-white/50 font-bold">Bet: ${bet.toLocaleString()} on {JSON.stringify(currentBet.value)}</p>}
 
         {/* Spin button */}
         <button type="button" onClick={spin} disabled={spinning || !currentBet || state.cash < bet}
-          className="w-full max-w-md rounded-xl bg-apex-red py-4 font-display text-sm font-bold uppercase tracking-wider text-white transition-all hover:bg-apex-red/80 disabled:opacity-40">
+          className="w-full max-w-lg rounded-2xl bg-apex-red py-5 font-display text-xl font-black uppercase tracking-wider text-white transition-all hover:bg-apex-red/80 hover:scale-105 disabled:opacity-40 shadow-lg shadow-apex-red/30">
           {spinning ? "Spinning..." : "Bet"}
         </button>
 
         {/* Result */}
         {won !== null && !spinning && (
-          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className={cn("rounded-xl px-6 py-3 font-display text-lg font-bold",
-            won ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"
+          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className={cn("rounded-2xl px-10 py-5 font-display text-2xl font-black",
+            won ? "bg-green-500/20 text-green-400 border-2 border-green-500/30" : "bg-red-500/20 text-red-400 border-2 border-red-500/30"
           )}>
             {won ? `+$${winAmount.toLocaleString()}!` : `-$${bet.toLocaleString()}!`}
           </motion.div>
         )}
         {carPrize && (
-          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="rounded-xl border border-amber-500/50 bg-amber-500/20 px-6 py-4 text-center">
+          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="rounded-2xl border-2 border-amber-500/50 bg-amber-500/15 px-8 py-6 text-center">
             <p className="text-xs font-bold uppercase tracking-wider text-amber-400">🎰 CASINO PRIZE WON!</p>
             <p className="mt-1 font-display text-lg font-black text-white">{carPrize}</p>
           </motion.div>
@@ -496,25 +599,25 @@ function CrashGame({ state, dispatch }: { state: GameState; dispatch: React.Disp
   return (
     <GameLayout title="Crash" emoji="📈">
       <div className="flex flex-col items-center gap-6">
-        <div className={cn("flex h-40 w-full max-w-md items-center justify-center rounded-2xl border-2 text-6xl font-black font-mono transition-colors",
+        <div className={cn("flex h-52 w-full max-w-lg items-center justify-center rounded-3xl border-3 text-8xl font-black font-mono transition-colors shadow-2xl",
           crashed ? "border-red-500 bg-red-500/10 text-red-400" : cashedOut ? "border-green-500 bg-green-500/10 text-green-400" : playing ? "border-amber-500 bg-amber-500/10 text-amber-400" : "border-white/20 bg-[#0a0a0c] text-white/30"
         )}>
           {crashed ? "CRASHED" : `${multiplier.toFixed(2)}×`}
         </div>
-        <div className="w-full max-w-xs"><BetInput value={bet} onChange={setBet} max={state.cash} /></div>
+        <div className="w-full max-w-lg"><BetInput value={bet} onChange={setBet} max={state.cash} /></div>
         {playing ? (
           <button type="button" onClick={cashOut}
-            className="rounded-xl bg-green-600 px-12 py-4 font-display text-lg font-bold uppercase tracking-wider text-white transition-all hover:bg-green-700 animate-pulse">
+            className="rounded-2xl bg-green-600 px-16 py-6 font-display text-2xl font-black uppercase tracking-wider text-white transition-all hover:bg-green-700 hover:scale-105 animate-pulse shadow-lg shadow-green-600/30">
             CASH OUT — ${(bet * multiplier).toFixed(0)}
           </button>
         ) : (
           <button type="button" onClick={start} disabled={state.cash < bet}
-            className="rounded-xl bg-apex-red px-12 py-3 font-display text-sm font-bold uppercase tracking-wider text-white transition-all hover:bg-apex-red/80 disabled:opacity-40">
+            className="rounded-2xl bg-apex-red px-16 py-5 font-display text-xl font-black uppercase tracking-wider text-white transition-all hover:bg-apex-red/80 hover:scale-105 disabled:opacity-40 shadow-lg shadow-apex-red/30">
             {crashed ? "Play Again" : "Start"} — ${bet.toLocaleString()}
           </button>
         )}
-        {cashedOut && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="rounded-xl bg-green-500/20 px-6 py-3 font-display text-lg font-bold text-green-400">Cashed out at {cashedAt.toFixed(2)}×!</motion.div>}
-        {crashed && !cashedOut && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="rounded-xl bg-red-500/20 px-6 py-3 font-display text-lg font-bold text-red-400">Crashed at {multiplier.toFixed(2)}×!</motion.div>}
+        {cashedOut && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="rounded-2xl px-10 py-5 font-display text-2xl font-black bg-green-500/20 text-green-400 border-2 border-green-500/30">Cashed out at {cashedAt.toFixed(2)}×!</motion.div>}
+        {crashed && !cashedOut && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="rounded-2xl px-10 py-5 font-display text-2xl font-black bg-red-500/20 text-red-400 border-2 border-red-500/30">Crashed at {multiplier.toFixed(2)}×!</motion.div>}
         {carPrize && (
           <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="rounded-xl border border-amber-500/50 bg-amber-500/20 px-6 py-4 text-center">
             <p className="text-xs font-bold uppercase tracking-wider text-amber-400">🎰 CASINO PRIZE WON!</p>
@@ -573,19 +676,19 @@ function MinesGame({ state, dispatch }: { state: GameState; dispatch: React.Disp
 
   return (
     <GameLayout title="Mines" emoji="💣">
-      <div className="flex flex-col items-center gap-4">
-        <div className="w-full max-w-xs"><BetInput value={bet} onChange={setBet} max={state.cash} /></div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-white/40">Mines:</span>
+      <div className="flex flex-col items-center gap-6">
+        <div className="w-full max-w-lg"><BetInput value={bet} onChange={setBet} max={state.cash} /></div>
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-bold text-white/50">Mines:</span>
           {[3, 5, 7, 10].map((n) => (
             <button key={n} type="button" onClick={() => !playing && setMineCount(n)} disabled={playing}
-              className={cn("rounded-md px-3 py-1 text-xs font-bold transition-colors", mineCount === n ? "bg-apex-red text-white" : "bg-white/5 text-white/40")}>{n}</button>
+              className={cn("rounded-lg px-5 py-2 text-sm font-bold transition-colors", mineCount === n ? "bg-apex-red text-white" : "bg-white/5 text-white/40 hover:bg-white/10")}>{n}</button>
           ))}
         </div>
-        <div className="grid grid-cols-5 gap-2">
+        <div className="grid grid-cols-5 gap-3">
           {Array.from({ length: ROWS * COLS }, (_, i) => (
             <button key={i} type="button" onClick={() => reveal(i)} disabled={!playing || revealed.has(i) || gameOver}
-              className={cn("flex size-14 items-center justify-center rounded-xl border-2 text-xl font-bold transition-all",
+              className={cn("flex size-18 items-center justify-center rounded-2xl border-3 text-3xl font-bold transition-all hover:scale-105",
                 revealed.has(i) ? mines.has(i) ? "border-red-500 bg-red-500/20 text-red-400" : "border-green-500 bg-green-500/20 text-green-400"
                 : gameOver && mines.has(i) ? "border-red-500/50 bg-red-500/10 text-red-400" : "border-white/15 bg-[#0a0a0c] hover:border-white/30"
               )}>
@@ -595,25 +698,25 @@ function MinesGame({ state, dispatch }: { state: GameState; dispatch: React.Disp
         </div>
         {playing && revealed.size > 0 && (
           <button type="button" onClick={cashOut}
-            className="rounded-xl bg-green-600 px-8 py-3 font-display text-sm font-bold uppercase tracking-wider text-white transition-all hover:bg-green-700">
+            className="rounded-2xl bg-green-600 px-12 py-5 font-display text-xl font-black uppercase tracking-wider text-white transition-all hover:bg-green-700 hover:scale-105 shadow-lg shadow-green-600/30">
             Cash Out — ${Math.floor(bet * currentMult).toLocaleString()} ({currentMult.toFixed(2)}×)
           </button>
         )}
         {!playing && !gameOver && (
           <button type="button" onClick={start} disabled={state.cash < bet}
-            className="rounded-xl bg-apex-red px-12 py-3 font-display text-sm font-bold uppercase tracking-wider text-white transition-all hover:bg-apex-red/80 disabled:opacity-40">
+            className="rounded-2xl bg-apex-red px-16 py-5 font-display text-xl font-black uppercase tracking-wider text-white transition-all hover:bg-apex-red/80 hover:scale-105 disabled:opacity-40 shadow-lg shadow-apex-red/30">
             Start — ${bet.toLocaleString()}
           </button>
         )}
         {won !== null && gameOver && (
-          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className={cn("rounded-xl px-6 py-3 font-display text-lg font-bold",
-            won > 0 ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"
+          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className={cn("rounded-2xl px-10 py-5 font-display text-2xl font-black",
+            won > 0 ? "bg-green-500/20 text-green-400 border-2 border-green-500/30" : "bg-red-500/20 text-red-400 border-2 border-red-500/30"
           )}>{won > 0 ? `+$${won.toLocaleString()}!` : `-$${Math.abs(won).toLocaleString()}!`}</motion.div>
         )}
         {carPrize && (
-          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="rounded-xl border border-amber-500/50 bg-amber-500/20 px-6 py-4 text-center">
-            <p className="text-xs font-bold uppercase tracking-wider text-amber-400">🎰 CASINO PRIZE WON!</p>
-            <p className="mt-1 font-display text-lg font-black text-white">{carPrize}</p>
+          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="rounded-2xl border-2 border-amber-500/50 bg-amber-500/15 px-8 py-6 text-center">
+            <p className="text-sm font-bold uppercase tracking-wider text-amber-400">🎰 CASINO PRIZE WON!</p>
+            <p className="mt-2 font-display text-2xl font-black text-white">{carPrize}</p>
           </motion.div>
         )}
       </div>
@@ -673,15 +776,15 @@ function JackpotGame({ state, dispatch }: { state: GameState; dispatch: React.Di
     <GameLayout title="Jackpot" emoji="🎲">
       <div className="flex flex-col items-center gap-6">
         {/* Pool display */}
-        <div className="w-full max-w-md rounded-2xl border-2 border-amber-500/50 bg-amber-500/10 p-6">
-          <div className="text-center mb-4">
-            <p className="text-xs font-bold uppercase tracking-wider text-amber-400/60">Prize Pool</p>
-            <p className="font-mono text-4xl font-black text-amber-400">${totalPool.toLocaleString()}</p>
+        <div className="w-full max-w-lg rounded-3xl border-3 border-amber-500/50 bg-amber-500/10 p-8 shadow-2xl shadow-amber-500/10">
+          <div className="text-center mb-6">
+            <p className="text-sm font-bold uppercase tracking-wider text-amber-400/60">Prize Pool</p>
+            <p className="font-mono text-6xl font-black text-amber-400 mt-2">${totalPool.toLocaleString()}</p>
           </div>
           {pool.length > 0 && (
-            <div className="space-y-1 max-h-32 overflow-y-auto">
+            <div className="space-y-2 max-h-40 overflow-y-auto">
               {pool.map((p, i) => (
-                <div key={i} className={cn("flex items-center justify-between rounded-lg px-3 py-1.5 text-xs font-bold",
+                <div key={i} className={cn("flex items-center justify-between rounded-xl px-4 py-2.5 text-sm font-bold",
                   p.type === "car" ? "bg-purple-500/20 text-purple-400" : "bg-white/5 text-white/60"
                 )}>
                   <span>{p.type === "car" ? "🚗" : "💵"} {p.label}</span>
@@ -692,29 +795,29 @@ function JackpotGame({ state, dispatch }: { state: GameState; dispatch: React.Di
           )}
         </div>
 
-        {spinning && <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }} className="text-5xl">🎲</motion.div>}
+        {spinning && <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }} className="text-7xl">🎲</motion.div>}
 
         {/* Bet controls */}
-        <div className="w-full max-w-xs"><BetInput value={bet} onChange={setBet} max={state.cash} /></div>
+        <div className="w-full max-w-lg"><BetInput value={bet} onChange={setBet} max={state.cash} /></div>
 
-        <div className="flex gap-3">
+        <div className="flex gap-4">
           <button type="button" onClick={addCash} disabled={spinning || state.cash < bet}
-            className="rounded-xl border border-white/20 bg-white/5 px-6 py-3 font-display text-sm font-bold uppercase tracking-wider text-white/70 transition-all hover:bg-white/10 disabled:opacity-40">
+            className="rounded-2xl border-2 border-white/20 bg-white/5 px-8 py-4 font-display text-base font-bold uppercase tracking-wider text-white/70 transition-all hover:bg-white/10 hover:scale-105 disabled:opacity-40">
             💵 Add Cash
           </button>
           <button type="button" onClick={addCar} disabled={spinning}
-            className="rounded-xl border border-purple-500/30 bg-purple-500/10 px-6 py-3 font-display text-sm font-bold uppercase tracking-wider text-purple-400 transition-all hover:bg-purple-500/20 disabled:opacity-40">
+            className="rounded-2xl border-2 border-purple-500/30 bg-purple-500/10 px-8 py-4 font-display text-base font-bold uppercase tracking-wider text-purple-400 transition-all hover:bg-purple-500/20 hover:scale-105 disabled:opacity-40">
             🚗 Gamble Car
           </button>
           <button type="button" onClick={draw} disabled={spinning || pool.length === 0}
-            className="rounded-xl bg-apex-red px-8 py-3 font-display text-sm font-bold uppercase tracking-wider text-white transition-all hover:bg-apex-red/80 disabled:opacity-40">
+            className="rounded-2xl bg-apex-red px-10 py-4 font-display text-base font-bold uppercase tracking-wider text-white transition-all hover:bg-apex-red/80 hover:scale-105 disabled:opacity-40 shadow-lg shadow-apex-red/30">
             Draw Winner
           </button>
         </div>
 
         {winner && (
-          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className={cn("rounded-xl px-8 py-4 font-display text-xl font-bold",
-            winner.includes("YOU") ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"
+          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className={cn("rounded-2xl px-10 py-6 font-display text-2xl font-black",
+            winner.includes("YOU") ? "bg-green-500/20 text-green-400 border-2 border-green-500/30" : "bg-red-500/20 text-red-400 border-2 border-red-500/30"
           )}>{winner}</motion.div>
         )}
         {carPrize && (
