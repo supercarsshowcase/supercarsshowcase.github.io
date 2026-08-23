@@ -124,6 +124,7 @@ const schema = defineSchema(
     // another a few seconds each, then they fade.
     announcements: defineTable({
       authorName: v.string(),
+      authorRole: v.optional(v.string()),
       // First/primary message — kept for the single-message API.
       message: v.string(),
       // Full batch (may hold more than one) — used by the multi-message API.

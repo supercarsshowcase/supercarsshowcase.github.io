@@ -98,6 +98,7 @@ export const getLatestAnnouncement = query({
       ? {
           _id: latest._id,
           authorName: latest.authorName,
+          authorRole: latest.authorRole,
           message: latest.message,
           createdAt: latest.createdAt,
         }
@@ -117,6 +118,7 @@ export const getAnnouncementBatch = query({
       ? {
           _id: latest._id,
           authorName: latest.authorName,
+          authorRole: latest.authorRole,
           messages: latest.messages?.length ? latest.messages : [latest.message],
           createdAt: latest.createdAt,
         }
@@ -136,6 +138,7 @@ export const postAnnouncement = mutation({
 
     await ctx.db.insert("announcements", {
       authorName: admin.name?.trim() ? admin.name.trim() : "Admin",
+      authorRole: admin.role,
       message,
       createdAt: Date.now(),
     });
@@ -160,6 +163,7 @@ export const postAnnouncements = mutation({
 
     await ctx.db.insert("announcements", {
       authorName: admin.name?.trim() ? admin.name.trim() : "Admin",
+      authorRole: admin.role,
       message: messages[0],
       messages,
       createdAt: Date.now(),
