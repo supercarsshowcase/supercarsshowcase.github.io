@@ -272,6 +272,7 @@ function CoinflipGame({ state, dispatch }: { state: GameState; dispatch: React.D
   const play = useCallback(() => {
     if (mode === "cash") {
       if (state.cash < bet) return toast.error("Not enough cash!");
+      dispatch({ type: "ADD_CASH", amount: -bet }); // Deduct upfront
     } else {
       if (!selectedCar) return toast.error("Select a car to gamble!");
     }
@@ -283,10 +284,9 @@ function CoinflipGame({ state, dispatch }: { state: GameState; dispatch: React.D
       setWon(wonGame);
       if (mode === "cash") {
         if (wonGame) {
-          dispatch({ type: "ADD_CASH", amount: bet });
-        } else {
-          dispatch({ type: "ADD_CASH", amount: -bet });
+          dispatch({ type: "ADD_CASH", amount: bet * 2 }); // Win: get bet back + profit
         }
+        // Lose: bet already deducted, nothing to do
       } else {
         // Car gambling: win = get random car from house, lose = lose your car
         if (wonGame) {
