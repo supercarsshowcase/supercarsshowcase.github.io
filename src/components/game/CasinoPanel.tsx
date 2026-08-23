@@ -288,7 +288,7 @@ function CoinflipGame({ state, dispatch }: { state: GameState; dispatch: React.D
         }
         // Lose: bet already deducted, nothing to do
       } else {
-        // Car gambling: win = get similar-value car, lose = lose your car (25% keep)
+        // Car gambling: win = get similar-value car, lose = lose your car
         if (wonGame) {
           const betCar = GAME_CAR_MAP[selectedCar!];
           const betValue = betCar?.value ?? 0;
@@ -301,18 +301,10 @@ function CoinflipGame({ state, dispatch }: { state: GameState; dispatch: React.D
           setWonCar(`${prizeCar.brand} ${prizeCar.name}`);
           toast.success(`WON a ${prizeCar.name}!`);
         } else {
-          // 25% chance to keep your car on loss
-          const keepCar = Math.random() < 0.25;
-          if (keepCar) {
-            const kept = GAME_CAR_MAP[selectedCar!];
-            setLostCar(null);
-            setWonCar(null);
-            toast.success(`Lucky! You kept your ${kept?.name}!`);
-          } else {
-            dispatch({ type: "REMOVE_CAR", carId: selectedCar! });
-            const lost = GAME_CAR_MAP[selectedCar!];
-            setLostCar(lost ? `${lost.brand} ${lost.name}` : selectedCar);
-          }
+          // Lose = always lose your car
+          dispatch({ type: "REMOVE_CAR", carId: selectedCar! });
+          const lost = GAME_CAR_MAP[selectedCar!];
+          setLostCar(lost ? `${lost.brand} ${lost.name}` : selectedCar);
         }
       }
       setSpinning(false);
