@@ -27,12 +27,39 @@ const GAMES: GameDef[] = [
 
 // Casino-exclusive prize cars (can only be won, not bought)
 const CASINO_PRIZE_CARS = [
-  { id: "casino-chiron", brand: "Bugatti", name: "Chiron Casino Edition", value: 25000000, rarity: "mythic" as const, chance: 0.005 },
+  // ── Billions (ultra-rare 0.01% – 0.1%) ──
+  { id: "casino-infinity", brand: "One-off", name: "Infinity One Casino", value: 1000000000, rarity: "ultimate" as const, chance: 0.0001 },
+  { id: "casino-crystal", brand: "One-off", name: "Crystal Edition Casino", value: 500000000, rarity: "ultimate" as const, chance: 0.0002 },
+  { id: "casino-boat-tail", brand: "Rolls-Royce", name: "Boat Tail Casino Edition", value: 200000000, rarity: "ultimate" as const, chance: 0.0005 },
+  { id: "casino-noire", brand: "Bugatti", name: "La Voiture Noire Casino", value: 100000000, rarity: "ultimate" as const, chance: 0.001 },
+  { id: "casino-imola", brand: "Pagani", name: "Imola Casino Edition", value: 65000000, rarity: "mythic" as const, chance: 0.002 },
+  // ── Tens of millions (0.01% – 0.1%) ──
+  { id: "casino-jesko", brand: "Koenigsegg", name: "Jesko Absolut Casino", value: 48000000, rarity: "mythic" as const, chance: 0.001 },
+  { id: "casino-tourbillon", brand: "Bugatti", name: "Tourbillon Casino Edition", value: 42000000, rarity: "mythic" as const, chance: 0.002 },
   { id: "casino-sian", brand: "Lamborghini", name: "Sián Casino Special", value: 35000000, rarity: "mythic" as const, chance: 0.003 },
+  { id: "casino-chiron-super", brand: "Bugatti", name: "Chiron Super Sport Casino", value: 30000000, rarity: "mythic" as const, chance: 0.004 },
+  { id: "casino-chiron", brand: "Bugatti", name: "Chiron Casino Edition", value: 25000000, rarity: "mythic" as const, chance: 0.005 },
+  { id: "casino-nevera", brand: "Rimac", name: "Nevera Casino Edition", value: 22000000, rarity: "mythic" as const, chance: 0.005 },
+  { id: "casino-agera", brand: "Koenigsegg", name: "Agera RS Casino", value: 18000000, rarity: "mythic" as const, chance: 0.006 },
+  { id: "casino-revuelto", brand: "Lamborghini", name: "Revuelto Casino Edition", value: 12500000, rarity: "hyper" as const, chance: 0.008 },
+  { id: "casino-812", brand: "Ferrari", name: "812 Casino Special", value: 12000000, rarity: "hyper" as const, chance: 0.01 },
+  { id: "casino-daytona", brand: "Ferrari", name: "Daytona SP3 Casino", value: 10000000, rarity: "hyper" as const, chance: 0.01 },
+  { id: "casino-one", brand: "Mercedes-AMG", name: "Project ONE Casino", value: 9000000, rarity: "hyper" as const, chance: 0.01 },
+  { id: "casino-veneno", brand: "Lamborghini", name: "Veneno Casino Edition", value: 8400000, rarity: "hyper" as const, chance: 0.01 },
   { id: "casino-765lt", brand: "McLaren", name: "765LT Casino Edition", value: 8000000, rarity: "exotic" as const, chance: 0.01 },
-  { id: "casino-812", brand: "Ferrari", name: "812 Casino Special", value: 12000000, rarity: "hyper" as const, chance: 0.008 },
+  // ── Millions (0.1%) ──
+  { id: "casino-p1", brand: "McLaren", name: "P1 Casino Edition", value: 5500000, rarity: "hyper" as const, chance: 0.01 },
+  { id: "casino-laferrari", brand: "Ferrari", name: "LaFerrari Casino", value: 5200000, rarity: "hyper" as const, chance: 0.01 },
+  { id: "casino-veyron", brand: "Bugatti", name: "Veyron Casino Edition", value: 4500000, rarity: "hyper" as const, chance: 0.01 },
+  { id: "casino-918", brand: "Porsche", name: "918 Spyder Casino", value: 3200000, rarity: "exotic" as const, chance: 0.01 },
   { id: "casino-gt-black", brand: "Mercedes-AMG", name: "GT Black Series Casino", value: 2000000, rarity: "legendary" as const, chance: 0.02 },
-  { id: "casino-911-gt3", brand: "Porsche", name: "911 GT3 Casino Edition", value: 1500000, rarity: "legendary" as const, chance: 0.025 },
+  { id: "casino-huracan", brand: "Lamborghini", name: "Huracán Casino Edition", value: 1500000, rarity: "legendary" as const, chance: 0.02 },
+  { id: "casino-911-gt3", brand: "Porsche", name: "911 GT3 RS Casino", value: 1200000, rarity: "legendary" as const, chance: 0.025 },
+  { id: "casino-f458", brand: "Ferrari", name: "458 Italia Casino", value: 900000, rarity: "legendary" as const, chance: 0.03 },
+  { id: "casino-r8", brand: "Audi", name: "R8 V10 Casino Edition", value: 750000, rarity: "legendary" as const, chance: 0.03 },
+  { id: "casino-720s", brand: "McLaren", name: "720S Casino Edition", value: 650000, rarity: "exotic" as const, chance: 0.04 },
+  { id: "casino-vantage", brand: "Aston Martin", name: "Vantage Casino Edition", value: 500000, rarity: "legendary" as const, chance: 0.04 },
+  { id: "casino-amg-gt", brand: "Mercedes-AMG", name: "AMG GT Casino Edition", value: 400000, rarity: "legendary" as const, chance: 0.05 },
 ];
 
 /* ── Panel ─────────────────────────────────────────────────────────────── */
