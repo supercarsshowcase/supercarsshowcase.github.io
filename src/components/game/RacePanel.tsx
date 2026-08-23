@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
+  Bot,
   Flag,
   Globe,
   Plus,
@@ -10,6 +11,7 @@ import {
 } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { TRACKS as SERVER_TRACKS } from "@/convex/race";
 import { useAuth } from "@/hooks/use-auth";
 import { RaceCanvas } from "./RaceCanvas";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -36,6 +38,9 @@ export function RacePanel({
   const [view, setView] = useState<View>("browser");
   const [selectedTrack, setSelectedTrack] = useState("city-circuit");
   const [lobbyId, setLobbyId] = useState<Id<"raceLobbies"> | null>(null);
+  const [vsComputer, setVsComputer] = useState(false);
+  const [aiRacing, setAiRacing] = useState(false);
+  const [aiFinished, setAiFinished] = useState(false);
 
   const createLobby = useMutation(api.race.createLobby);
   const joinLobby = useMutation(api.race.joinLobby);
@@ -58,8 +63,21 @@ export function RacePanel({
       if (myLobby.status === "waiting") setView("lobby");
       else if (myLobby.status === "countdown" || myLobby.status === "racing") setView("racing");
       else if (myLobby.status === "finished") setView("lobby");
+
+      // Auto-transition countdown → racing when countdown expires
+      if (myLobby.status === "countdown" && myLobby.countdownEnds) {
+        const msLeft = myLobby.countdownEnds - Date.now();
+        if (msLeft <= 0) {
+          void beginRace({ lobbyId: myLobby._id });
+        } else {
+          const t = setTimeout(() => {
+            void beginRace({ lobbyId: myLobby._id });
+          }, msLeft + 200);
+          return () => clearTimeout(t);
+        }
+      }
     }
-  }, [myLobby]);
+  }, [myLobby, beginRace]);
 
   const handleCreate = useCallback(
     async (trackId: string) => {
@@ -269,6 +287,53 @@ export function RacePanel({
               )}
             </div>
 
+            {/* Vs Computer */}
+            <div className="rounded-xl border border-apex-line bg-apex-panel p-5">
+              <div className="mb-4 flex items-center gap-3">
+                <div className="flex size-10 items-center justify-center rounded-lg bg-green-500/15">
+                  <Bot className="size-5 text-green-400" />
+                </div>
+                <div>
+                  <p className="font-display text-sm font-bold text-white">Vs Computer</p>
+                  <p className="text-[11px] text-white/40">Race against AI opponents offline</p>
+                </div>
+              </div>
+
+              <div className="mb-4 grid grid-cols-2 gap-2">
+                {TRACKS.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setSelectedTrack(t.id)}
+                    className={cn(
+                      "rounded-lg border p-3 text-left transition-all",
+                      selectedTrack === t.id
+                        ? "border-green-500 bg-green-500/10"
+                        : "border-apex-line bg-[#0a0a0c] hover:border-white/20",
+                    )}
+                  >
+                    <span className="text-2xl">{t.icon}</span>
+                    <p className="mt-1 font-display text-xs font-bold text-white">{t.name}</p>
+                    <p className="text-[10px] text-white/35">{t.desc}</p>
+                  </button>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setVsComputer(true);
+                  setAiRacing(true);
+                  setAiFinished(false);
+                  setView("racing");
+                }}
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-green-600 py-3 font-display text-sm font-bold uppercase tracking-[0.15em] text-white transition-colors hover:bg-green-700"
+              >
+                <Bot className="size-4" />
+                Start vs Computer
+              </button>
+            </div>
+
             {/* How to play */}
             <div className="rounded-xl border border-apex-line bg-apex-panel p-5">
               <p className="mb-3 font-display text-xs font-bold uppercase tracking-[0.2em] text-white/50">
@@ -389,8 +454,8 @@ export function RacePanel({
           </motion.div>
         )}
 
-        {/* ── RACING VIEW ── */}
-        {view === "racing" && lobby && myId && (
+        {/* ── RACING VIEW (multiplayer) ── */}
+        {view === "racing" && lobby && myId && !vsComputer && (
           <motion.div
             key="racing"
             initial={{ opacity: 0, scale: 0.98 }}
@@ -403,7 +468,6 @@ export function RacePanel({
               players={lobby.players.map((p) => ({
                 id: p.userId,
                 name: p.playerName,
-                carId: p.carId,
                 x: p.x,
                 y: p.y,
                 angle: p.angle,
@@ -419,7 +483,6 @@ export function RacePanel({
               onFinish={handleFinish}
             />
 
-            {/* Finish overlay with results */}
             {lobby.status === "finished" && (
               <div className="mt-4 space-y-3">
                 <div className="rounded-xl border border-apex-line bg-apex-panel p-5">
@@ -434,51 +497,64 @@ export function RacePanel({
                         key={p._id}
                         className={cn(
                           "flex items-center gap-3 rounded-lg border p-3",
-                          p.userId === myId
-                            ? "border-apex-red/30 bg-apex-red/5"
-                            : "border-apex-line bg-[#0a0a0c]",
+                          p.userId === myId ? "border-apex-red/30 bg-apex-red/5" : "border-apex-line bg-[#0a0a0c]",
                         )}
                       >
-                        <span
-                          className={cn(
-                            "flex size-8 items-center justify-center rounded-full font-display text-sm font-bold",
-                            p.placement === 1
-                              ? "bg-yellow-500/20 text-yellow-400"
-                              : p.placement === 2
-                                ? "bg-white/10 text-white/60"
-                                : p.placement === 3
-                                  ? "bg-amber-700/20 text-amber-600"
-                                  : "bg-white/5 text-white/30",
-                          )}
-                        >
+                        <span className={cn("flex size-8 items-center justify-center rounded-full font-display text-sm font-bold", p.placement === 1 ? "bg-yellow-500/20 text-yellow-400" : p.placement === 2 ? "bg-white/10 text-white/60" : "bg-white/5 text-white/30")}>
                           {p.placement ?? "?"}
                         </span>
                         <div className="flex-1">
                           <p className="font-display text-sm font-bold text-white">
                             {p.playerName}
-                            {p.userId === myId && (
-                              <span className="ml-2 text-[9px] text-apex-red">(You)</span>
-                            )}
+                            {p.userId === myId && <span className="ml-2 text-[9px] text-apex-red">(You)</span>}
                           </p>
                         </div>
-                        <span className="text-[11px] text-white/40">
-                          {p.finishTime?.toFixed(1)}s
-                        </span>
+                        <span className="text-[11px] text-white/40">{p.finishTime?.toFixed(1)}s</span>
                       </div>
                     ))}
-
                 <button
                   type="button"
-                  onClick={() => {
-                    setView("browser");
-                    setLobbyId(null);
-                    void leaveLobby();
-                  }}
+                  onClick={() => { setView("browser"); setLobbyId(null); void leaveLobby(); }}
                   className="mt-3 w-full rounded-lg border border-apex-red/40 bg-apex-red/10 py-3 font-display text-sm font-bold uppercase tracking-[0.15em] text-white transition-colors hover:bg-apex-red"
                 >
                   Back to Lobbies
                 </button>
                 </div>
+              </div>
+            )}
+          </motion.div>
+        )}
+
+        {/* ── RACING VIEW (vs Computer) ── */}
+        {view === "racing" && vsComputer && (
+          <motion.div
+            key="ai-racing"
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            {!aiFinished ? (
+              <RaceCanvas
+                track={(SERVER_TRACKS.find((t) => t.id === selectedTrack) ?? SERVER_TRACKS[0]) as any}
+                myId="local"
+                players={[]}
+                status={aiRacing ? "countdown" : "waiting"}
+                countdownEnds={aiRacing ? Date.now() + 3000 : undefined}
+                vsComputer
+                aiCount={3}
+                onFinish={() => setAiFinished(true)}
+              />
+            ) : (
+              <div className="flex flex-col items-center gap-4 rounded-xl border border-apex-line bg-apex-panel p-8">
+                <p className="font-display text-3xl font-black text-white">RACE COMPLETE</p>
+                <p className="text-sm text-white/40">Great driving!</p>
+                <button
+                  type="button"
+                  onClick={() => { setVsComputer(false); setAiRacing(false); setAiFinished(false); setView("browser"); }}
+                  className="rounded-lg border border-apex-red/40 bg-apex-red/10 px-8 py-3 font-display text-sm font-bold uppercase tracking-[0.15em] text-white transition-colors hover:bg-apex-red"
+                >
+                  Back to Lobbies
+                </button>
               </div>
             )}
           </motion.div>
