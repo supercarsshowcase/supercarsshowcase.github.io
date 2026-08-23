@@ -391,6 +391,7 @@ export default function Admin() {
 
   // ── Queries ──
   const stats = useQuery(api.site.getAdminStats);
+  const users = useQuery(api.site.listUsers);
   const feedback = useQuery(api.feedback.listFeedback);
   const carOverrides = useQuery(api.cars.getCarOverrides);
 
@@ -602,6 +603,11 @@ export default function Admin() {
                   className="mb-3 w-full rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3 py-2 text-sm text-white outline-none focus:border-apex-red"
                 >
                   <option value="">Select a user…</option>
+                  {users?.map((u) => (
+                    <option key={u._id} value={u._id}>
+                      {u.name} ({u.email || "no email"}) — {u.role}
+                    </option>
+                  ))}
                 </select>
 
                 {/* Give Cash */}
