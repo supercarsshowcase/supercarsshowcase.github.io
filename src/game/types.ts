@@ -133,6 +133,8 @@ export interface SpinResult {
   carId?: string;
   /** Winning slice index on the 12-slice wheel (0 = supercar). */
   slice: number;
+  /** Which car tier was won: 1 = 1% ($10-30M), 2 = 0.01% ($100-300M), 3 = 0.001% ($1B+) */
+  tier?: 1 | 2 | 3;
 }
 
 export interface CrateResult {

@@ -46,6 +46,8 @@ import {
   carPower,
   carValue,
   hourlySupercar,
+  hourlySupercar01,
+  hourlySupercar001,
   nextSupercarSwapAt,
   rollCrate,
   rollDealerStock,
@@ -196,7 +198,7 @@ function SpinPanel({ state, dispatch }: { state: GameState; dispatch: React.Disp
       <PanelHeader
         eyebrow="Lucky Spin"
         title="SPIN THE WHEEL"
-        hint="Free every 15 minutes. Cash on 99% of the wheel — and this hour's supercar on 1%. The jackpot rotates every hour."
+        hint="Free every 15 minutes. Three car tiers rotate hourly: 1% → $10-30M, 0.01% → $100-300M, 0.001% → $1B+."
       />
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1.15fr_1fr]">
         <div className="relative mx-auto aspect-square w-full max-w-[600px]">
@@ -281,37 +283,49 @@ function SpinPanel({ state, dispatch }: { state: GameState; dispatch: React.Disp
             {spinning ? "Spinning…" : canSpin ? "SPIN — FREE" : `Next spin in ${waitLabel}`}
           </button>
           <p className="mt-2 text-center text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">
-            1% chance of a supercar · free every 15 minutes
+            1% ($10-30M) · 0.01% ($100-300M) · 0.001% ($1B+) · free every 15 min
           </p>
 
-          {/* Jackpot preview — this hour's supercar, fixed until it rotates */}
-          {previewCar && (
-            <div className="mt-6 overflow-hidden rounded-xl border border-amber-300/30 bg-apex-panel">
-              <div className="relative h-40 bg-[#0a0a0b]">
-                <SmartImage
-                  src={gameCarImage(previewCar)}
-                  alt={previewCar.name}
-                  seed={previewCar.id}
-                  className="h-full w-full object-cover"
-                />
-                <span className="absolute left-2 top-2 rounded-sm border border-amber-300 bg-black/50 px-2 py-0.5 font-display text-[9px] font-bold uppercase tracking-[0.16em] text-amber-300 backdrop-blur">
-                  Hourly Jackpot
-                </span>
-              </div>
-              <div className="flex items-center justify-between gap-3 p-4">
-                <div className="min-w-0">
-                  <p className="font-display text-lg font-black text-white">{previewCar.name}</p>
-                  <p className="truncate text-[11px] text-white/40">
-                    {previewCar.brand} · {fmtNum(previewCar.hp)} hp · {fmtMoney(previewCar.value)}
-                  </p>
-                </div>
-                <span className="shrink-0 rounded-md border border-amber-300/30 bg-amber-300/5 px-3 py-2 font-display text-[10px] font-bold uppercase tracking-[0.14em] text-amber-300">
-                  <RefreshCw className="mr-1 inline size-3.5" />
-                  New in {swapLabel}
-                </span>
-              </div>
+          {/* Hourly featured cars — all 3 tiers */}
+          <div className="mt-6 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="font-display text-[10px] font-semibold uppercase tracking-[0.22em] text-white/40">This hour's cars</p>
+              <span className="inline-flex items-center gap-1 rounded-md border border-amber-300/30 bg-amber-300/5 px-2 py-1 font-display text-[9px] font-bold uppercase tracking-[0.12em] text-amber-300">
+                <RefreshCw className="size-2.5" />
+                {swapLabel}
+              </span>
             </div>
-          )}
+            {[
+              { car: previewCar, tier: 1, pct: "1%", color: "#f59e0b", range: "$10M – $30M" },
+              { car: hourlySupercar01(now), tier: 2, pct: "0.01%", color: "#c084fc", range: "$100M – $300M" },
+              { car: hourlySupercar001(now), tier: 3, pct: "0.001%", color: "#ffd700", range: "$1B+" },
+            ].map(({ car, tier, pct, color, range }) => (
+              car ? (
+                <div key={tier} className="overflow-hidden rounded-xl border bg-apex-panel" style={{ borderColor: `${color}40` }}>
+                  <div className="flex gap-3 p-3">
+                    <div className="relative h-20 w-28 shrink-0 overflow-hidden rounded-lg bg-[#0a0a0b]">
+                      <SmartImage
+                        src={gameCarImage(car)}
+                        alt={car.name}
+                        seed={car.id}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                    <div className="flex flex-1 flex-col justify-center min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="rounded-sm px-1.5 py-0.5 font-display text-[9px] font-black uppercase tracking-wider" style={{ background: `${color}20`, color, border: `1px solid ${color}40` }}>
+                          {pct}
+                        </span>
+                        <span className="text-[10px] text-white/30">{range}</span>
+                      </div>
+                      <p className="mt-1 truncate font-display text-sm font-black text-white">{car.name}</p>
+                      <p className="truncate text-[10px] text-white/35">{car.brand} · {fmtMoney(car.value)}</p>
+                    </div>
+                  </div>
+                </div>
+              ) : null
+            ))}
+          </div>
 
           <div className="mt-6 min-h-[7.5rem] rounded-xl border border-apex-line bg-apex-panel p-5 text-center">
             <AnimatePresence mode="wait">
@@ -334,12 +348,13 @@ function SpinPanel({ state, dispatch }: { state: GameState; dispatch: React.Disp
                     transition={{ type: "spring", stiffness: 260, damping: 18 }}
                   >
                     <p className="font-display text-[10px] font-semibold uppercase tracking-[0.28em] text-amber-300">
-                      🏆 Supercar won!
+                      {result.tier === 3 ? "ULTRA RARE" : result.tier === 2 ? "MYTHIC" : "SUPERCAR"} WON!
                     </p>
                     <p className="mt-2 font-display text-2xl font-black text-white">{wonCar.name}</p>
                     <p className="mt-1 text-xs text-white/40">
-                      {wonCar.brand} · {fmtMoney(wonCar.value)} · {fmtNum(wonCar.hp)} hp — added to your garage
+                      {wonCar.brand} · {fmtMoney(wonCar.value)} · {fmtNum(wonCar.hp)} hp
                     </p>
+                    <p className="mt-1 text-[10px] font-bold text-green-400">Added to your garage!</p>
                   </motion.div>
                 ) : (
                   <motion.div

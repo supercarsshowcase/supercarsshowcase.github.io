@@ -321,15 +321,15 @@ export function rollSpin(state: GameState, now = Date.now()): SpinResult {
   const roll = Math.random();
   if (roll < 0.00001) {
     const car = hourlySupercar001(now);
-    if (car) return { kind: "car", carId: car.id, slice: 0 };
+    if (car) return { kind: "car", carId: car.id, slice: 0, tier: 3 };
   }
   if (roll < 0.00011) {
     const car = hourlySupercar01(now);
-    if (car) return { kind: "car", carId: car.id, slice: 0 };
+    if (car) return { kind: "car", carId: car.id, slice: 0, tier: 2 };
   }
   if (roll < 0.01011) {
     const car = hourlySupercar(now);
-    if (car) return { kind: "car", carId: car.id, slice: 0 };
+    if (car) return { kind: "car", carId: car.id, slice: 0, tier: 1 };
   }
   const slices = spinCashSlices(state);
   const idx = Math.floor(Math.random() * slices.length);
