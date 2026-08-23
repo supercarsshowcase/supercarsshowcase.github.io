@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useRef } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
@@ -14,8 +14,27 @@ export default function Game() {
 
   const [state, dispatch] = useReducer(gameReducer, undefined, loadGame);
   const stateRef = useRef(state);
-  const globalMultiplier = activeEvent?.multiplier ?? 1;
+
+  // Local override: force event to null when it expires on the client side
+  // (Convex queries only re-fire on data changes, not on a timer).
+  const [eventExpired, setEventExpired] = useState(false);
+  const effectiveEvent = eventExpired ? null : activeEvent;
+  const globalMultiplier = effectiveEvent?.multiplier ?? 1;
   const globalMultiplierRef = useRef(globalMultiplier);
+
+  // Reset the expired flag when a new event arrives from Convex.
+  useEffect(() => {
+    if (activeEvent) setEventExpired(false);
+  }, [activeEvent]);
+
+  // When the event expires, null it out locally.
+  useEffect(() => {
+    if (!activeEvent) return;
+    const msLeft = activeEvent.expiresAt - Date.now();
+    if (msLeft <= 0) { setEventExpired(true); return; }
+    const timer = setTimeout(() => setEventExpired(true), msLeft + 500);
+    return () => clearTimeout(timer);
+  }, [activeEvent]);
 
   // Keep the latest state and multiplier available to handlers.
   useEffect(() => {
@@ -90,7 +109,7 @@ export default function Game() {
       state={state}
       dispatch={dispatch}
       globalMultiplier={globalMultiplier}
-      activeEvent={activeEvent}
+      activeEvent={effectiveEvent}
     />
   );
 }
