@@ -161,35 +161,6 @@ const schema = defineSchema(
     }).index("by_user", ["userId"])
       .index("by_lastSeen", ["lastSeen"]),
 
-    // ── Multiplayer Race ──
-    raceLobbies: defineTable({
-      hostId: v.id("users"),
-      hostName: v.string(),
-      status: v.string(), // "waiting" | "countdown" | "racing" | "finished"
-      trackId: v.string(),
-      createdAt: v.number(),
-      countdownEnds: v.optional(v.number()),
-      raceEnds: v.optional(v.number()),
-    }).index("by_status", ["status"]),
-
-    racePlayers: defineTable({
-      lobbyId: v.id("raceLobbies"),
-      userId: v.id("users"),
-      playerName: v.string(),
-      carId: v.string(),
-      // Position state
-      x: v.number(),
-      y: v.number(),
-      angle: v.number(),
-      speed: v.number(),
-      // Race progress
-      lap: v.number(),
-      finished: v.boolean(),
-      finishTime: v.optional(v.number()),
-      placement: v.optional(v.number()),
-      lastUpdate: v.number(),
-    }).index("by_lobby", ["lobbyId"])
-      .index("by_lobby_user", ["lobbyId", "userId"]),
   },
   {
     schemaValidation: false,

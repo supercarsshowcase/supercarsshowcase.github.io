@@ -125,10 +125,6 @@ export interface GameState {
   lastTick: number;
   /** Timestamp of the last Lucky Spin; the wheel is free every 15 minutes. */
   lastSpinAt: number;
-  /** Timestamp of the last race; races have a cooldown. */
-  lastRaceAt: number;
-  racesWon: number;
-  racesLost: number;
 }
 
 export interface SpinResult {

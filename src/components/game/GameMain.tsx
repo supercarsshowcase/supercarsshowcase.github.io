@@ -6,7 +6,6 @@ import {
   CircleDollarSign,
   Coins,
   Flame,
-  Flag,
   Gift,
   MousePointerClick,
   Package,
@@ -48,7 +47,6 @@ const NAV: { id: TabId; label: string; icon: LucideIcon }[] = [
   { id: "earn", label: "Earn", icon: MousePointerClick },
   { id: "spin", label: "Spin", icon: CircleDollarSign },
   { id: "garage", label: "Garage", icon: CarIcon },
-  { id: "race", label: "Race", icon: Flag },
   { id: "dealer", label: "Dealers", icon: Store },
   { id: "crates", label: "Crates", icon: Package },
   { id: "upgrades", label: "Upgrades", icon: Wrench },
@@ -61,7 +59,6 @@ type TabId =
   | "earn"
   | "spin"
   | "garage"
-  | "race"
   | "dealer"
   | "crates"
   | "upgrades"
