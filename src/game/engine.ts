@@ -64,6 +64,9 @@ export function initialGameState(): GameState {
     clicksOnStarter: 0,
     lastTick: now,
     lastSpinAt: 0,
+    lastRaceAt: 0,
+    racesWon: 0,
+    racesLost: 0,
   };
 }
 
@@ -341,6 +344,7 @@ export type Action =
   | { type: "SPIN"; now: number; result: SpinResult }
   | { type: "REFRESH_DEALER"; dealerId: string; stock: string[]; refreshAt: number; cost: number }
   | { type: "PRESTIGE" }
+  | { type: "START_RACE"; cost: number; prize: number; won: boolean; now: number }
   | { type: "HARD_RESET" }
   | { type: "LOAD"; state: GameState };
 
@@ -536,6 +540,17 @@ export function gameReducer(state: GameState, action: Action): GameState {
         totalEarned: 0,
         lastTick: Date.now(),
       };
+    }
+    case "START_RACE": {
+      if (state.cash < action.cost) return state;
+      return applyAchievements({
+        ...state,
+        cash: state.cash - action.cost + action.prize,
+        totalEarned: state.totalEarned + action.prize,
+        lastRaceAt: action.now,
+        racesWon: state.racesWon + (action.won ? 1 : 0),
+        racesLost: state.racesLost + (action.won ? 0 : 1),
+      });
     }
     case "HARD_RESET":
       return initialGameState();
