@@ -610,8 +610,6 @@ function CrashGame({ state, dispatch }: { state: GameState; dispatch: React.Disp
   const cashOut = useCallback(() => {
     if (!playing || crashed) return; if (timerRef.current) clearInterval(timerRef.current);    const win = Math.floor(bet * multiplier);
     dispatch({ type: "ADD_CASH", amount: win });
-    const cp = checkCasinoPrize(dispatch);
-    if (cp) { setCarPrize(cp); toast.success(`Won a car: ${cp}`); }
     setCashedOut(true);
     setCashedAt(multiplier); setPlaying(false);
     toast.success(`Cashed out at ${multiplier.toFixed(2)}× — +$${win.toLocaleString()}`);
@@ -678,13 +676,13 @@ function MinesGame({ state, dispatch }: { state: GameState; dispatch: React.Disp
     else {
       const nr = new Set(revealed); nr.add(idx); setRevealed(nr);
       const safe = ROWS * COLS - mineCount; const mult = 1 + (nr.size / safe) * (mineCount * 1.2); setCurrentMult(mult);
-      if (nr.size === safe) {        const win = Math.floor(bet * mult); dispatch({ type: "ADD_CASH", amount: win }); setPlaying(false); setWon(win); toast.success(`All clear! +$${win.toLocaleString()}`); const cp = checkCasinoPrize(dispatch); if (cp) { setCarPrize(cp); toast.success(`Won a car: ${cp}`); } }
+      if (nr.size === safe) {        const win = Math.floor(bet * mult); dispatch({ type: "ADD_CASH", amount: win }); setPlaying(false); setWon(win); toast.success(`All clear! +$${win.toLocaleString()}`); }
     }
   }, [playing, revealed, mines, bet, mineCount, dispatch]);
 
   const cashOut = useCallback(() => {
     if (!playing || revealed.size === 0) return;
-    const win = Math.floor(bet * currentMult); dispatch({ type: "ADD_CASH", amount: win }); setPlaying(false); setWon(win); setGameOver(true); const cp = checkCasinoPrize(dispatch); if (cp) { setCarPrize(cp); toast.success(`Won a car: ${cp}`); }
+    const win = Math.floor(bet * currentMult); dispatch({ type: "ADD_CASH", amount: win }); setPlaying(false); setWon(win); setGameOver(true);
   }, [playing, revealed, bet, currentMult, dispatch]);
 
   return (
