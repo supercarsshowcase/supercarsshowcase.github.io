@@ -47,16 +47,18 @@ export function AnnouncementOverlay() {
     lastSeen.current = id;
     const fresh = Date.now() - latest.createdAt <= FRESH_WINDOW_MS;
     const now = Date.now();
-    const incoming = fresh
-      ? (latest.messages ?? []).map((message, i) => ({
-          id: `${id}-${i}`,
-          name: latest.authorName,
-          message,
-          expiresAt: now + durationFor(message),
-          colorIdx: (stack.length + i) % ANNOUNCE_COLORS.length,
-        }))
-      : [];
-    setStack((prev) => [...prev, ...incoming]);
+    setStack((prev) => {
+      const incoming = fresh
+        ? (latest.messages ?? []).map((message, i) => ({
+            id: `${id}-${i}`,
+            name: latest.authorName,
+            message,
+            expiresAt: now + durationFor(message),
+            colorIdx: (prev.length + i) % ANNOUNCE_COLORS.length,
+          }))
+        : [];
+      return [...prev, ...incoming];
+    });
   }, [latest]);
 
   // Periodically prune messages whose time is up.

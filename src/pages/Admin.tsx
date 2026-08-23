@@ -20,8 +20,6 @@ import {
   Activity,
   CalendarDays,
   ChevronDown,
-  Check,
-  AlertTriangle,
   Loader2,
   Save,
   Pencil,
@@ -33,8 +31,6 @@ import {
   Verified,
 } from "lucide-react";
 import { carsList } from "@/data/cars";
-import { BRANDS } from "@/data/brands";
-import { getBrandImage } from "@/data/images";
 import { PageEditor } from "@/components/PageEditor";
 import {
   HOME_COPY,

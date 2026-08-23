@@ -12,6 +12,7 @@ import {
   Shield,
   Warehouse,
   UserRound,
+  Verified,
 } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -257,7 +258,7 @@ export function AppShell() {
                       {user?.name ?? "Signed in"}
                       {user?.role === "owner" && (
                         <span title="Verified Owner">
-                          <svg className="size-3.5 text-blue-400" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                          <Verified className="size-3.5 text-blue-400" />
                         </span>
                       )}
                     </p>
