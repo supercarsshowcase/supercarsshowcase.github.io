@@ -18,6 +18,7 @@ import type * as http from "../http.js";
 import type * as pages from "../pages.js";
 import type * as presence from "../presence.js";
 import type * as profile from "../profile.js";
+import type * as race from "../race.js";
 import type * as site from "../site.js";
 import type * as users from "../users.js";
 
@@ -38,6 +39,7 @@ declare const fullApi: ApiFromModules<{
   pages: typeof pages;
   presence: typeof presence;
   profile: typeof profile;
+  race: typeof race;
   site: typeof site;
   users: typeof users;
 }>;
