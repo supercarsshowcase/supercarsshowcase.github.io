@@ -350,7 +350,7 @@ function CoinflipGame({ state, dispatch }: { state: GameState; dispatch: React.D
     else { if (!selectedCar) return toast.error("Select a car to gamble!"); }
     setSpinning(true); setResult(null); setWon(null); setCarPrize(null); setWonCar(null); setLostCar(null);
     setTimeout(() => {
-      const r: "heads" | "tails" = Math.random() < 0.45 ? "heads" : "tails";
+      const r: "heads" | "tails" = Math.random() < 0.5 ? "heads" : "tails";
       setResult(r); const wonGame = r === pick;      setWon(wonGame);
       if (mode === "cash") {
         if (wonGame) {
@@ -833,8 +833,8 @@ function OnlineCoinflip({ state, dispatch }: { state: GameState; dispatch: React
   const findMatch = useCallback(() => {
     if (state.cash < bet) return toast.error("Not enough cash!"); setFinding(true); setResult(null); setCarPrize(null);
     setTimeout(() => {
-      const won = Math.random() < 0.45; if (won) { dispatch({ type: "ADD_CASH", amount: bet }); } else { dispatch({ type: "ADD_CASH", amount: -bet }); }
-      setResult({ myPick: won ? pick : pick === "heads" ? "tails" : "heads", oppPick: Math.random() < 0.5 ? "heads" : "tails", won }); setFinding(false);
+      const coinFlipResult = Math.random() < 0.5 ? "heads" : "tails"; const won = coinFlipResult === pick; if (won) { dispatch({ type: "ADD_CASH", amount: bet }); } else { dispatch({ type: "ADD_CASH", amount: -bet }); }
+      setResult({ myPick: pick, oppPick: coinFlipResult, won }); setFinding(false);
       if (won) { const cp = checkCasinoPrize(dispatch); if (cp) { setCarPrize(cp); toast.success("Won a car: " + cp); } }
       toast[won ? "success" : "error"](won ? `Won $${bet.toLocaleString()}!` : `Lost $${bet.toLocaleString()}`);
     }, 2500);
