@@ -284,8 +284,6 @@ function CoinflipGame({ state, dispatch }: { state: GameState; dispatch: React.D
       if (mode === "cash") {
         if (wonGame) {
           dispatch({ type: "ADD_CASH", amount: bet });
-          const prize = checkCasinoPrize(dispatch);
-          if (prize) { setCarPrize(prize); toast.success(`🎰 CASINO PRIZE: ${prize}`); }
         } else {
           dispatch({ type: "ADD_CASH", amount: -bet });
         }
@@ -475,8 +473,6 @@ function RouletteGame({ state, dispatch }: { state: GameState; dispatch: React.D
       setWinAmount(winAmt);
       if (wonGame) {
         dispatch({ type: "ADD_CASH", amount: winAmt });
-        const prize = checkCasinoPrize(dispatch);
-        if (prize) { setCarPrize(prize); toast.success(`🎰 CASINO PRIZE: ${prize}`); }
       }
       setSpinning(false);
     }, 2500);
@@ -619,8 +615,6 @@ function CrashGame({ state, dispatch }: { state: GameState; dispatch: React.Disp
     const win = Math.floor(bet * multiplier);
     dispatch({ type: "ADD_CASH", amount: win });
     setCashedOut(true); setCashedAt(multiplier); setPlaying(false);
-    const prize = checkCasinoPrize(dispatch);
-    if (prize) { setCarPrize(prize); toast.success(`🎰 CASINO PRIZE: ${prize}`); }
     toast.success(`Cashed out at ${multiplier.toFixed(2)}× — +$${win.toLocaleString()}`);
   }, [playing, crashed, bet, multiplier, dispatch]);
 
@@ -692,8 +686,6 @@ function MinesGame({ state, dispatch }: { state: GameState; dispatch: React.Disp
       if (nr.size === safe) {
         const win = Math.floor(bet * mult); dispatch({ type: "ADD_CASH", amount: win });
         setPlaying(false); setWon(win); toast.success(`All clear! +$${win.toLocaleString()}`);
-        const prize = checkCasinoPrize(dispatch);
-        if (prize) { setCarPrize(prize); toast.success(`🎰 CASINO PRIZE: ${prize}`); }
       }
     }
   }, [playing, revealed, mines, bet, mineCount, dispatch]);
@@ -794,8 +786,6 @@ function JackpotGame({ state, dispatch }: { state: GameState; dispatch: React.Di
         dispatch({ type: "ADD_CASH", amount: totalPool });
         setWinner("YOU WON THE JACKPOT!");
         // Casino car prize on jackpot win
-        const prize = checkCasinoPrize(dispatch);
-        if (prize) { setCarPrize(prize); toast.success(`🎰 CASINO PRIZE: ${prize}`); }
       } else {
         setWinner("House wins the jackpot");
       }
@@ -879,8 +869,6 @@ function OnlineCoinflip({ state, dispatch }: { state: GameState; dispatch: React
     setTimeout(() => {
       const won = Math.random() < 0.45;
       if (won) { dispatch({ type: "ADD_CASH", amount: bet * 2 });
-        const prize = checkCasinoPrize(dispatch);
-        if (prize) { setCarPrize(prize); toast.success(`🎰 CASINO PRIZE: ${prize}`); }
       }
       setResult({ myPick: won ? pick : (pick === "heads" ? "tails" : "heads"), oppPick: Math.random() < 0.5 ? "heads" : "tails", won });
       setFinding(false);
