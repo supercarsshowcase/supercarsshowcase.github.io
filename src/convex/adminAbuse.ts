@@ -60,6 +60,7 @@ export const giveCar = mutation({
     const target = await ctx.db.get(args.userId);
     if (!target) throw new Error("User not found.");
     if (!args.carId.trim()) throw new Error("Car ID required.");
+    if (args.carId.trim() === "ghost-prototype") throw new Error("Cannot gift the secret car.");
     await ctx.db.insert("adminGifts", {
       userId: args.userId,
       kind: "car",
