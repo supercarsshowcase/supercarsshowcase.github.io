@@ -277,7 +277,7 @@ function CoinflipGame({ state, dispatch }: { state: GameState; dispatch: React.D
     }
     setSpinning(true); setResult(null); setWon(null); setCarPrize(null); setWonCar(null); setLostCar(null);
     setTimeout(() => {
-      const r: "heads" | "tails" = Math.random() < 0.5 ? "heads" : "tails";
+      const r: "heads" | "tails" = Math.random() < 0.45 ? "heads" : "tails";
       setResult(r);
       const wonGame = r === pick;
       setWon(wonGame);
@@ -601,7 +601,7 @@ function CrashGame({ state, dispatch }: { state: GameState; dispatch: React.Disp
     dispatch({ type: "ADD_CASH", amount: -bet });
     setPlaying(true); setCrashed(false); setCashedOut(false); setCashedAt(0); setCarPrize(null);
     setMultiplier(1.0);
-    crashPoint.current = Math.max(1.01, Math.pow(Math.random(), 0.7) * 10 + 1);
+    crashPoint.current = Math.max(1.01, Math.pow(Math.random(), 0.4) * 5 + 1);
     let mult = 1.0;
     timerRef.current = setInterval(() => {
       mult += 0.03 + mult * 0.008;
@@ -687,7 +687,7 @@ function MinesGame({ state, dispatch }: { state: GameState; dispatch: React.Disp
     else {
       const nr = new Set(revealed); nr.add(idx); setRevealed(nr);
       const safe = ROWS * COLS - mineCount;
-      const mult = 1 + (nr.size / safe) * (mineCount * 2);
+      const mult = 1 + (nr.size / safe) * (mineCount * 1.2);
       setCurrentMult(mult);
       if (nr.size === safe) {
         const win = Math.floor(bet * mult); dispatch({ type: "ADD_CASH", amount: win });
@@ -789,7 +789,7 @@ function JackpotGame({ state, dispatch }: { state: GameState; dispatch: React.Di
     setSpinning(true); setWinner(null); setCarPrize(null);
     setTimeout(() => {
       // 55% player wins
-      const playerWins = Math.random() < 0.55;
+      const playerWins = Math.random() < 0.4;
       if (playerWins) {
         dispatch({ type: "ADD_CASH", amount: totalPool });
         setWinner("YOU WON THE JACKPOT!");
@@ -877,7 +877,7 @@ function OnlineCoinflip({ state, dispatch }: { state: GameState; dispatch: React
     setFinding(true); setResult(null); setCarPrize(null);
     dispatch({ type: "ADD_CASH", amount: -bet });
     setTimeout(() => {
-      const won = Math.random() < 0.5;
+      const won = Math.random() < 0.45;
       if (won) { dispatch({ type: "ADD_CASH", amount: bet * 2 });
         const prize = checkCasinoPrize(dispatch);
         if (prize) { setCarPrize(prize); toast.success(`🎰 CASINO PRIZE: ${prize}`); }
