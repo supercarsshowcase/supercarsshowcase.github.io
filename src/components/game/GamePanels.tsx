@@ -249,7 +249,7 @@ function SpinPanel({ state, dispatch }: { state: GameState; dispatch: React.Disp
                   style={{
                     left: `${50 + radius * Math.sin(angle)}%`,
                     top: `${50 - radius * Math.cos(angle)}%`,
-                    width: "21%",
+                    width: "17%",
                     aspectRatio: "16/10",
                     transform: "translate(-50%, -50%)",
                     boxShadow: "0 4px 18px rgba(0,0,0,0.55)",
@@ -289,7 +289,7 @@ function SpinPanel({ state, dispatch }: { state: GameState; dispatch: React.Disp
                 <span
                   key={i}
                   className="absolute -translate-x-1/2 -translate-y-1/2 font-display text-[10px] font-black uppercase tracking-tight text-white/85"
-                  style={{ left: `${x}%`, top: `${y}%`, textShadow: "0 1px 4px rgba(0,0,0,0.9)" }}
+                  style={{ left: `${x}%`, top: `${y}%`, textShadow: "0 1px 4px rgba(0,0,0,0.9)", zIndex: 20 }}
                 >
                   {label}
                 </span>
