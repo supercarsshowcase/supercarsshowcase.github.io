@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
 import { GameMain } from "@/components/game/GameMain";
 import { gameReducer, loadGame, saveGame } from "@/game/engine";
+import { levelFrom } from "@/game/data";
 
 const SAVE_INTERVAL_MS = 5000;
 
@@ -125,7 +126,6 @@ export default function Game() {
     const id = window.setInterval(() => {
       const s = stateRef.current;
       if (!s) return;
-      const { levelFrom } = require("@/game/data");
       void upsertScore({
         cash: s.cash,
         totalEarned: s.totalEarned,
@@ -138,7 +138,6 @@ export default function Game() {
     const initial = setTimeout(() => {
       const s = stateRef.current;
       if (!s) return;
-      const { levelFrom } = require("@/game/data");
       void upsertScore({
         cash: s.cash,
         totalEarned: s.totalEarned,
