@@ -17,7 +17,7 @@ import {
 import {
   GAME_CAR_MAP, gameCarImage, RARITY_META, ACHIEVEMENTS,
   DEALERS, CRATES, UPGRADES, PARTS, fmtMoney, fmtNum,
-  levelFrom, CAR_DEALERS,
+  levelFrom, DEALERS,
 } from "../../game/data";
 import { SmartImage } from "../SmartImage";
 import { cn } from "../../lib/utils";
@@ -35,7 +35,7 @@ const Ha = SmartImage;
 const ce = cn;
 const dp = RARITY_META;
 const Gh = ACHIEVEMENTS;
-const Tc = CAR_DEALERS;
+const Tc = DEALERS;
 const v1 = CRATES;
 const D1 = calcBuyPrice;
 const pp = rollDealerStock;
