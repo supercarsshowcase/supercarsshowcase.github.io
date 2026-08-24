@@ -128,7 +128,17 @@ function SpinPanel({ state, dispatch }: { state: GameState; dispatch: any }) {
     });
   }, [canSpin, spinning, state]);
 
-  const wonCar = result?.kind === "car" && result.carId ? Te[result.carId] : null;
+  const skipSpinCost = Math.max(1000, Math.round(state.cash * 0.05));
+
+  const skipSpin = useCallback(() => {
+    if (!result || !spinning) return;
+    if (state.cash < skipSpinCost) return;
+    dispatch({ type: 'ADD_CASH', amount: -skipSpinCost });
+    dispatch({ type: 'SPIN', now: Date.now(), result });
+    setSpinning(false);
+  }, [result, spinning, state, skipSpinCost]);
+
+  const wonCar = result?.kind === 'car' && result.carId ? Te[result.carId] : null;
   const stops = U9.map((c, i) => c + " " + (i * or2).toFixed(1) + "deg " + ((i + 1) * or2).toFixed(1) + "deg").join(", ");
   const waitSec = Math.max(0, Math.ceil((readyAt - now) / 1000));
   const waitLabel = waitSec >= 3600 ? Math.floor(waitSec / 3600) + "h " + Math.floor((waitSec % 3600) / 60) + "m" : waitSec >= 60 ? Math.floor(waitSec / 60) + "m " + (waitSec % 60) + "s" : waitSec + "s";
@@ -187,6 +197,13 @@ function SpinPanel({ state, dispatch }: { state: GameState; dispatch: any }) {
             className="rounded-md bg-apex-red py-3 font-display text-sm font-black uppercase tracking-[0.2em] text-white transition-colors hover:bg-apex-red/80 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/30">
             {spinning ? "Spinning…" : canSpin ? (state.freeSpins > 0 ? `SPIN — ${state.freeSpins.toLocaleString()} FREE SPINS` : "SPIN — FREE") : "Next spin in " + waitLabel}
           </button>
+          {spinning && (
+            <button type="button" onClick={skipSpin}
+              disabled={state.cash < skipSpinCost}
+              className="mt-2 rounded-md border border-amber-400/30 bg-amber-400/5 py-2 font-display text-[10px] font-bold uppercase tracking-[0.16em] text-amber-300/70 transition-colors hover:border-amber-400/50 hover:text-amber-300 disabled:cursor-not-allowed disabled:opacity-30">
+              Skip Spin -- {fmtMoney(skipSpinCost)}
+            </button>
+          )}
           {!canSpin && !spinning && (
             <button type="button" onClick={() => {
               const skipCost = Math.round(500 * Math.pow(1.5, levelFrom(state)));

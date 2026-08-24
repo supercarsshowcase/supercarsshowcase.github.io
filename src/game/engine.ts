@@ -20,6 +20,8 @@ const STORAGE_VERSION = 1;
 export const SPIN_COOLDOWN_MS = 15 * 60_000;
 /** Chance the wheel lands on a supercar (0.3%). */
 export const SPIN_CAR_CHANCE = 0.003;
+/** 30% income nerf applied globally to all cars. */
+const INCOME_NERF = 0.7;
 
 // ── Initial state ─────────────────────────────────────────────────────────────
 
@@ -169,7 +171,7 @@ export function clickValue(state: GameState): number {
   const cond = conditionOf(state, state.activeCarId);
   const condMult = 0.5 + 0.5 * cond;
   const mults = carUpgradeMults(state, state.activeCarId);
-  const base = def.value * 0.003;
+  const base = def.value * 0.003 * INCOME_NERF;
   return Math.max(1, Math.round(base * (1 + mults.clickMult) * condMult * clickMultiplier(state)));
 }
 
@@ -181,7 +183,7 @@ export function passivePerSec(state: GameState): number {
     const cond = conditionOf(state, carId);
     const condMult = 0.5 + 0.5 * cond;
     const mults = carUpgradeMults(state, carId);
-    base += def.value * 0.00003 * (1 + mults.passiveMult) * condMult;
+    base += def.value * 0.00003 * INCOME_NERF * (1 + mults.passiveMult) * condMult;
   }
   return base * passiveMultiplier(state);
 }
