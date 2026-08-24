@@ -402,6 +402,7 @@ export default function Admin() {
   const giveCar = useMutation(api.adminAbuse.giveCar);
   const setMultiplierEvent = useMutation(api.adminAbuse.setMultiplierEvent);
   const clearMultiplierEvent = useMutation(api.adminAbuse.clearMultiplierEvent);
+  const resetPlayerProgress = useMutation(api.adminAbuse.resetPlayerProgress);
   const setFeedbackStatus = useMutation(api.feedback.setFeedbackStatus);
   const deleteFeedback = useMutation(api.feedback.deleteFeedback);
   const saveCarEdit = useMutation(api.cars.saveCarEdit);
@@ -415,6 +416,14 @@ export default function Admin() {
   const [eventMultiplier, setEventMultiplier] = useState("100");
   const [eventDuration, setEventDuration] = useState("30");
   const [eventLabel, setEventLabel] = useState("100x EVENT");
+  const [resetCash, setResetCash] = useState(false);
+  const [resetCars, setResetCars] = useState(false);
+  const [resetParts, setResetParts] = useState(false);
+  const [resetUpgrades, setResetUpgrades] = useState(false);
+  const [resetPrestige, setResetPrestige] = useState(false);
+  const [resetAchievements, setResetAchievements] = useState(false);
+  const [resetDaily, setResetDaily] = useState(false);
+  const [resetCasino, setResetCasino] = useState(false);
 
   const sortedGameCars = Object.entries(GAME_CAR_MAP)
     
@@ -885,6 +894,97 @@ export default function Admin() {
                   </button>
                 </div>
               </div>
+              </div>
+
+              {/* ── Reset Player Progress Card */}
+              <div className="mt-6 rounded-lg border border-white/[0.06] bg-[#0b0b0c] p-5">
+                <h4 className="font-display text-xs font-bold uppercase tracking-[0.12em] text-white/70 mb-3">
+                  Reset Player Progress
+                </h4>
+                <p className="text-[11px] text-white/35 mb-4">Select what to reset for a player. This is permanent and cannot be undone.</p>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-[0.12em] text-white/50">Target User ID</label>
+                    <input
+                      value={abuseTarget}
+                      onChange={(e) => setAbuseTarget(e.target.value)}
+                      placeholder="Paste user ID..."
+                      className="mt-1 w-full rounded-md border border-white/10 bg-[#111113] px-3 py-2 text-xs text-white outline-none focus:border-apex-red/50"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {([
+                      ["Cash", resetCash, setResetCash, "cash"],
+                      ["Cars", resetCars, setResetCars, "cars"],
+                      ["Parts", resetParts, setResetParts, "parts"],
+                      ["Upgrades", resetUpgrades, setResetUpgrades, "upgrades"],
+                      ["Prestige", resetPrestige, setResetPrestige, "prestige"],
+                      ["Achievements", resetAchievements, setResetAchievements, "achievements"],
+                      ["Daily Reward", resetDaily, setResetDaily, "daily"],
+                      ["Casino Winnings", resetCasino, setResetCasino, "casino"],
+                    ] as const).map(([label, val, setter]) => (
+                      <label
+                        key={label}
+                        className={`flex items-center gap-2 rounded-md border px-3 py-2 text-[10px] font-bold uppercase tracking-[0.1em] cursor-pointer transition-colors ${
+                          val
+                            ? "border-red-500/50 bg-red-500/10 text-red-400"
+                            : "border-white/10 bg-[#111113] text-white/40 hover:border-white/20"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={val}
+                          onChange={(e) => setter(e.target.checked)}
+                          className="sr-only"
+                        />
+                        <div className={`size-3 rounded-sm border ${val ? "border-red-500 bg-red-500" : "border-white/20"} flex items-center justify-center`}>
+                          {val && <span className="text-[8px] text-white">✓</span>}
+                        </div>
+                        {label}
+                      </label>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    disabled={!abuseTarget.trim()}
+                    onClick={async () => {
+                      const opts: Record<string, boolean> = {
+                        cash: resetCash,
+                        cars: resetCars,
+                        parts: resetParts,
+                        upgrades: resetUpgrades,
+                        prestige: resetPrestige,
+                        achievements: resetAchievements,
+                        daily: resetDaily,
+                        casino: resetCasino,
+                      };
+                      const selected = Object.values(opts).filter(Boolean);
+                      if (selected.length === 0) {
+                        toast.error("Select at least one thing to reset");
+                        return;
+                      }
+                      try {
+                        const result = await resetPlayerProgress({
+                          userId: abuseTarget.trim() as any,
+                          resetCash,
+                          resetCars,
+                          resetParts,
+                          resetUpgrades,
+                          resetPrestige,
+                          resetAchievements,
+                          resetDaily,
+                          resetCasino,
+                        });
+                        toast.success(`Reset ${result.resetOptions.join(", ")} for ${result.userName}`);
+                      } catch (e: unknown) {
+                        toast.error(e instanceof Error ? e.message : "Failed");
+                      }
+                    }}
+                    className="mt-2 rounded-md border border-red-500/40 bg-red-500/10 px-4 py-2 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-red-400 hover:bg-red-500/20 disabled:opacity-30"
+                  >
+                    Reset Progress
+                  </button>
+                </div>
               </div>
             </div>
           </CollapsibleSection>

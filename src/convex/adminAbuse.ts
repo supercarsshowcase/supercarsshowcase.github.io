@@ -175,3 +175,61 @@ export const claimGift = mutation({
     return gift;
   },
 });
+
+// ── Reset Player Progress ─────────────────────────────────────────────────────
+
+export const resetPlayerProgress = mutation({
+  args: {
+    userId: v.id("users"),
+    resetCash: v.boolean(),
+    resetCars: v.boolean(),
+    resetParts: v.boolean(),
+    resetUpgrades: v.boolean(),
+    resetPrestige: v.boolean(),
+    resetAchievements: v.boolean(),
+    resetDaily: v.boolean(),
+    resetCasino: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const target = await ctx.db.get(args.userId);
+    if (!target) throw new Error("User not found.");
+
+    const resetOptions: string[] = [];
+    if (args.resetCash) resetOptions.push("cash");
+    if (args.resetCars) resetOptions.push("cars");
+    if (args.resetParts) resetOptions.push("parts");
+    if (args.resetUpgrades) resetOptions.push("upgrades");
+    if (args.resetPrestige) resetOptions.push("prestige");
+    if (args.resetAchievements) resetOptions.push("achievements");
+    if (args.resetDaily) resetOptions.push("daily");
+    if (args.resetCasino) resetOptions.push("casino");
+
+    if (resetOptions.length === 0) {
+      throw new Error("Select at least one thing to reset.");
+    }
+
+    await ctx.db.insert("adminGifts", {
+      userId: args.userId,
+      kind: "reset",
+      resetOptions: {
+        cash: args.resetCash,
+        cars: args.resetCars,
+        parts: args.resetParts,
+        upgrades: args.resetUpgrades,
+        prestige: args.resetPrestige,
+        achievements: args.resetAchievements,
+        daily: args.resetDaily,
+        casino: args.resetCasino,
+      },
+      claimed: false,
+      createdAt: Date.now(),
+    });
+
+    return {
+      success: true,
+      userName: target.name ?? "Unknown",
+      resetOptions,
+    };
+  },
+});

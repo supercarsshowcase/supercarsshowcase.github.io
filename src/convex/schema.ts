@@ -142,12 +142,13 @@ const schema = defineSchema(
       createdAt: v.number(),
     }).index("by_key", ["key"]),
 
-    // Admin gifts (money / cars) pending for individual users.
+    // Admin gifts (money / cars / resets) pending for individual users.
     adminGifts: defineTable({
       userId: v.id("users"),
-      kind: v.string(), // "money" | "car"
+      kind: v.string(), // "money" | "car" | "reset"
       amount: v.optional(v.number()),
       carId: v.optional(v.string()),
+      resetOptions: v.optional(v.record(v.string(), v.boolean())),
       claimed: v.boolean(),
       createdAt: v.number(),
     })

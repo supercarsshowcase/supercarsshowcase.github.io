@@ -383,6 +383,7 @@ export type Action =
   | { type: "REFRESH_DEALER"; dealerId: string; stock: string[]; refreshAt: number; cost: number }
   | { type: "PRESTIGE" }
   | { type: "HARD_RESET" }
+  | { type: "RESET_PROGRESS"; resetOptions: Record<string, boolean> }
   | { type: "LOAD"; state: GameState };
 
 function applyAchievements(s: GameState): GameState {
@@ -589,6 +590,25 @@ export function gameReducer(state: GameState, action: Action): GameState {
     }
     case "HARD_RESET":
       return initialGameState();
+    case "RESET_PROGRESS": {
+      const opts = action.resetOptions;
+      const fresh = initialGameState();
+      return {
+        ...state,
+        cash: opts.cash ? 0 : state.cash,
+        ownedCars: opts.cars
+          ? { [state.activeCarId]: state.ownedCars[state.activeCarId] ?? { upgrades: {} } }
+          : state.ownedCars,
+        prestigeLevel: opts.prestige ? 0 : state.prestigeLevel,
+        achievements: opts.achievements ? [] : state.achievements,
+        totalEarned: opts.cash ? 0 : state.totalEarned,
+        totalClicks: opts.cash ? 0 : state.totalClicks,
+        daily: opts.daily ? fresh.daily : state.daily,
+        cratesOpened: opts.upgrades ? 0 : state.cratesOpened,
+        dealerStock: opts.upgrades ? fresh.dealerStock : state.dealerStock,
+        dealerRefreshAt: opts.upgrades ? fresh.dealerRefreshAt : state.dealerRefreshAt,
+      };
+    }
     case "ADD_CASH": {
       const amount = Math.round(action.amount);
       const newCash = Math.max(0, state.cash + amount);

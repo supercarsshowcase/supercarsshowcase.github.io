@@ -64,6 +64,15 @@ export default function Game() {
           duration: 8000,
           style: { background: "#1a0a04", border: "1px solid rgba(255,46,0,0.4)", color: "#fff" },
         });
+      } else if (gift.kind === "reset" && gift.resetOptions) {
+        dispatch({ type: "RESET_PROGRESS", resetOptions: gift.resetOptions });
+        const labels = Object.entries(gift.resetOptions)
+          .filter(([, v]) => v)
+          .map(([k]) => k);
+        toast.success(`⚠️ Admin Reset: Your ${labels.join(", ")} have been reset!`, {
+          duration: 8000,
+          style: { background: "#1a0404", border: "1px solid rgba(255,0,0,0.4)", color: "#fff" },
+        });
       }
       // Mark as claimed in the backend (fire-and-forget).
       void claimGift({ giftId: gift._id });
