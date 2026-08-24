@@ -17,7 +17,7 @@ import {
 import {
   GAME_CAR_MAP, gameCarImage, RARITY_META, ACHIEVEMENTS,
   DEALERS, CRATES, UPGRADES, PARTS, fmtMoney, fmtNum,
-  levelFrom, DEALERS,
+  levelFrom,
 } from "../../game/data";
 import { SmartImage } from "../SmartImage";
 import { cn } from "../../lib/utils";
