@@ -35,7 +35,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
 
   type AuthMode = "username" | "email" | "email-otp";
   const [mode, setMode] = useState<AuthMode>("username");
-  const [flow, setFlow] = useState<"signIn" | "signUp">("signIn");
+  const [flow, setFlow] = useState<"signIn" | "signUp">("signUp");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -70,9 +70,12 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
       navigate(redirect);
     } catch (err) {
       console.error("Username auth error:", err);
-      setError(
-        err instanceof Error ? err.message : "Sign in failed. Please try again.",
-      );
+      const msg = err instanceof Error ? err.message : String(err);
+      if (flow === "signIn" && (msg.includes("Invalid credentials") || msg.includes("Server Error") || msg.includes("Called by client"))) {
+        setError("No account found with this username. Try creating an account first!");
+      } else {
+        setError(msg || "Auth failed. Please try again.");
+      }
       setIsLoading(false);
     }
   };
