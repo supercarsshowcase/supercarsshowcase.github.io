@@ -21,6 +21,7 @@ import {
 } from "../../game/data";
 import { SmartImage } from "../SmartImage";
 import { cn } from "../../lib/utils";
+import { CasinoPanel } from "./CasinoPanel";
 import type { GameState, Rarity, SpinResult, CrateResult } from "../../game/types";
 import {
   RefreshCw, Trophy, Wrench, Package, X as XIcon, Save,
@@ -569,6 +570,7 @@ export function GamePanels({ tab, state, dispatch }: { tab: string; state: GameS
     case "inventory": return <PartsBin state={state} dispatch={dispatch} />;
     case "achievements": return <AchievementsPanel state={state} />;
     case "prestige": return <PrestigePanel state={state} dispatch={dispatch} />;
+    case "casino": return <CasinoPanel state={state} dispatch={dispatch} />;
     default: return <GaragePanel state={state} dispatch={dispatch} />;
   }
 }
