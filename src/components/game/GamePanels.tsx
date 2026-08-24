@@ -187,6 +187,16 @@ function SpinPanel({ state, dispatch }: { state: GameState; dispatch: any }) {
             className="rounded-md bg-apex-red py-3 font-display text-sm font-black uppercase tracking-[0.2em] text-white transition-colors hover:bg-apex-red/80 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/30">
             {spinning ? "Spinning…" : canSpin ? (state.freeSpins > 0 ? `SPIN — ${state.freeSpins.toLocaleString()} FREE SPINS` : "SPIN — FREE") : "Next spin in " + waitLabel}
           </button>
+          {!canSpin && !spinning && (
+            <button type="button" onClick={() => {
+              const skipCost = Math.round(500 * Math.pow(1.5, levelFrom(state)));
+              if (state.cash < skipCost) return;
+              dispatch({ type: 'SKIP_COOLDOWN', cost: skipCost });
+            }}
+              className="mt-2 rounded-md border border-white/15 py-2 font-display text-[10px] font-bold uppercase tracking-[0.16em] text-white/50 transition-colors hover:border-apex-red/50 hover:text-white/80">
+              Skip Cooldown -- {fmtMoney(Math.round(500 * Math.pow(1.5, levelFrom(state))))}
+            </button>
+          )}
           <p className="mt-2 text-center text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">1% ($10-30M) | 0.01% ($100-300M) | 0.001% ($1B+) | bonus spins available</p>
           <div className="mt-6 space-y-3">
             <div className="flex items-center justify-between">

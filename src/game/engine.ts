@@ -387,6 +387,7 @@ export type Action =
   | { type: "HARD_RESET" }
   | { type: "RESET_PROGRESS"; resetOptions: Record<string, boolean> }
   | { type: "GIVE_SPINS"; amount: number }
+  | { type: "SKIP_COOLDOWN"; cost: number }
   | { type: "LOAD"; state: GameState };
 
 function applyAchievements(s: GameState): GameState {
@@ -598,6 +599,9 @@ export function gameReducer(state: GameState, action: Action): GameState {
     }
     case "GIVE_SPINS":
       return { ...state, freeSpins: state.freeSpins + Math.max(0, Math.round(action.amount)) };
+    case "SKIP_COOLDOWN":
+      if (state.cash < action.cost) return state;
+      return { ...state, cash: state.cash - action.cost, lastSpinAt: 0 };
     case "HARD_RESET":
       return initialGameState();
     case "RESET_PROGRESS": {
