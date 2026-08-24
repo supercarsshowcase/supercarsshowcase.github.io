@@ -162,6 +162,19 @@ const schema = defineSchema(
     }).index("by_user", ["userId"])
       .index("by_lastSeen", ["lastSeen"]),
 
+    // Leaderboard — one row per player, updated on save.
+    leaderboard: defineTable({
+      userId: v.id("users"),
+      name: v.string(),
+      cash: v.number(),
+      totalEarned: v.number(),
+      level: v.number(),
+      prestigeLevel: v.number(),
+      carCount: v.number(),
+      lastUpdated: v.number(),
+    }).index("by_cash", ["cash"])
+      .index("by_user", ["userId"]),
+
   },
   {
     schemaValidation: false,

@@ -19,6 +19,7 @@ import {
   TrendingUp,
   Trophy,
   Wrench,
+  BarChart3,
   type LucideIcon,
 } from "lucide-react";
 import { SmartImage } from "@/components/SmartImage";
@@ -53,6 +54,7 @@ const NAV: { id: TabId; label: string; icon: LucideIcon }[] = [
   { id: "upgrades", label: "Upgrades", icon: Wrench },
   { id: "inventory", label: "Parts", icon: Boxes },
   { id: "casino", label: "Casino", icon: Dice5 },
+  { id: "leaderboard", label: "Leaderboard", icon: BarChart3 },
   { id: "achievements", label: "Achievements", icon: Trophy },
   { id: "prestige", label: "Prestige", icon: Sparkles },
 ];
@@ -66,6 +68,7 @@ type TabId =
   | "upgrades"
   | "inventory"
   | "casino"
+  | "leaderboard"
   | "achievements"
   | "prestige";
 

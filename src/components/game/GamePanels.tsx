@@ -22,6 +22,7 @@ import {
 import { SmartImage } from "../SmartImage";
 import { cn } from "../../lib/utils";
 import { CasinoPanel } from "./CasinoPanel";
+import { LeaderboardPanel } from "./LeaderboardPanel";
 import type { GameState, Rarity, SpinResult, CrateResult } from "../../game/types";
 import {
   RefreshCw, Trophy, Wrench, Package, X as XIcon, Save,
@@ -571,6 +572,7 @@ export function GamePanels({ tab, state, dispatch }: { tab: string; state: GameS
     case "achievements": return <AchievementsPanel state={state} />;
     case "prestige": return <PrestigePanel state={state} dispatch={dispatch} />;
     case "casino": return <CasinoPanel state={state} dispatch={dispatch} />;
+    case "leaderboard": return <LeaderboardPanel />;
     default: return <GaragePanel state={state} dispatch={dispatch} />;
   }
 }

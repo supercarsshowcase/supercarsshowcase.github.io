@@ -11,6 +11,7 @@ export default function Game() {
   const activeEvent = useQuery(api.adminAbuse.getActiveEvent);
   const gifts = useQuery(api.adminAbuse.getMyGifts);
   const claimGift = useMutation(api.adminAbuse.claimGift);
+  const upsertScore = useMutation(api.leaderboard.upsertScore);
 
   const [state, dispatch] = useReducer(gameReducer, undefined, loadGame);
   const stateRef = useRef(state);
@@ -117,6 +118,36 @@ export default function Game() {
       });
     }, 1000);
     return () => window.clearInterval(id);
+  }, []);
+
+  // Update leaderboard score every 30 seconds.
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      const s = stateRef.current;
+      if (!s) return;
+      const { levelFrom } = require("@/game/data");
+      void upsertScore({
+        cash: s.cash,
+        totalEarned: s.totalEarned,
+        level: levelFrom(s),
+        prestigeLevel: s.prestigeLevel,
+        carCount: Object.keys(s.ownedCars).length,
+      });
+    }, 30_000);
+    // Also update on first mount after a short delay.
+    const initial = setTimeout(() => {
+      const s = stateRef.current;
+      if (!s) return;
+      const { levelFrom } = require("@/game/data");
+      void upsertScore({
+        cash: s.cash,
+        totalEarned: s.totalEarned,
+        level: levelFrom(s),
+        prestigeLevel: s.prestigeLevel,
+        carCount: Object.keys(s.ownedCars).length,
+      });
+    }, 3000);
+    return () => { window.clearInterval(id); clearTimeout(initial); };
   }, []);
 
   return (
