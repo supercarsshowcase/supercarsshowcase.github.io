@@ -64,6 +64,12 @@ export default function Game() {
           duration: 8000,
           style: { background: "#1a0a04", border: "1px solid rgba(255,46,0,0.4)", color: "#fff" },
         });
+      } else if (gift.kind === "spins" && gift.amount) {
+        dispatch({ type: "GIVE_SPINS", amount: gift.amount });
+        toast.success(`🎰 Admin Gift: +${gift.amount.toLocaleString()} free spins!`, {
+          duration: 8000,
+          style: { background: "#1a0a04", border: "1px solid rgba(255,46,0,0.4)", color: "#fff" },
+        });
       } else if (gift.kind === "reset" && gift.resetOptions) {
         dispatch({ type: "RESET_PROGRESS", resetOptions: gift.resetOptions });
         const labels = Object.entries(gift.resetOptions)

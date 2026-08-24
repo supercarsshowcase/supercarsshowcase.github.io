@@ -135,7 +135,7 @@ function SpinPanel({ state, dispatch }: { state: GameState; dispatch: any }) {
 
   return (
     <div>
-      <SectionHeader eyebrow="Lucky Spin" title="SPIN THE WHEEL" hint="Free every 15 minutes. Three car tiers rotate hourly: 1% = $10-30M, 0.01% = $100-300M, 0.001% = $1B+." />
+      <SectionHeader eyebrow="Lucky Spin" title="SPIN THE WHEEL" hint="Free every 15 minutes. Admin can grant bonus spins. Three car tiers rotate hourly." />
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1.15fr_1fr]">
         <div className="relative mx-auto aspect-square w-full max-w-[600px]">
           <div className="absolute left-1/2 top-0 z-20 -translate-x-1/2 -translate-y-1/2">
@@ -185,9 +185,9 @@ function SpinPanel({ state, dispatch }: { state: GameState; dispatch: any }) {
         <div className="flex flex-col justify-center">
           <button type="button" disabled={!canSpin} onClick={spin}
             className="rounded-md bg-apex-red py-3 font-display text-sm font-black uppercase tracking-[0.2em] text-white transition-colors hover:bg-apex-red/80 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/30">
-            {spinning ? "Spinning…" : canSpin ? "SPIN — FREE" : "Next spin in " + waitLabel}
+            {spinning ? "Spinning…" : canSpin ? (state.freeSpins > 0 ? `SPIN — ${state.freeSpins.toLocaleString()} FREE SPINS` : "SPIN — FREE") : "Next spin in " + waitLabel}
           </button>
-          <p className="mt-2 text-center text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">1% ($10-30M) | 0.01% ($100-300M) | 0.001% ($1B+) | free every 15 min</p>
+          <p className="mt-2 text-center text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">1% ($10-30M) | 0.01% ($100-300M) | 0.001% ($1B+) | bonus spins available</p>
           <div className="mt-6 space-y-3">
             <div className="flex items-center justify-between">
               <p className="font-display text-[10px] font-semibold uppercase tracking-[0.22em] text-white/40">This hour{"'"}s cars</p>

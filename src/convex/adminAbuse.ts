@@ -176,6 +176,31 @@ export const claimGift = mutation({
   },
 });
 
+// ── Give Spins to a user ─────────────────────────────────────────────────────
+
+export const giveSpins = mutation({
+  args: {
+    userId: v.id("users"),
+    amount: v.number(),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const target = await ctx.db.get(args.userId);
+    if (!target) throw new Error("User not found.");
+    if (args.amount <= 0 || args.amount > 10_000_000) {
+      throw new Error("Amount must be between 1 and 10,000,000.");
+    }
+    await ctx.db.insert("adminGifts", {
+      userId: args.userId,
+      kind: "spins",
+      amount: Math.round(args.amount),
+      claimed: false,
+      createdAt: Date.now(),
+    });
+    return { success: true, amount: Math.round(args.amount), userName: target.name ?? "Unknown" };
+  },
+});
+
 // ── Reset Player Progress ─────────────────────────────────────────────────────
 
 export const resetPlayerProgress = mutation({

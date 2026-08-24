@@ -64,6 +64,7 @@ export function initialGameState(): GameState {
     clicksOnStarter: 0,
     lastTick: now,
     lastSpinAt: 0,
+    freeSpins: 0,
   };
 }
 
@@ -260,6 +261,7 @@ export function spinCashSlices(state: GameState): number[] {
 
 /** When the wheel becomes free to spin again. */
 export function spinReadyAt(state: GameState): number {
+  if (state.freeSpins > 0) return 0; // free spins are always ready
   return state.lastSpinAt + SPIN_COOLDOWN_MS;
 }
 
@@ -384,6 +386,7 @@ export type Action =
   | { type: "PRESTIGE" }
   | { type: "HARD_RESET" }
   | { type: "RESET_PROGRESS"; resetOptions: Record<string, boolean> }
+  | { type: "GIVE_SPINS"; amount: number }
   | { type: "LOAD"; state: GameState };
 
 function applyAchievements(s: GameState): GameState {
@@ -546,28 +549,33 @@ export function gameReducer(state: GameState, action: Action): GameState {
       };
     }
     case "SPIN": {
-      if (action.now < state.lastSpinAt + SPIN_COOLDOWN_MS) return state;
+      const hasFreeSpin = state.freeSpins > 0;
+      if (!hasFreeSpin && action.now < state.lastSpinAt + SPIN_COOLDOWN_MS) return state;
+      const nextFreeSpins = hasFreeSpin ? state.freeSpins - 1 : state.freeSpins;
       const r = action.result;
       if (r.kind === "car" && r.carId) {
         const def = GAME_CAR_MAP[r.carId];
-        if (!def) return { ...state, lastSpinAt: action.now };
+        if (!def) return { ...state, lastSpinAt: action.now, freeSpins: nextFreeSpins };
         if (state.ownedCars[r.carId]) {
           return applyAchievements({
             ...state,
             cash: state.cash + Math.round(def.value * 0.2),
             lastSpinAt: action.now,
+            freeSpins: nextFreeSpins,
           });
         }
         return applyAchievements({
           ...state,
           ownedCars: { ...state.ownedCars, [r.carId]: { upgrades: {} } },
           lastSpinAt: action.now,
+          freeSpins: nextFreeSpins,
         });
       }
       return applyAchievements({
         ...state,
         cash: state.cash + (r.amount ?? 0),
         lastSpinAt: action.now,
+        freeSpins: nextFreeSpins,
       });
     }
     case "REFRESH_DEALER":
@@ -588,6 +596,8 @@ export function gameReducer(state: GameState, action: Action): GameState {
         lastTick: Date.now(),
       };
     }
+    case "GIVE_SPINS":
+      return { ...state, freeSpins: state.freeSpins + Math.max(0, Math.round(action.amount)) };
     case "HARD_RESET":
       return initialGameState();
     case "RESET_PROGRESS": {

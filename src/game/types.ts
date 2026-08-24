@@ -125,6 +125,8 @@ export interface GameState {
   lastTick: number;
   /** Timestamp of the last Lucky Spin; the wheel is free every 15 minutes. */
   lastSpinAt: number;
+  /** Bonus spins granted by admin that skip the cooldown. */
+  freeSpins: number;
 }
 
 export interface SpinResult {

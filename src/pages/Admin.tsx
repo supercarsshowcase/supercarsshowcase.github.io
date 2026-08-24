@@ -29,6 +29,7 @@ import {
   Gift,
   Zap,
   Verified,
+  RotateCw,
 } from "lucide-react";
 import { carsList } from "@/data/cars";
 import { PageEditor } from "@/components/PageEditor";
@@ -403,6 +404,7 @@ export default function Admin() {
   const setMultiplierEvent = useMutation(api.adminAbuse.setMultiplierEvent);
   const clearMultiplierEvent = useMutation(api.adminAbuse.clearMultiplierEvent);
   const resetPlayerProgress = useMutation(api.adminAbuse.resetPlayerProgress);
+  const giveSpins = useMutation(api.adminAbuse.giveSpins);
   const setFeedbackStatus = useMutation(api.feedback.setFeedbackStatus);
   const deleteFeedback = useMutation(api.feedback.deleteFeedback);
   const saveCarEdit = useMutation(api.cars.saveCarEdit);
@@ -416,6 +418,7 @@ export default function Admin() {
   const [eventMultiplier, setEventMultiplier] = useState("100");
   const [eventDuration, setEventDuration] = useState("30");
   const [eventLabel, setEventLabel] = useState("100x EVENT");
+  const [abuseSpins, setAbuseSpins] = useState("");
   const [resetCash, setResetCash] = useState(false);
   const [resetCars, setResetCars] = useState(false);
   const [resetParts, setResetParts] = useState(false);
@@ -759,6 +762,60 @@ export default function Admin() {
                     className="rounded-md bg-apex-red px-4 py-2 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-white hover:opacity-90"
                   >
                     Send Car
+                  </button>
+                </div>
+              </div>
+
+              {/* Give Spins Card */}
+              <div className="rounded-xl border border-apex-line bg-[#08080a] p-4">
+                <h3 className="mb-3 flex items-center gap-2 font-display text-xs font-bold uppercase tracking-[0.16em] text-white/70">
+                  <span className="flex size-6 items-center justify-center rounded-md bg-violet-500/10"><RotateCw className="size-3.5 text-violet-400" /></span>
+                  Give Spins
+                </h3>
+
+                <div className="flex items-end gap-2">
+                  <div className="flex-1">
+                    <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40">
+                      Number of spins
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="10000000"
+                      value={abuseSpins}
+                      onChange={(e) => setAbuseSpins(e.target.value)}
+                      placeholder="100"
+                      className="w-full rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3 py-2 text-sm text-white outline-none focus:border-apex-red"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!abuseTarget || !abuseSpins) {
+                        toast.error("Select a user and enter an amount");
+                        return;
+                      }
+                      const amt = Math.min(Number(abuseSpins), 10_000_000);
+                      if (amt <= 0 || !isFinite(amt)) {
+                        toast.error("Invalid amount");
+                        return;
+                      }
+                      try {
+                        await giveSpins({
+                          userId: abuseTarget as Id<"users">,
+                          amount: amt,
+                        });
+                        toast.success(`Gave ${amt.toLocaleString()} spins`);
+                        setAbuseSpins("");
+                      } catch (e: unknown) {
+                        toast.error(
+                          e instanceof Error ? e.message : "Failed",
+                        );
+                      }
+                    }}
+                    className="rounded-md bg-violet-600 px-4 py-2 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-white hover:opacity-90"
+                  >
+                    Send Spins
                   </button>
                 </div>
               </div>
