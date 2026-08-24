@@ -20,7 +20,7 @@ async function isAdmin(ctx: QueryCtx | MutationCtx) {
   const userId = await getAuthUserId(ctx);
   if (userId === null) return false;
   const user = await ctx.db.get(userId);
-  return Boolean(user && user.role === "admin");
+  return Boolean(user && (user.role === "admin" || user.role === "owner"));
 }
 
 /** Public — every visitor needs this to render the owner's chosen copy. */
