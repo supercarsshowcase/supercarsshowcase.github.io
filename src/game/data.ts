@@ -760,6 +760,15 @@ const GAME_CAR_IMAGES: Record<string, string> = {
   // Endgame one-offs — real exotic photos for the fictional ultimates.
   "crystal-one-24": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/2017_Pagani_Zonda_HP_Barchetta_USG26.jpg/960px-2017_Pagani_Zonda_HP_Barchetta_USG26.jpg",
   "infinity-one-27": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/Mercedes-AMG_One_IAA_2023_1X7A0454.jpg/960px-Mercedes-AMG_One_IAA_2023_1X7A0454.jpg",
+  // Casino custom one-offs — real photos for the fictional casino editions.
+  "casino-infinity": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/Mercedes-AMG_One_IAA_2023_1X7A0454.jpg/960px-Mercedes-AMG_One_IAA_2023_1X7A0454.jpg",
+  "casino-crystal": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/2017_Pagani_Zonda_HP_Barchetta_USG26.jpg/960px-2017_Pagani_Zonda_HP_Barchetta_USG26.jpg",
+  "casino-imola": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6a/Pagani_Imola_%2850418650123%29.jpg/960px-Pagani_Imola_%2850418650123%29.jpg",
+  "casino-sian": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/Lamborghini_Si%C3%A1n_FKP_37_%2848881082362%29.jpg/960px-Lamborghini_Si%C3%A1n_FKP_37_%2848881082362%29.jpg",
+  "casino-812": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Ferrari_812_Superfast_in_Giallo_Modena_%28front%29%2C_10_January_2020.jpg/960px-Ferrari_812_Superfast_in_Giallo_Modena_%28front%29%2C_10_January_2020.jpg",
+  "casino-veneno": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/40/Lamborghini_Veneno_front.jpg/960px-Lamborghini_Veneno_front.jpg",
+  "casino-f458": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e2/Ferrari_458_Italia_-_Flickr_-_Alexandre_Pr%C3%A9vot_%281%29.jpg/960px-Ferrari_458_Italia_-_Flickr_-_Alexandre_Pr%C3%A9vot_%281%29.jpg",
+  "casino-720s": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f4/McLaren_720S_%2834579748431%29.jpg/960px-McLaren_720S_%2834579748431%29.jpg",
 };
 
 /** Manual image overrides for game cars whose archive twin uses a different slug. */
@@ -771,6 +780,8 @@ const GAME_IMAGE_ALIASES: Record<string, string> = {
   "rs3-19": "audi-r8-gt",
   "imola-20": "pagani-huayra",
   "veneno-14": "lamborghini-aventador-svj",
+  "ferrari-f8-19": "ferrari-488-gtb",
+  "m4-18": "bmw-m2",
 };
 
 const normTokens = (s: string): string[] =>
