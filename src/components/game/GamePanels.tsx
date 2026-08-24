@@ -250,7 +250,7 @@ function SpinPanel({ state, dispatch }: { state: GameState; dispatch: any }) {
                 ) : (
                   <Ge.div key="won-cash" initial={{ opacity: 0, scale: 0.8, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ type: "spring", stiffness: 260, damping: 18 }}>
                     <p className="font-display text-[10px] font-semibold uppercase tracking-[0.28em] text-white/40">You won</p>
-                    <p className="mt-2 font-display text-4xl font-black text-apex-red">{"+" + Ie(result.kind === "cash" ? result.amount : 0)}</p>
+                    <p className="mt-2 font-display text-4xl font-black text-apex-red">{"+" + Ie(result.kind === "cash" ? (result.cash ?? 0) : 0)}</p>
                   </Ge.div>
                 )
               ) : (
@@ -407,7 +407,7 @@ function CratePanel({ state, dispatch }: { state: GameState; dispatch: any }) {
         <div className="mt-6 rounded-xl border border-apex-line bg-apex-panel p-5 text-center">
           <p className="font-display text-[10px] font-semibold uppercase tracking-[0.28em] text-apex-red">Last Drop</p>
           <p className="mt-2 font-display text-xl font-black text-white">
-            {lastResult.kind === "car" ? (Te[lastResult.carId]?.name ?? "Car") : lastResult.kind === "part" ? "Part" : Ie(lastResult.amount)}
+            {lastResult.kind === "car" ? (Te[lastResult.carId]?.name ?? "Car") : lastResult.kind === "part" ? "Part" : Ie(lastResult.cash ?? 0)}
           </p>
         </div>
       )}
