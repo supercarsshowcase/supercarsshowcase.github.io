@@ -395,8 +395,8 @@ function CratePanel({ state, dispatch }: { state: GameState; dispatch: any }) {
               <h4 className="font-display text-base font-black text-white">{crate.name}</h4>
               <p className="mt-1 text-[11px] text-white/40">{crate.desc}</p>
               <div className="mt-4 flex items-center justify-between">
-                <span className="font-display text-sm font-black text-apex-red">{Ie(crate.cost)}</span>
-                <button type="button" disabled={state.cash < crate.cost} onClick={() => openCrate(crate.id)}
+                <span className="font-display text-sm font-black text-apex-red">{Ie(crate.cost * 5)}</span>
+                <button type="button" disabled={state.cash < crate.cost * 5} onClick={() => openCrate(crate.id)}
                   className="rounded-md bg-apex-red px-3 py-1.5 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-white transition-colors hover:bg-apex-red/80 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/30">Open</button>
               </div>
             </div>

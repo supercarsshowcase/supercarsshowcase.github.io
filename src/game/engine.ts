@@ -20,8 +20,16 @@ const STORAGE_VERSION = 1;
 export const SPIN_COOLDOWN_MS = 15 * 60_000;
 /** Chance the wheel lands on a supercar (0.3%). */
 export const SPIN_CAR_CHANCE = 0.003;
-/** 30% income nerf applied globally to all cars. */
-const INCOME_NERF = 0.7;
+/** 80% income nerf applied globally to all cars. */
+const INCOME_NERF = 0.2;
+/** Upgrade costs are 8x more expensive. */
+const UPGRADE_COST_MULT = 8;
+/** Upgrade effects are halved. */
+const UPGRADE_EFFECT_MULT = 0.5;
+/** Crate costs are 5x more expensive. */
+const CRATE_COST_MULT = 5;
+/** Spin cash rewards are 30% of original. */
+const SPIN_REWARD_MULT = 0.3;
 
 // ── Initial state ─────────────────────────────────────────────────────────────
 
@@ -82,10 +90,10 @@ function carUpgradeMults(state: GameState, carId: string) {
     if (!def || stage < 1) continue;
     for (let i = 0; i < Math.min(stage, def.stages.length); i++) {
       const fx = def.stages[i].effect;
-      out.clickMult += fx.clickMult ?? 0;
-      out.passiveMult += fx.passiveMult ?? 0;
-      out.valueMult += fx.valueMult ?? 0;
-      out.hpMult += fx.hpMult ?? 0;
+      out.clickMult += (fx.clickMult ?? 0) * UPGRADE_EFFECT_MULT;
+      out.passiveMult += (fx.passiveMult ?? 0) * UPGRADE_EFFECT_MULT;
+      out.valueMult += (fx.valueMult ?? 0) * UPGRADE_EFFECT_MULT;
+      out.hpMult += (fx.hpMult ?? 0) * UPGRADE_EFFECT_MULT;
     }
   }
   return out;
@@ -171,7 +179,7 @@ export function clickValue(state: GameState): number {
   const cond = conditionOf(state, state.activeCarId);
   const condMult = 0.5 + 0.5 * cond;
   const mults = carUpgradeMults(state, state.activeCarId);
-  const base = def.value * 0.003 * INCOME_NERF;
+  const base = def.value * 0.001 * INCOME_NERF;
   return Math.max(1, Math.round(base * (1 + mults.clickMult) * condMult * clickMultiplier(state)));
 }
 
@@ -183,7 +191,7 @@ export function passivePerSec(state: GameState): number {
     const cond = conditionOf(state, carId);
     const condMult = 0.5 + 0.5 * cond;
     const mults = carUpgradeMults(state, carId);
-    base += def.value * 0.00003 * INCOME_NERF * (1 + mults.passiveMult) * condMult;
+    base += def.value * 0.0003 * INCOME_NERF * (1 + mults.passiveMult) * condMult;
   }
   return base * passiveMultiplier(state);
 }
@@ -195,7 +203,7 @@ export function upgradeCost(state: GameState, carId: string, upgradeId: string):
   const stage = state.ownedCars[carId]?.upgrades[upgradeId] ?? 0;
   if (stage >= up.stages.length) return Infinity;
   const tier = Math.min(2_000_000, Math.max(1, Math.pow(def.value / 10_000, 0.8)));
-  return Math.max(1, Math.round(up.stages[stage].cost * tier));
+  return Math.max(1, Math.round(up.stages[stage].cost * tier * UPGRADE_COST_MULT));
 }
 
 export function buyPrice(defId: string): number {
@@ -258,7 +266,7 @@ const SPIN_CASH_BASE = [25, 50, 100, 200, 400, 800, 1600, 3000, 5000];
 
 export function spinCashSlices(state: GameState): number[] {
   const scale = 1 + (levelFrom(state) - 1) * 0.15;
-  return SPIN_CASH_BASE.map((v) => Math.round(v * scale));
+  return SPIN_CASH_BASE.map((v) => Math.round(v * scale * SPIN_REWARD_MULT));
 }
 
 /** When the wheel becomes free to spin again. */
@@ -354,7 +362,7 @@ export function dailyReward(state: GameState, now: number): number {
       ? state.daily.streak + 1
       : 1;
   const mult = Math.min(streak, 14);
-  return Math.round(100 * Math.pow(1.25, mult - 1) * (1 + state.prestigeLevel * 2));
+  return Math.round(100 * Math.pow(1.25, mult - 1) * (1 + state.prestigeLevel * 2) * 0.2);
 }
 
 // ── Achievements ──────────────────────────────────────────────────────────────
@@ -499,8 +507,9 @@ export function gameReducer(state: GameState, action: Action): GameState {
     }
     case "OPEN_CRATE": {
       const crate = CRATE_MAP[action.crateId];
-      if (!crate || state.cash < crate.cost) return state;
-      let cash = state.cash - crate.cost;
+      const actualCrateCost = crate.cost * CRATE_COST_MULT;
+      if (!crate || state.cash < actualCrateCost) return state;
+      let cash = state.cash - actualCrateCost;
       let ownedCars = state.ownedCars;
       let inventory = state.inventory;
       const r = action.result;
