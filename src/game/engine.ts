@@ -620,6 +620,8 @@ export function gameReducer(state: GameState, action: Action): GameState {
         cratesOpened: opts.upgrades ? 0 : state.cratesOpened,
         dealerStock: opts.upgrades ? fresh.dealerStock : state.dealerStock,
         dealerRefreshAt: opts.upgrades ? fresh.dealerRefreshAt : state.dealerRefreshAt,
+        lastSpinAt: opts.casino ? 0 : state.lastSpinAt,
+        freeSpins: opts.casino ? 0 : state.freeSpins,
       };
     }
     case "ADD_CASH": {
