@@ -507,8 +507,9 @@ export function gameReducer(state: GameState, action: Action): GameState {
     }
     case "OPEN_CRATE": {
       const crate = CRATE_MAP[action.crateId];
+      if (!crate) return state;
       const actualCrateCost = crate.cost * CRATE_COST_MULT;
-      if (!crate || state.cash < actualCrateCost) return state;
+      if (state.cash < actualCrateCost) return state;
       let cash = state.cash - actualCrateCost;
       let ownedCars = state.ownedCars;
       let inventory = state.inventory;
@@ -599,13 +600,13 @@ export function gameReducer(state: GameState, action: Action): GameState {
     case "PRESTIGE": {
       const requirement = 5000 * (state.prestigeLevel + 1);
       if (state.reputation < requirement) return state;
-      return {
+      return normalize(state, {
         ...initialGameState(),
         prestigeLevel: state.prestigeLevel + 1,
         achievements: state.achievements,
         totalEarned: 0,
         lastTick: Date.now(),
-      };
+      });
     }
     case "GIVE_SPINS":
       return { ...state, freeSpins: state.freeSpins + Math.max(0, Math.round(action.amount)) };
@@ -622,6 +623,7 @@ export function gameReducer(state: GameState, action: Action): GameState {
           ? { [state.activeCarId]: state.ownedCars[state.activeCarId] ?? { upgrades: {} } }
           : state.ownedCars,
         prestigeLevel: opts.prestige ? 0 : state.prestigeLevel,
+        reputation: opts.prestige ? 0 : state.reputation,
         achievements: opts.achievements ? [] : state.achievements,
         totalEarned: opts.cash ? 0 : state.totalEarned,
         totalClicks: opts.cash ? 0 : state.totalClicks,
