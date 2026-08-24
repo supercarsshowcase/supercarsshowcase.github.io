@@ -128,15 +128,11 @@ function SpinPanel({ state, dispatch }: { state: GameState; dispatch: any }) {
     });
   }, [canSpin, spinning, state]);
 
-  const skipSpinCost = Math.max(1000, Math.round(state.cash * 0.05));
-
   const skipSpin = useCallback(() => {
     if (!result || !spinning) return;
-    if (state.cash < skipSpinCost) return;
-    dispatch({ type: 'ADD_CASH', amount: -skipSpinCost });
     dispatch({ type: 'SPIN', now: Date.now(), result });
     setSpinning(false);
-  }, [result, spinning, state, skipSpinCost]);
+  }, [result, spinning]);
 
   const wonCar = result?.kind === 'car' && result.carId ? Te[result.carId] : null;
   const stops = U9.map((c, i) => c + " " + (i * or2).toFixed(1) + "deg " + ((i + 1) * or2).toFixed(1) + "deg").join(", ");
@@ -199,21 +195,11 @@ function SpinPanel({ state, dispatch }: { state: GameState; dispatch: any }) {
           </button>
           {spinning && (
             <button type="button" onClick={skipSpin}
-              disabled={state.cash < skipSpinCost}
-              className="mt-2 rounded-md border border-amber-400/30 bg-amber-400/5 py-2 font-display text-[10px] font-bold uppercase tracking-[0.16em] text-amber-300/70 transition-colors hover:border-amber-400/50 hover:text-amber-300 disabled:cursor-not-allowed disabled:opacity-30">
-              Skip Spin -- {fmtMoney(skipSpinCost)}
+              className="mt-2 rounded-md border border-amber-400/30 bg-amber-400/5 py-2 font-display text-[10px] font-bold uppercase tracking-[0.16em] text-amber-300/70 transition-colors hover:border-amber-400/50 hover:text-amber-300">
+              Skip Animation
             </button>
           )}
-          {!canSpin && !spinning && (
-            <button type="button" onClick={() => {
-              const skipCost = Math.round(500 * Math.pow(1.5, levelFrom(state)));
-              if (state.cash < skipCost) return;
-              dispatch({ type: 'SKIP_COOLDOWN', cost: skipCost });
-            }}
-              className="mt-2 rounded-md border border-white/15 py-2 font-display text-[10px] font-bold uppercase tracking-[0.16em] text-white/50 transition-colors hover:border-apex-red/50 hover:text-white/80">
-              Skip Cooldown -- {fmtMoney(Math.round(500 * Math.pow(1.5, levelFrom(state))))}
-            </button>
-          )}
+
           <p className="mt-2 text-center text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">1% ($10-30M) | 0.01% ($100-300M) | 0.001% ($1B+) | bonus spins available</p>
           <div className="mt-6 space-y-3">
             <div className="flex items-center justify-between">
