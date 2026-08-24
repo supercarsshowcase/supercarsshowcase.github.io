@@ -6,7 +6,7 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp";
 import { useAuth } from "@/hooks/use-auth";
-import { ArrowRight, ArrowLeft, Loader2, Mail, UserX } from "lucide-react";
+import { ArrowRight, ArrowLeft, Loader2, User, Lock, Mail, UserX } from "lucide-react";
 import { Suspense, useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 
@@ -32,10 +32,21 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
     searchParams.get("returnTo"),
     redirectAfterAuth,
   );
-  const [step, setStep] = useState<"signIn" | { email: string }>("signIn");
-  const [otp, setOtp] = useState("");
+
+  type AuthMode = "username" | "email" | "email-otp";
+  const [mode, setMode] = useState<AuthMode>("username");
+  const [flow, setFlow] = useState<"signIn" | "signUp">("signIn");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Username + password fields
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+
+  // Email OTP fields
+  const [otpEmail, setOtpEmail] = useState("");
+  const [otp, setOtp] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
@@ -43,14 +54,40 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
     }
   }, [authLoading, isAuthenticated, navigate, redirect]);
 
+  // ── Username + Password ──
+  const handleUsernameSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+    try {
+      const syntheticEmail = `${username.trim().toLowerCase()}@supercars.showcase`;
+      await signIn("username-password", {
+        flow,
+        email: syntheticEmail,
+        username: username.trim().toLowerCase(),
+        password,
+      });
+      navigate(redirect);
+    } catch (err) {
+      console.error("Username auth error:", err);
+      setError(
+        err instanceof Error ? err.message : "Sign in failed. Please try again.",
+      );
+      setIsLoading(false);
+    }
+  };
+
+  // ── Email OTP ──
   const handleEmailSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsLoading(true);
     setError(null);
     try {
       const formData = new FormData(event.currentTarget);
+      const email = String(formData.get("email") ?? "");
+      setOtpEmail(email);
       await signIn("email-otp", formData);
-      setStep({ email: formData.get("email") as string });
+      setOtpSent(true);
       setIsLoading(false);
     } catch (err) {
       console.error("Email sign-in error:", err);
@@ -79,6 +116,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
     }
   };
 
+  // ── Guest ──
   const handleGuestLogin = async () => {
     setIsLoading(true);
     setError(null);
@@ -133,6 +171,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
             <p className="mt-5 max-w-sm text-sm leading-6 text-white/60">
               Sign in to keep your favorite supercars close. Browse the archive,
               build your collection, and compare the fastest machines on earth.
+              Your progress syncs across all your devices.
             </p>
           </div>
           <p className="text-xs uppercase tracking-[0.2em] text-white/30">
@@ -162,27 +201,146 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
             </Link>
           </div>
 
-          {step === "signIn" ? (
+          {/* ─── Username + Password Mode ─── */}
+          {mode === "username" && (
             <>
               <h2 className="font-display text-3xl font-black tracking-tight">
-                GET STARTED
+                {flow === "signIn" ? "WELCOME BACK" : "CREATE ACCOUNT"}
               </h2>
               <p className="mt-2 text-sm text-apex-muted">
-                Enter your email to sign in or create your account.
+                {flow === "signIn"
+                  ? "Sign in with your username and password."
+                  : "Choose a username and password to get started."}
+              </p>
+
+              <form onSubmit={handleUsernameSubmit} className="mt-8 space-y-4">
+                <div>
+                  <label className="font-display text-[11px] font-semibold uppercase tracking-[0.18em] text-white/50">
+                    Username
+                  </label>
+                  <div className="relative mt-2">
+                    <User className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-white/40" />
+                    <Input
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      placeholder="your_username"
+                      className="h-11 border-white/15 bg-black pl-10 text-white placeholder:text-white/30 focus:border-apex-red"
+                      disabled={isLoading}
+                      required
+                      minLength={3}
+                      maxLength={20}
+                      autoComplete="username"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="font-display text-[11px] font-semibold uppercase tracking-[0.18em] text-white/50">
+                    Password
+                  </label>
+                  <div className="relative mt-2">
+                    <Lock className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-white/40" />
+                    <Input
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="h-11 border-white/15 bg-black pl-10 text-white placeholder:text-white/30 focus:border-apex-red"
+                      disabled={isLoading}
+                      required
+                      minLength={4}
+                      autoComplete={flow === "signIn" ? "current-password" : "new-password"}
+                    />
+                  </div>
+                </div>
+
+                {error && <p className="text-sm text-apex-red">{error}</p>}
+
+                <Button
+                  type="submit"
+                  className="h-11 w-full bg-apex-red text-white hover:bg-apex-red-bright"
+                  disabled={isLoading || username.length < 3 || password.length < 4}
+                >
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : flow === "signIn" ? (
+                    <>
+                      Sign In
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </>
+                  ) : (
+                    <>
+                      Create Account
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </>
+                  )}
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => { setFlow(flow === "signIn" ? "signUp" : "signIn"); setError(null); }}
+                  disabled={isLoading}
+                  className="w-full text-white/60 hover:bg-transparent hover:text-white"
+                >
+                  {flow === "signIn"
+                    ? "Don't have an account? Sign Up"
+                    : "Already have an account? Sign In"}
+                </Button>
+              </form>
+
+              <div className="mt-6 flex items-center gap-4">
+                <span className="h-px flex-1 bg-apex-line" />
+                <span className="text-[11px] uppercase tracking-[0.2em] text-white/40">
+                  Or
+                </span>
+                <span className="h-px flex-1 bg-apex-line" />
+              </div>
+
+              <div className="mt-6 space-y-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 w-full border-white/15 bg-transparent text-white hover:border-apex-red hover:bg-apex-red/10"
+                  onClick={() => { setMode("email"); setError(null); }}
+                  disabled={isLoading}
+                >
+                  <Mail className="mr-2 h-4 w-4" />
+                  Use Email Instead
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 w-full border-white/15 bg-transparent text-white hover:border-apex-red hover:bg-apex-red/10"
+                  onClick={handleGuestLogin}
+                  disabled={isLoading}
+                >
+                  <UserX className="mr-2 h-4 w-4" />
+                  Continue as Guest
+                </Button>
+              </div>
+            </>
+          )}
+
+          {/* ─── Email OTP Mode ─── */}
+          {mode === "email" && !otpSent && (
+            <>
+              <h2 className="font-display text-3xl font-black tracking-tight">
+                SIGN IN WITH EMAIL
+              </h2>
+              <p className="mt-2 text-sm text-apex-muted">
+                Enter your email to receive a verification code.
               </p>
 
               <form onSubmit={handleEmailSubmit} className="mt-8">
-                <label
-                  htmlFor="email"
-                  className="font-display text-[11px] font-semibold uppercase tracking-[0.18em] text-white/50"
-                >
+                <label className="font-display text-[11px] font-semibold uppercase tracking-[0.18em] text-white/50">
                   Email address
                 </label>
                 <div className="relative mt-2 flex items-center gap-2">
                   <div className="relative flex-1">
                     <Mail className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-white/40" />
                     <Input
-                      id="email"
                       name="email"
                       placeholder="name@example.com"
                       type="email"
@@ -206,38 +364,33 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                 </div>
                 {error && <p className="mt-3 text-sm text-apex-red">{error}</p>}
 
-                <div className="mt-8 flex items-center gap-4">
-                  <span className="h-px flex-1 bg-apex-line" />
-                  <span className="text-[11px] uppercase tracking-[0.2em] text-white/40">
-                    Or
-                  </span>
-                  <span className="h-px flex-1 bg-apex-line" />
-                </div>
-
                 <Button
                   type="button"
-                  variant="outline"
-                  className="mt-6 h-11 w-full border-white/15 bg-transparent text-white hover:border-apex-red hover:bg-apex-red/10"
-                  onClick={handleGuestLogin}
+                  variant="ghost"
+                  onClick={() => { setMode("username"); setError(null); }}
                   disabled={isLoading}
+                  className="mt-4 w-full text-white/60 hover:bg-transparent hover:text-white"
                 >
-                  <UserX className="mr-2 h-4 w-4" />
-                  Continue as Guest
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Back to Username & Password
                 </Button>
               </form>
             </>
-          ) : (
+          )}
+
+          {/* ─── Email OTP Verification ─── */}
+          {mode === "email" && otpSent && (
             <>
               <h2 className="font-display text-3xl font-black tracking-tight">
                 CHECK YOUR EMAIL
               </h2>
               <p className="mt-2 text-sm text-apex-muted">
                 We&apos;ve sent a verification code to{" "}
-                <span className="text-white">{step.email}</span>.
+                <span className="text-white">{otpEmail}</span>.
               </p>
 
               <form onSubmit={handleOtpSubmit} className="mt-8">
-                <input type="hidden" name="email" value={step.email} />
+                <input type="hidden" name="email" value={otpEmail} />
                 <input type="hidden" name="code" value={otp} />
 
                 <div className="flex justify-center">
@@ -291,7 +444,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                 <Button
                   type="button"
                   variant="ghost"
-                  onClick={() => setStep("signIn")}
+                  onClick={() => { setOtpSent(false); setOtp(""); setError(null); }}
                   disabled={isLoading}
                   className="mt-3 w-full text-white/60 hover:bg-transparent hover:text-white"
                 >
@@ -303,7 +456,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
           )}
 
           <p className="mt-10 text-center text-xs text-white/30">
-            Secured sign-in · Supercars Showcase
+            Your progress syncs across devices · Supercars Showcase
           </p>
         </div>
       </div>

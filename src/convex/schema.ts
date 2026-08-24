@@ -35,10 +35,15 @@ const schema = defineSchema(
 
       role: v.optional(roleValidator), // role of the user. do not remove
 
+      // Username + password auth
+      username: v.optional(v.string()),
+
       // Custom profile fields (editable from /profile)
       bio: v.optional(v.string()),
       accent: v.optional(v.string()),
-    }).index("email", ["email"]), // index for the email. do not remove or modify
+    })
+      .index("email", ["email"]) // index for the email. do not remove or modify
+      .index("by_username", ["username"]), // index for username auth
 
     // ── Analytics ──
     // Simple key/value counters (e.g. "visits", "visitors").
@@ -174,6 +179,13 @@ const schema = defineSchema(
       lastUpdated: v.number(),
     }).index("by_cash", ["cash"])
       .index("by_user", ["userId"]),
+
+    // Game saves — per-user cloud save for cross-device sync.
+    gameSaves: defineTable({
+      userId: v.id("users"),
+      state: v.string(), // JSON-serialized GameState
+      updatedAt: v.number(),
+    }).index("by_user", ["userId"]),
 
   },
   {

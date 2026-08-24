@@ -1,5 +1,6 @@
 import { useEffect, useReducer, useRef, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
+import { useConvexAuth } from "convex/react";
 import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
 import { GameMain } from "@/components/game/GameMain";
@@ -13,6 +14,11 @@ export default function Game() {
   const gifts = useQuery(api.adminAbuse.getMyGifts);
   const claimGift = useMutation(api.adminAbuse.claimGift);
   const upsertScore = useMutation(api.leaderboard.upsertScore);
+
+  const { isAuthenticated } = useConvexAuth();
+  const loadCloudSave = useQuery(api.gameSaves.load);
+  const saveCloudSave = useMutation(api.gameSaves.save);
+  const cloudLoadedRef = useRef(false);
 
   const [state, dispatch] = useReducer(gameReducer, undefined, loadGame);
   const stateRef = useRef(state);
@@ -46,6 +52,37 @@ export default function Game() {
   useEffect(() => {
     globalMultiplierRef.current = globalMultiplier;
   }, [globalMultiplier]);
+
+  // ── Cloud save sync ──
+  // On mount, load cloud save and use it if newer than localStorage.
+  useEffect(() => {
+    if (!isAuthenticated || !loadCloudSave || cloudLoadedRef.current) return;
+    cloudLoadedRef.current = true;
+    const { state: cloudState, updatedAt } = loadCloudSave;
+    if (!cloudState) return;
+    try {
+      const cloud = JSON.parse(cloudState);
+      const local = loadGame();
+      // Use cloud save if it's newer or local has less total earned
+      if (!local || cloud.totalEarned > local.totalEarned) {
+        dispatch({ type: "LOAD", state: cloud });
+        toast.success("☁️ Cloud save loaded!", {
+          duration: 3000,
+          style: { background: "#0a1520", border: "1px solid rgba(0,150,255,0.3)", color: "#fff" },
+        });
+      }
+    } catch { /* ignore corrupt cloud save */ }
+  }, [isAuthenticated, loadCloudSave]);
+
+  // Save to cloud periodically alongside localStorage.
+  // Use a ref so the interval always calls the latest version.
+  const saveCloudRef = useRef<() => void>(() => {});
+  saveCloudRef.current = () => {
+    if (!isAuthenticated || !stateRef.current) return;
+    try {
+      void saveCloudSave({ state: JSON.stringify(stateRef.current) });
+    } catch { /* ignore */ }
+  };
 
   // Consume admin gifts (money / cars) on mount and when new gifts arrive.
   const claimedGiftsRef = useRef(new Set<string>());
@@ -90,14 +127,22 @@ export default function Game() {
   // Persist every few seconds and on tab hide/unload.
   useEffect(() => {
     const id = window.setInterval(() => {
-      if (stateRef.current) saveGame(stateRef.current);
+      if (stateRef.current) {
+        saveGame(stateRef.current);
+        saveCloudRef.current();
+      }
     }, SAVE_INTERVAL_MS);
     const onVisibility = () => {
-      if (document.visibilityState === "hidden" && stateRef.current)
+      if (document.visibilityState === "hidden" && stateRef.current) {
         saveGame(stateRef.current);
+        saveCloudRef.current();
+      }
     };
     const onPageHide = () => {
-      if (stateRef.current) saveGame(stateRef.current);
+      if (stateRef.current) {
+        saveGame(stateRef.current);
+        saveCloudRef.current();
+      }
     };
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("pagehide", onPageHide);
@@ -105,7 +150,10 @@ export default function Game() {
       window.clearInterval(id);
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("pagehide", onPageHide);
-      if (stateRef.current) saveGame(stateRef.current);
+      if (stateRef.current) {
+        saveGame(stateRef.current);
+        saveCloudRef.current();
+      }
     };
   }, []);
 
