@@ -985,7 +985,7 @@ export default function Admin() {
                       ["Achievements", resetAchievements, setResetAchievements, "achievements"],
                       ["Daily Reward", resetDaily, setResetDaily, "daily"],
                       ["Casino Winnings", resetCasino, setResetCasino, "casino"],
-                    ] as const).map(([label, val, setter]) => (
+                    ] as [string, boolean, (v: boolean) => void, string][]).map(([label, val, setter]) => (
                       <label
                         key={label}
                         className={`flex items-center gap-2 rounded-md border px-3 py-2 text-[10px] font-bold uppercase tracking-[0.1em] cursor-pointer transition-colors ${
