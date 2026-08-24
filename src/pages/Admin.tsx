@@ -904,13 +904,19 @@ export default function Admin() {
                 <p className="text-[11px] text-white/35 mb-4">Select what to reset for a player. This is permanent and cannot be undone.</p>
                 <div className="space-y-3">
                   <div>
-                    <label className="text-[10px] font-bold uppercase tracking-[0.12em] text-white/50">Target User ID</label>
-                    <input
+                    <label className="text-[10px] font-bold uppercase tracking-[0.12em] text-white/50">Target User</label>
+                    <select
                       value={abuseTarget}
                       onChange={(e) => setAbuseTarget(e.target.value)}
-                      placeholder="Paste user ID..."
-                      className="mt-1 w-full rounded-md border border-white/10 bg-[#111113] px-3 py-2 text-xs text-white outline-none focus:border-apex-red/50"
-                    />
+                      className="mt-1 w-full rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3.5 py-2.5 text-sm text-white outline-none transition-colors focus:border-apex-red"
+                    >
+                      <option value="">Select a user...</option>
+                      {users?.map((u) => (
+                        <option key={u._id} value={u._id}>
+                          {u.name} ({u.email || "no email"}) — {u.role}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {([
@@ -946,7 +952,7 @@ export default function Admin() {
                   </div>
                   <button
                     type="button"
-                    disabled={!abuseTarget.trim()}
+                    disabled={!abuseTarget}
                     onClick={async () => {
                       const opts: Record<string, boolean> = {
                         cash: resetCash,
@@ -965,7 +971,7 @@ export default function Admin() {
                       }
                       try {
                         const result = await resetPlayerProgress({
-                          userId: abuseTarget.trim() as any,
+                          userId: abuseTarget as Id<"users">,
                           resetCash,
                           resetCars,
                           resetParts,
