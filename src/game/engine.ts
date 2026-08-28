@@ -210,6 +210,13 @@ export function buyPrice(defId: string): number {
   return GAME_CAR_MAP[defId]?.value ?? 0;
 }
 
+/** Actual cost the player pays to open a crate (base cost × multiplier). */
+export function crateCost(crateId: string): number {
+  const crate = CRATE_MAP[crateId];
+  if (!crate) return Infinity;
+  return crate.cost * CRATE_COST_MULT;
+}
+
 // ── Reward rolls (called from components, result applied via reducer) ─────────
 
 function weightedPick<T>(entries: { value: T; weight: number }[]): T | undefined {
@@ -616,12 +623,22 @@ export function gameReducer(state: GameState, action: Action): GameState {
     case "RESET_PROGRESS": {
       const opts = action.resetOptions;
       const fresh = initialGameState();
+      // When upgrading, strip all upgrades from owned cars (keep the cars themselves).
+      let ownedCars = state.ownedCars;
+      if (opts.upgrades) {
+        const stripped: Record<string, { upgrades: Record<string, number> }> = {};
+        for (const [id, owned] of Object.entries(ownedCars)) {
+          stripped[id] = { upgrades: {} };
+        }
+        ownedCars = stripped;
+      }
       return {
         ...state,
         cash: opts.cash ? 0 : state.cash,
         ownedCars: opts.cars
           ? { [state.activeCarId]: state.ownedCars[state.activeCarId] ?? { upgrades: {} } }
-          : state.ownedCars,
+          : ownedCars,
+        inventory: opts.parts ? {} : state.inventory,
         prestigeLevel: opts.prestige ? 0 : state.prestigeLevel,
         reputation: opts.prestige ? 0 : state.reputation,
         achievements: opts.achievements ? [] : state.achievements,

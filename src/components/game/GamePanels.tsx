@@ -12,7 +12,7 @@ import {
   hourlySupercar001, nextSupercarSwapAt, rollCrate, saveGame, initialGameState,
   passivePerSec, clickValue, dailyReward, carValue, carPower,
   buyPrice as calcBuyPrice, rollDealerStock, upgradeCost as calcUpgradeCost,
-  spinSupercarPool, gameReducer, critChance,
+  crateCost as calcCrateCost, spinSupercarPool, gameReducer, critChance,
 } from "../../game/engine";
 import {
   GAME_CAR_MAP, gameCarImage, RARITY_META, ACHIEVEMENTS,
@@ -396,8 +396,8 @@ function CratePanel({ state, dispatch }: { state: GameState; dispatch: any }) {
               <h4 className="font-display text-base font-black text-white">{crate.name}</h4>
               <p className="mt-1 text-[11px] text-white/40">{crate.desc}</p>
               <div className="mt-4 flex items-center justify-between">
-                <span className="font-display text-sm font-black text-apex-red">{Ie(crate.cost * 5)}</span>
-                <button type="button" disabled={state.cash < crate.cost * 5} onClick={() => openCrate(crate.id)}
+                <span className="font-display text-sm font-black text-apex-red">{Ie(calcCrateCost(crate.id))}</span>
+                <button type="button" disabled={state.cash < calcCrateCost(crate.id)} onClick={() => openCrate(crate.id)}
                   className="rounded-md bg-apex-red px-3 py-1.5 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-white transition-colors hover:bg-apex-red/80 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/30">Open</button>
               </div>
             </div>
@@ -526,13 +526,13 @@ function PrestigePanel({ state, dispatch }: { state: GameState; dispatch: any })
   const canPrestige = state.reputation >= required;
   return (
     <div>
-      <SectionHeader eyebrow="Rebirth" title="PRESTIGE" hint="Reset cash, cars, parts for a permanent +50% income/click bonus per level." />
+      <SectionHeader eyebrow="Rebirth" title="PRESTIGE" hint="Reset cash, cars, parts for a permanent +5% income/click bonus per level." />
       <div className="max-w-lg rounded-xl border border-apex-line bg-apex-panel p-5">
         <div className="flex items-center gap-3">
           <Award className="size-5 text-apex-red" />
           <div>
             <p className="font-display text-lg font-black text-white">Reputation {Qi(state.reputation)} / {Qi(required)}</p>
-            <p className="text-[11px] text-white/40">Prestige level {state.prestigeLevel} {"· next bonus +50% earnings"}</p>
+            <p className="text-[11px] text-white/40">Prestige level {state.prestigeLevel} {"· next bonus +5% earnings"}</p>
           </div>
         </div>
         <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
@@ -549,7 +549,7 @@ function PrestigePanel({ state, dispatch }: { state: GameState; dispatch: any })
         </button>
       </div>
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
-        {[{ icon: Shield, t: "+50% earnings" }, { icon: TrendingUp, t: "+2.5× clicks" }, { icon: Award, t: "Better luck" }].map(({ icon: Icon, t }, idx) => (
+        {[{ icon: Shield, t: "+5% earnings" }, { icon: TrendingUp, t: "+5% clicks" }, { icon: Award, t: "Better luck" }].map(({ icon: Icon, t }, idx) => (
           <div key={idx} className="rounded-xl border border-apex-line bg-apex-panel p-4">
             <Icon className="size-5 text-apex-red" />
             <p className="mt-2 font-display text-sm font-bold text-white">{t}</p>
