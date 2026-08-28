@@ -300,7 +300,7 @@ export function GameMain({
 
       <div className="flex min-h-0 flex-1 items-stretch gap-4 overflow-hidden">
         {/* ── Left sidebar (desktop) ── */}
-        <aside className="hidden h-0 min-h-0 w-[21rem] shrink-0 flex-1 flex-col gap-3 overflow-y-auto lg:flex">
+        <aside className="hidden w-[21rem] shrink-0 flex-col gap-3 overflow-y-auto lg:flex">
           {/* Balance */}
           <div className="rounded-xl border border-apex-line bg-apex-panel p-4">
             <p className="text-[9px] font-semibold uppercase tracking-[0.24em] text-white/40">
