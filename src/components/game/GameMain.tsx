@@ -219,7 +219,7 @@ export function GameMain({
   };
 
   return (
-    <div className="px-3 py-4 sm:px-5 lg:px-7">
+    <div className="h-dvh flex flex-col overflow-hidden px-3 py-3 sm:px-5 lg:px-7">
       {/* ── Active Event Banner ── */}
       {activeEvent && (
         <motion.div
@@ -298,9 +298,9 @@ export function GameMain({
         </button>
       </div>
 
-      <div className="flex items-start gap-4">
+      <div className="flex min-h-0 flex-1 items-start gap-4 overflow-hidden">
         {/* ── Left sidebar (desktop) ── */}
-        <aside className="sticky top-20 hidden w-[21rem] shrink-0 flex-col gap-3 lg:flex">
+        <aside className="hidden w-[21rem] shrink-0 flex-col gap-3 overflow-y-auto lg:flex">
           {/* Balance */}
           <div className="rounded-xl border border-apex-line bg-apex-panel p-4">
             <p className="text-[9px] font-semibold uppercase tracking-[0.24em] text-white/40">
@@ -413,7 +413,7 @@ export function GameMain({
         </aside>
 
         {/* ── Main area ── */}
-        <main className="min-w-0 flex-1">
+        <main className="min-h-0 min-w-0 flex-1 overflow-y-auto">
           {tab === "earn" ? (
             <EarnZone
               state={state}
@@ -545,7 +545,7 @@ function EarnZone({
           }}
         />
 
-        <div className="relative flex min-h-[480px] flex-col items-center justify-center p-6 sm:min-h-[600px]">
+        <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center p-4 sm:p-6">
           {/* Car badge + name */}
           <div className="mb-3 flex items-center gap-2">
             <span
