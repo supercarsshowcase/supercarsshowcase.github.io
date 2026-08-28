@@ -107,6 +107,13 @@ function CountdownTimer({ expiresAt }: { expiresAt: number }) {
   );
 }
 
+/** Minimum ms between clicks. Below this, clicks are silently dropped. */
+const CLICK_COOLDOWN_MS = 40;
+/** If 8+ clicks land within 1 second, block for this long (ms). */
+const BURST_PENALTY_MS = 2000;
+const BURST_THRESHOLD = 8;
+const BURST_WINDOW_MS = 1000;
+
 export function GameMain({
   state,
   dispatch,
@@ -121,6 +128,12 @@ export function GameMain({
   const [tab, setTab] = useState<TabId>("earn");
   const [popups, setPopups] = useState<Popup[]>([]);
   const popupId = useRef(0);
+
+  // ── Anti-autoclicker state ──
+  const lastClickAt = useRef(0);
+  const clickTimestamps = useRef<number[]>([]);
+  const [clickLocked, setClickLocked] = useState(false);
+  const [clickBlocked, setClickBlocked] = useState(false);
 
   const active = GAME_CAR_MAP[state.activeCarId] ?? GAME_CAR_MAP[STARTER_ID];
   const level = levelFrom(state);
@@ -141,6 +154,32 @@ export function GameMain({
   const nextLevelEarned = Math.pow(levelBase, 2) * 500;
 
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const now = Date.now();
+
+    // 1. Minimum cooldown between clicks — blocks simple autoclickers
+    if (now - lastClickAt.current < CLICK_COOLDOWN_MS) return;
+    lastClickAt.current = now;
+
+    // 2. Burst detection — if too many clicks in a short window, lock out
+    clickTimestamps.current.push(now);
+    // Prune old timestamps outside the window
+    clickTimestamps.current = clickTimestamps.current.filter((t) => now - t < BURST_WINDOW_MS);
+    if (clickTimestamps.current.length >= BURST_THRESHOLD) {
+      clickTimestamps.current = [];
+      setClickBlocked(true);
+      setClickLocked(true);
+      toast.error("Too fast! Auto-clicking detected. Clicking paused.", {
+        duration: BURST_PENALTY_MS,
+        style: { background: "#1a0404", border: "1px solid rgba(255,0,0,0.4)", color: "#fff" },
+      });
+      setTimeout(() => {
+        setClickBlocked(false);
+        setClickLocked(false);
+        clickTimestamps.current = [];
+      }, BURST_PENALTY_MS);
+      return;
+    }
+
     const crit = Math.random() < critChance(state);
     const amount = Math.round(perClick * (crit ? 5 : 1));
     dispatch({ type: "CLICK", amount, globalMultiplier });
@@ -385,6 +424,7 @@ export function GameMain({
               income={income}
               popups={popups}
               onCarClick={handleClick}
+              clickBlocked={clickBlocked}
             />
           ) : (
             <div>
@@ -429,6 +469,7 @@ function EarnZone({
   income,
   popups,
   onCarClick,
+  clickBlocked,
 }: {
   state: GameState;
   active: NonNullable<typeof GAME_CAR_MAP[string]>;
@@ -438,19 +479,56 @@ function EarnZone({
   income: number;
   popups: Popup[];
   onCarClick: (e: React.MouseEvent<HTMLDivElement>) => void;
+  clickBlocked: boolean;
 }) {
   return (
     <div className="relative">
-      <div className="mb-4 flex items-center justify-between">
-        <p className="font-display text-[10px] font-semibold uppercase tracking-[0.28em] text-apex-red">
-          Earn
-        </p>
-
+      {/* ── Earn header with stats row ── */}
+      <div className="mb-5">
+        <div className="flex items-center justify-between">
+          <p className="font-display text-[10px] font-semibold uppercase tracking-[0.28em] text-apex-red">
+            Earn
+          </p>
+          <span className="font-display text-[9px] font-bold uppercase tracking-[0.16em] text-white/30">
+            Tap the car to earn cash
+          </span>
+        </div>
+        {/* Quick stats strip */}
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <EarnStat value={fmtMoney(perClick)} label="Per click" accent />
+          <EarnStat value={fmtMoney(income)} label="Per second" />
+          <EarnStat value={fmtMoney(carValue(state, state.activeCarId))} label="Value" />
+          <EarnStat value={carPower(state, state.activeCarId).toLocaleString()} label="Power" />
+        </div>
       </div>
 
+      {/* ── Anti-cheat notice ── */}
+      <div className="mb-4 flex items-center gap-3 rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3">
+        <Shield className="size-4 shrink-0 text-amber-400/70" />
+        <div className="min-w-0 flex-1">
+          <p className="font-display text-[10px] font-bold uppercase tracking-[0.16em] text-amber-300/80">
+            Fair Play Enforced
+          </p>
+          <p className="mt-0.5 text-[10px] text-white/35">
+            Auto-clickers are detected and blocked. Click at a natural pace to keep earning.
+          </p>
+        </div>
+        {clickBlocked && (
+          <span className="shrink-0 rounded-full bg-red-500/20 px-3 py-1 font-display text-[9px] font-bold uppercase tracking-[0.12em] text-red-400 animate-pulse">
+            PAUSED
+          </span>
+        )}
+      </div>
+
+      {/* ── Car click zone ── */}
       <div
         onClick={onCarClick}
-        className="group relative cursor-pointer select-none overflow-hidden rounded-2xl border border-apex-line bg-[#0b0b0c]"
+        className={cn(
+          "group relative cursor-pointer select-none overflow-hidden rounded-2xl border bg-[#0b0b0c] transition-all",
+          clickBlocked
+            ? "border-red-500/30"
+            : "border-apex-line hover:border-apex-red/30",
+        )}
       >
         {/* Corner brackets */}
         <span className="pointer-events-none absolute left-3 top-3 z-10 size-4 border-l-2 border-t-2 border-apex-red/50" />
@@ -459,12 +537,16 @@ function EarnZone({
         <span className="pointer-events-none absolute bottom-3 right-3 z-10 size-4 border-b-2 border-r-2 border-apex-red/50" />
 
         <div
-          className="pointer-events-none absolute inset-0"
+          className="pointer-events-none absolute inset-0 transition-opacity duration-300"
           style={{
-            background: `radial-gradient(80% 90% at 50% 40%, ${rarityMeta.glow} 0%, transparent 60%), #050505`,
+            background: clickBlocked
+              ? `radial-gradient(80% 90% at 50% 40%, rgba(127,29,29,0.15) 0%, transparent 60%), #050505`
+              : `radial-gradient(80% 90% at 50% 40%, ${rarityMeta.glow} 0%, transparent 60%), #050505`,
           }}
         />
-        <div className="relative flex min-h-[560px] flex-col items-center justify-center p-6 sm:min-h-[680px]">
+
+        <div className="relative flex min-h-[480px] flex-col items-center justify-center p-6 sm:min-h-[600px]">
+          {/* Car badge + name */}
           <div className="mb-3 flex items-center gap-2">
             <span
               className="rounded-sm border px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.14em]"
@@ -484,11 +566,15 @@ function EarnZone({
             {active.name}
           </h2>
 
-          <motion.div whileTap={{ scale: 0.97 }} className="relative mt-6 w-full max-w-5xl">
+          {/* Car image */}
+          <motion.div whileTap={{ scale: clickBlocked ? 1 : 0.97 }} className="relative mt-6 w-full max-w-5xl">
             <SmartImage
               src={gameCarImage(active)}
               alt={active.name}
-              className="mx-auto w-full max-h-[520px] object-contain drop-shadow-[0_20px_60px_rgba(0,0,0,0.8)]"
+              className={cn(
+                "mx-auto w-full max-h-[480px] object-contain drop-shadow-[0_20px_60px_rgba(0,0,0,0.8)] transition-all duration-300",
+                clickBlocked ? "opacity-50 grayscale" : "",
+              )}
             />
             <div
               className="pointer-events-none absolute inset-x-10 bottom-2 h-8 rounded-[100%] opacity-60 blur-xl"
@@ -496,15 +582,8 @@ function EarnZone({
             />
           </motion.div>
 
-          <div className="mt-7 grid w-full max-w-4xl grid-cols-2 gap-px overflow-hidden rounded-lg border border-apex-line bg-apex-line sm:grid-cols-4">
-            <EarnStat value={fmtMoney(perClick)} label="Per click" accent />
-            <EarnStat value={fmtMoney(income)} label="Per second" />
-            <EarnStat value={fmtMoney(carValue(state, state.activeCarId))} label="Value" />
-            <EarnStat value={carPower(state, state.activeCarId).toLocaleString()} label="Power" />
-          </div>
-
           {/* Condition bar */}
-          <div className="mt-5 w-full max-w-md">
+          <div className="mt-6 w-full max-w-md">
             <div className="mb-1 flex items-center justify-between text-[9px] font-semibold uppercase tracking-[0.18em] text-white/35">
               <span>Condition</span>
               <span>{Math.round(condition * 100)}%</span>
@@ -518,10 +597,20 @@ function EarnZone({
             </div>
           </div>
 
-          <p className="mt-7 inline-flex items-center gap-2 rounded-full border border-apex-red/40 bg-apex-red/10 px-6 py-2.5 font-display text-[11px] font-bold uppercase tracking-[0.2em] text-white transition-colors group-hover:bg-apex-red">
-            <MousePointerClick className="size-4" />
-            Click the car to earn
-          </p>
+          {/* Click prompt */}
+          {clickBlocked ? (
+            <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-red-500/40 bg-red-500/10 px-6 py-2.5">
+              <Shield className="size-4 text-red-400" />
+              <span className="font-display text-[11px] font-bold uppercase tracking-[0.2em] text-red-400">
+                Clicking paused — too fast
+              </span>
+            </div>
+          ) : (
+            <p className="mt-6 inline-flex items-center gap-2 rounded-full border border-apex-red/40 bg-apex-red/10 px-6 py-2.5 font-display text-[11px] font-bold uppercase tracking-[0.2em] text-white transition-colors group-hover:bg-apex-red">
+              <MousePointerClick className="size-4" />
+              Click the car to earn
+            </p>
+          )}
         </div>
 
         {/* Floating popups */}
