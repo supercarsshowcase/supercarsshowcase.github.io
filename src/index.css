@@ -138,7 +138,16 @@
     @apply bg-apex-ink text-foreground;
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    -webkit-text-size-adjust: 100%;
     text-rendering: optimizeLegibility;
+  }
+  /* Prevent mobile browsers from auto-zooming on inputs and text size inflation */
+  input, select, textarea, button {
+    font-size: 16px !important;
+    max-height: 100vh;
+  }
+  html {
+    overflow-x: hidden;
   }
   button:not([disabled]),
   [role="button"]:not([disabled]) {
