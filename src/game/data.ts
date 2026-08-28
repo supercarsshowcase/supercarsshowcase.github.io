@@ -61,7 +61,7 @@ type CarSpec = [
 ];
 
 /** All car values are multiplied by this to make progression harder. */
-const CAR_VALUE_MULT = 3;
+const CAR_VALUE_MULT = 30;
 
 function car(s: CarSpec): GameCarDef {
   return {
@@ -450,8 +450,8 @@ export const CRATES: CrateDef[] = [
     desc: "Mystery junk. Sometimes a miracle.",
     weights: { common: 75, uncommon: 20, rare: 4, epic: 1 },
     maxTier: 2,
-    cashMin: 30,
-    cashMax: 200,
+    cashMin: 3,
+    cashMax: 20,
   },
   {
     id: "import",
@@ -462,8 +462,8 @@ export const CRATES: CrateDef[] = [
     desc: "Unclaimed cargo from across the sea.",
     weights: { common: 25, uncommon: 42, rare: 24, epic: 8, legendary: 1 },
     maxTier: 3,
-    cashMin: 200,
-    cashMax: 2500,
+    cashMin: 20,
+    cashMax: 250,
   },
   {
     id: "dealer",
@@ -474,8 +474,8 @@ export const CRATES: CrateDef[] = [
     desc: "Dealer plates included. No questions asked.",
     weights: { rare: 28, epic: 46, legendary: 20, exotic: 6 },
     maxTier: 4,
-    cashMin: 1000,
-    cashMax: 12000,
+    cashMin: 100,
+    cashMax: 1200,
   },
   {
     id: "exotic",
@@ -486,8 +486,8 @@ export const CRATES: CrateDef[] = [
     desc: "Carbon, titanium and attitude.",
     weights: { epic: 28, legendary: 44, exotic: 22, hyper: 6 },
     maxTier: 6,
-    cashMin: 8000,
-    cashMax: 100000,
+    cashMin: 800,
+    cashMax: 10000,
   },
   {
     id: "mythic",
@@ -498,8 +498,8 @@ export const CRATES: CrateDef[] = [
     desc: "The collection agency keeps asking.",
     weights: { legendary: 18, exotic: 36, hyper: 34, mythic: 11, ultimate: 1 },
     maxTier: 8,
-    cashMin: 120000,
-    cashMax: 1200000,
+    cashMin: 12000,
+    cashMax: 120000,
   },
   {
     id: "vault",
@@ -510,8 +510,8 @@ export const CRATES: CrateDef[] = [
     desc: "One of one. Maybe two.",
     weights: { hyper: 35, mythic: 50, ultimate: 15 },
     maxTier: 10,
-    cashMin: 2000000,
-    cashMax: 20000000,
+    cashMin: 200000,
+    cashMax: 2000000,
   },
 ];
 
@@ -713,8 +713,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [
 
 /** Player level, derived from total lifetime earnings. */
 export function levelFrom(s: { totalEarned: number; prestigeLevel: number }): number {
-  const base = 1 + Math.floor(Math.sqrt(Math.max(s.totalEarned, 0) / 500));
-  return base + s.prestigeLevel * 10;
+  const base = 1 + Math.floor(Math.sqrt(Math.max(s.totalEarned, 0) / 50000));
+  return base + s.prestigeLevel * 1;
 }
 
 /** Index of the rarity (0 = common … 8 = ultimate). */

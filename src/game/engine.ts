@@ -20,16 +20,16 @@ const STORAGE_VERSION = 1;
 export const SPIN_COOLDOWN_MS = 15 * 60_000;
 /** Chance the wheel lands on a supercar (0.3%). */
 export const SPIN_CAR_CHANCE = 0.003;
-/** 78% income nerf applied globally to all cars. */
-const INCOME_NERF = 0.22;
-/** Upgrade costs are 8x more expensive. */
-const UPGRADE_COST_MULT = 8;
-/** Upgrade effects are halved. */
-const UPGRADE_EFFECT_MULT = 0.5;
-/** Crate costs are 5x more expensive. */
-const CRATE_COST_MULT = 5;
-/** Spin cash rewards are 30% of original. */
-const SPIN_REWARD_MULT = 0.3;
+/** 97.8% income nerf applied globally to all cars. */
+const INCOME_NERF = 0.022;
+/** Upgrade costs are 80x more expensive. */
+const UPGRADE_COST_MULT = 80;
+/** Upgrade effects are 20x weaker. */
+const UPGRADE_EFFECT_MULT = 0.05;
+/** Crate costs are 50x more expensive. */
+const CRATE_COST_MULT = 50;
+/** Spin cash rewards are 3% of original (10x nerf). */
+const SPIN_REWARD_MULT = 0.03;
 
 // ── Initial state ─────────────────────────────────────────────────────────────
 
@@ -123,7 +123,7 @@ export function carPower(state: GameState, carId: string): number {
 
 /** Global click multiplier: prestige + parts + collections. */
 export function clickMultiplier(state: GameState): number {
-  const prestige = 1 + 0.5 * state.prestigeLevel;
+  const prestige = 1 + 0.05 * state.prestigeLevel;
   const parts = 1 + partBonus(state, "clickMult");
   const collect = 1 + collectionBonus(state, "click");
   return prestige * parts * collect;
@@ -131,8 +131,8 @@ export function clickMultiplier(state: GameState): number {
 
 /** Global passive income multiplier: prestige + garage + parts + collections. */
 export function passiveMultiplier(state: GameState): number {
-  const prestige = 1 + 0.5 * state.prestigeLevel;
-  const garage = 1 + 0.05 * (levelFrom(state) - 1);
+  const prestige = 1 + 0.05 * state.prestigeLevel;
+  const garage = 1 + 0.005 * (levelFrom(state) - 1);
   const parts = 1 + partBonus(state, "passiveMult");
   const collect = 1 + collectionBonus(state, "passive");
   return prestige * garage * parts * collect;
@@ -179,7 +179,7 @@ export function clickValue(state: GameState): number {
   const cond = conditionOf(state, state.activeCarId);
   const condMult = 0.5 + 0.5 * cond;
   const mults = carUpgradeMults(state, state.activeCarId);
-  const base = def.value * 0.003 * INCOME_NERF;
+  const base = def.value * 0.0003 * INCOME_NERF;
   return Math.max(1, Math.round(base * (1 + mults.clickMult) * condMult * clickMultiplier(state)));
 }
 
@@ -191,7 +191,7 @@ export function passivePerSec(state: GameState): number {
     const cond = conditionOf(state, carId);
     const condMult = 0.5 + 0.5 * cond;
     const mults = carUpgradeMults(state, carId);
-    base += def.value * 0.00003 * INCOME_NERF * (1 + mults.passiveMult) * condMult;
+    base += def.value * 0.000003 * INCOME_NERF * (1 + mults.passiveMult) * condMult;
   }
   return base * passiveMultiplier(state);
 }
@@ -262,7 +262,7 @@ export function rollCrate(state: GameState, crateId: string): CrateResult {
 // ── Lucky Spin wheel ──────────────────────────────────────────────────────────
 
 /** Cash values on the wheel, growing with player level (slice 0 is the car). */
-const SPIN_CASH_BASE = [25, 50, 100, 200, 400, 800, 1600, 3000, 5000];
+const SPIN_CASH_BASE = [2, 5, 10, 20, 40, 80, 160, 300, 500];
 
 export function spinCashSlices(state: GameState): number[] {
   const scale = 1 + (levelFrom(state) - 1) * 0.15;
@@ -362,7 +362,7 @@ export function dailyReward(state: GameState, now: number): number {
       ? state.daily.streak + 1
       : 1;
   const mult = Math.min(streak, 14);
-  return Math.round(100 * Math.pow(1.25, mult - 1) * (1 + state.prestigeLevel * 2) * 0.2);
+  return Math.round(10 * Math.pow(1.25, mult - 1) * (1 + state.prestigeLevel * 0.2) * 0.2);
 }
 
 // ── Achievements ──────────────────────────────────────────────────────────────
