@@ -300,16 +300,16 @@ export function GameMain({
 
       <div className="flex min-h-0 flex-1 items-stretch gap-4 overflow-hidden">
         {/* ── Left sidebar (desktop) ── */}
-        <aside className="hidden w-[21rem] shrink-0 flex-col gap-3 overflow-y-auto lg:flex">
+        <aside className="hidden w-[21rem] shrink-0 flex-col gap-2 overflow-hidden lg:flex">
           {/* Balance */}
-          <div className="rounded-xl border border-apex-line bg-apex-panel p-4">
-            <p className="text-[9px] font-semibold uppercase tracking-[0.24em] text-white/40">
+          <div className="rounded-xl border border-apex-line bg-apex-panel p-3">
+            <p className="text-[8px] font-semibold uppercase tracking-[0.22em] text-white/40">
               Cash
             </p>
-            <p className="mt-1 font-display text-3xl font-black tracking-tight text-white">
+            <p className="mt-0.5 font-display text-2xl font-black tracking-tight text-white">
               {fmtMoney(cash)}
             </p>
-            <div className="mt-3 grid grid-cols-2 gap-2 border-t border-apex-line pt-3 text-center">
+            <div className="mt-2 grid grid-cols-2 gap-1.5 border-t border-apex-line pt-2 text-center">
               <div>
                 <p className="font-display text-sm font-black text-apex-red">{fmtMoney(income)}</p>
                 <p className="text-[8px] font-semibold uppercase tracking-[0.18em] text-white/35">
@@ -326,7 +326,7 @@ export function GameMain({
           </div>
 
           {/* Level / XP */}
-          <div className="rounded-xl border border-apex-line bg-apex-panel p-4">
+          <div className="rounded-xl border border-apex-line bg-apex-panel p-3">
             <div className="flex items-center justify-between">
               <span className="font-display text-[11px] font-bold uppercase tracking-[0.18em] text-white">
                 Level {level}
@@ -348,7 +348,7 @@ export function GameMain({
           </div>
 
           {/* Nav */}
-          <nav className="flex flex-col gap-1 rounded-xl border border-apex-line bg-apex-panel p-2">
+          <nav className="flex flex-col gap-0.5 rounded-xl border border-apex-line bg-apex-panel p-1.5">
             {NAV.map((item) => {
               const Icon = item.icon;
               const isActive = tab === item.id;
@@ -358,7 +358,7 @@ export function GameMain({
                   type="button"
                   onClick={() => setTab(item.id)}
                   className={cn(
-                    "flex items-center gap-3 rounded-md px-3 py-2.5 font-display text-[11px] font-bold uppercase tracking-[0.16em] transition-colors",
+                    "flex items-center gap-2.5 rounded-md px-2.5 py-1.5 font-display text-[10px] font-bold uppercase tracking-[0.14em] transition-colors",
                     isActive
                       ? "border-l-2 border-apex-red bg-apex-red/10 text-white"
                       : "border-l-2 border-transparent text-white/45 hover:bg-white/5 hover:text-white",
@@ -372,7 +372,7 @@ export function GameMain({
           </nav>
 
           {/* Daily + save/reset */}
-          <div className="mt-auto rounded-xl border border-apex-line bg-apex-panel p-3">
+          <div className="mt-auto rounded-xl border border-apex-line bg-apex-panel p-2.5">
             <button
               type="button"
               onClick={claimDaily}
