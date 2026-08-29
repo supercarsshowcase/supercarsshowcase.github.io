@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useState } from "react";
-import { Link, NavLink, Outlet, useNavigate } from "react-router";
+import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router";
 import {
   Heart,
   Menu,
@@ -68,7 +68,9 @@ export function AppShell() {
   const { currency, setCurrency, region, setRegion, favorites } = useApp();
   const { isAuthenticated, user, signOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const isGame = location.pathname === "/game";
 
   const isAdmin = user?.role === "owner" || user?.role === "admin" || user?.role === "moderator";
 
@@ -122,10 +124,10 @@ export function AppShell() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-apex-ink text-white">
+    <div className={isGame ? "flex h-dvh flex-col overflow-hidden bg-apex-ink text-white" : "flex min-h-screen flex-col bg-apex-ink text-white"}>
       <Analytics />
       <AnnouncementOverlay />
-      <header className="sticky top-0 z-50 border-b border-apex-line bg-black/85 backdrop-blur-md">
+      <header className={isGame ? "hidden" : "sticky top-0 z-50 border-b border-apex-line bg-black/85 backdrop-blur-md"}>
         <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between gap-3 px-4 sm:px-6">
           <div className="flex items-center gap-6">
             <Logo name={settings?.siteName} />
@@ -400,11 +402,11 @@ export function AppShell() {
         )}
       </header>
 
-      <main className="flex-1">
+      <main className={isGame ? "min-h-0 flex-1 overflow-hidden" : "flex-1">
         <Outlet />
       </main>
 
-      <footer className="border-t border-apex-line bg-black">
+      <footer className={isGame ? "hidden" : "border-t border-apex-line bg-black"}>
         <div className="mx-auto max-w-[1400px] px-4 py-12 sm:px-6">
           <div className="flex flex-col gap-10 md:flex-row md:justify-between">
             <div className="max-w-sm">
