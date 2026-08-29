@@ -369,7 +369,7 @@ export function dailyReward(state: GameState, now: number): number {
       ? state.daily.streak + 1
       : 1;
   const mult = Math.min(streak, 14);
-  return Math.round(10 * Math.pow(1.25, mult - 1) * (1 + state.prestigeLevel * 0.2) * 0.2);
+  return Math.round(100 * Math.pow(1.1, mult - 1) * (1 + state.prestigeLevel * 0.2));
 }
 
 // ── Achievements ──────────────────────────────────────────────────────────────

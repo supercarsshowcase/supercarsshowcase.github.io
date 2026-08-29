@@ -20,6 +20,7 @@ import {
   Trophy,
   Wrench,
   BarChart3,
+  Zap,
   type LucideIcon,
 } from "lucide-react";
 import { SmartImage } from "@/components/SmartImage";
@@ -481,10 +482,21 @@ function EarnZone({
   onCarClick: (e: React.MouseEvent<HTMLDivElement>) => void;
   clickBlocked: boolean;
 }) {
+  const totalEarned = state.totalEarned;
+  const totalClicks = state.totalClicks ?? 0;
+  const critChance = Math.min(0.15 + (state.prestigeLevel * 0.01), 0.30);
+  const ownedCount = Object.keys(state.ownedCars).length;
+  const upgradeCount = Object.values(state.ownedCars).reduce(
+    (sum: number, c: any) => sum + Object.values(c?.upgrades ?? {}).reduce((s: number, v: any) => s + (v as number), 0),
+    0,
+  );
+  const daily = dailyReward(state, state.lastTick);
+  const streak = state.daily.streak;
+
   return (
     <div className="relative">
       {/* ── Earn header with stats row ── */}
-      <div className="mb-5">
+      <div className="mb-4">
         <div className="flex items-center justify-between">
           <p className="font-display text-[10px] font-semibold uppercase tracking-[0.28em] text-apex-red">
             Earn
@@ -494,30 +506,38 @@ function EarnZone({
           </span>
         </div>
         {/* Quick stats strip */}
-        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
           <EarnStat value={fmtMoney(perClick)} label="Per click" accent />
           <EarnStat value={fmtMoney(income)} label="Per second" />
-          <EarnStat value={fmtMoney(carValue(state, state.activeCarId))} label="Value" />
-          <EarnStat value={carPower(state, state.activeCarId).toLocaleString()} label="Power" />
+          <EarnStat value={fmtMoney(carValue(state, state.activeCarId))} label="Car value" />
+          <EarnStat value={carPower(state, state.activeCarId).toLocaleString()} label="Horsepower" />
+          <EarnStat value={fmtMoney(totalEarned)} label="Total earned" />
+          <EarnStat value={totalClicks.toLocaleString()} label="Total clicks" />
         </div>
       </div>
 
-      {/* ── Anti-cheat notice ── */}
-      <div className="mb-4 flex items-center gap-3 rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3">
-        <Shield className="size-4 shrink-0 text-amber-400/70" />
-        <div className="min-w-0 flex-1">
-          <p className="font-display text-[10px] font-bold uppercase tracking-[0.16em] text-amber-300/80">
-            Fair Play Enforced
-          </p>
-          <p className="mt-0.5 text-[10px] text-white/35">
-            Auto-clickers are detected and blocked. Click at a natural pace to keep earning.
-          </p>
+      {/* ── Detailed info strip ── */}
+      <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="rounded-lg border border-apex-line bg-apex-panel px-3 py-2.5">
+          <p className="text-[8px] font-semibold uppercase tracking-[0.2em] text-white/35">Daily Reward</p>
+          <p className="mt-0.5 font-display text-sm font-black text-apex-red">{fmtMoney(daily)}</p>
+          {streak > 1 && <p className="text-[9px] text-white/40">Streak: {streak}×</p>}
         </div>
-        {clickBlocked && (
-          <span className="shrink-0 rounded-full bg-red-500/20 px-3 py-1 font-display text-[9px] font-bold uppercase tracking-[0.12em] text-red-400 animate-pulse">
-            PAUSED
-          </span>
-        )}
+        <div className="rounded-lg border border-apex-line bg-apex-panel px-3 py-2.5">
+          <p className="text-[8px] font-semibold uppercase tracking-[0.2em] text-white/35">Crit Chance</p>
+          <p className="mt-0.5 font-display text-sm font-black text-amber-400">{Math.round(critChance * 100)}%</p>
+          <p className="text-[9px] text-white/40">5× multiplier</p>
+        </div>
+        <div className="rounded-lg border border-apex-line bg-apex-panel px-3 py-2.5">
+          <p className="text-[8px] font-semibold uppercase tracking-[0.2em] text-white/35">Garage</p>
+          <p className="mt-0.5 font-display text-sm font-black text-white">{ownedCount} cars</p>
+          <p className="text-[9px] text-white/40">{upgradeCount} upgrades</p>
+        </div>
+        <div className="rounded-lg border border-apex-line bg-apex-panel px-3 py-2.5">
+          <p className="text-[8px] font-semibold uppercase tracking-[0.2em] text-white/35">Reputation</p>
+          <p className="mt-0.5 font-display text-sm font-black text-emerald-400">{Math.round(state.reputation).toLocaleString()}</p>
+          <p className="text-[9px] text-white/40">Prestige {state.prestigeLevel}</p>
+        </div>
       </div>
 
       {/* ── Car click zone ── */}
@@ -567,12 +587,12 @@ function EarnZone({
           </h2>
 
           {/* Car image */}
-          <motion.div whileTap={{ scale: clickBlocked ? 1 : 0.97 }} className="relative mt-6 w-full max-w-5xl">
+          <motion.div whileTap={{ scale: clickBlocked ? 1 : 0.97 }} className="relative mt-4 w-full max-w-5xl">
             <SmartImage
               src={gameCarImage(active)}
               alt={active.name}
               className={cn(
-                "mx-auto w-full max-h-[480px] object-contain drop-shadow-[0_20px_60px_rgba(0,0,0,0.8)] transition-all duration-300",
+                "mx-auto w-full max-h-[360px] object-contain drop-shadow-[0_20px_60px_rgba(0,0,0,0.8)] transition-all duration-300",
                 clickBlocked ? "opacity-50 grayscale" : "",
               )}
             />
@@ -582,31 +602,39 @@ function EarnZone({
             />
           </motion.div>
 
-          {/* Condition bar */}
-          <div className="mt-6 w-full max-w-md">
-            <div className="mb-1 flex items-center justify-between text-[9px] font-semibold uppercase tracking-[0.18em] text-white/35">
-              <span>Condition</span>
-              <span>{Math.round(condition * 100)}%</span>
+          {/* Condition bar + car specs row */}
+          <div className="mt-4 w-full max-w-xl space-y-3">
+            <div>
+              <div className="mb-1 flex items-center justify-between text-[9px] font-semibold uppercase tracking-[0.18em] text-white/35">
+                <span>Condition</span>
+                <span>{Math.round(condition * 100)}%</span>
+              </div>
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                <motion.div
+                  className="h-full rounded-full bg-apex-red"
+                  animate={{ width: `${condition * 100}%` }}
+                  transition={{ duration: 0.4 }}
+                />
+              </div>
             </div>
-            <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
-              <motion.div
-                className="h-full rounded-full bg-apex-red"
-                animate={{ width: `${condition * 100}%` }}
-                transition={{ duration: 0.4 }}
-              />
+            {/* Quick specs */}
+            <div className="flex items-center justify-center gap-4 text-[9px] uppercase tracking-[0.14em] text-white/40">
+              <span className="flex items-center gap-1"><Zap className="size-3 text-apex-red" /> {carPower(state, state.activeCarId).toLocaleString()} hp</span>
+              <span className="flex items-center gap-1"><TrendingUp className="size-3 text-emerald-400" /> {fmtMoney(perClick)}/click</span>
+              <span className="flex items-center gap-1"><Coins className="size-3 text-amber-400" /> {fmtMoney(income)}/sec</span>
             </div>
           </div>
 
           {/* Click prompt */}
           {clickBlocked ? (
-            <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-red-500/40 bg-red-500/10 px-6 py-2.5">
+            <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-red-500/40 bg-red-500/10 px-6 py-2.5">
               <Shield className="size-4 text-red-400" />
               <span className="font-display text-[11px] font-bold uppercase tracking-[0.2em] text-red-400">
                 Clicking paused — too fast
               </span>
             </div>
           ) : (
-            <p className="mt-6 inline-flex items-center gap-2 rounded-full border border-apex-red/40 bg-apex-red/10 px-6 py-2.5 font-display text-[11px] font-bold uppercase tracking-[0.2em] text-white transition-colors group-hover:bg-apex-red">
+            <p className="mt-4 inline-flex items-center gap-2 rounded-full border border-apex-red/40 bg-apex-red/10 px-6 py-2.5 font-display text-[11px] font-bold uppercase tracking-[0.2em] text-white transition-colors group-hover:bg-apex-red">
               <MousePointerClick className="size-4" />
               Click the car to earn
             </p>
