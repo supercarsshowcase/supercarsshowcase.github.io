@@ -378,13 +378,13 @@ export function GameMain({
                     }
                   }}
                   className={cn(
-                    "flex items-center gap-1.5 rounded-md px-2 py-[3px] font-display text-[8px] font-bold uppercase tracking-[0.14em] transition-colors",
+                    "flex items-center gap-1 rounded-md px-1.5 py-[2px] font-display text-[9px] font-semibold uppercase tracking-[0.10em] transition-colors",
                     isActive
                       ? "border-l-2 border-apex-red bg-apex-red/10 text-white"
                       : "border-l-2 border-transparent text-white/45 hover:bg-white/5 hover:text-white",
                   )}
                 >
-                  <Icon className={cn("size-3", isActive ? "text-apex-red" : "text-white/40")} />
+                  <Icon className={cn("size-2.5 shrink-0", isActive ? "text-apex-red" : "text-white/40")} />
                   {item.label}
                 </button>
               );
@@ -471,11 +471,11 @@ export function GameMain({
                     }
                   }}
                   className={cn(
-                    "relative flex shrink-0 items-center gap-1.5 px-3 py-2.5 font-display text-[10px] font-bold uppercase tracking-[0.14em] transition-colors",
+                    "relative flex shrink-0 items-center gap-1 px-2 py-1.5 font-display text-[9px] font-semibold uppercase tracking-[0.10em] transition-colors",
                     isActive ? "text-white" : "text-white/45 hover:text-white",
                   )}
                 >
-                  <Icon className={cn("size-3.5", isActive ? "text-apex-red" : "text-white/40")} />
+                  <Icon className={cn("size-3 shrink-0", isActive ? "text-apex-red" : "text-white/40")} />
                   {item.label}
                   {isActive && <span className="absolute inset-x-2 -bottom-px h-0.5 bg-apex-red" />}
                 </button>

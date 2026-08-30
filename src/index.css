@@ -142,7 +142,7 @@
     text-rendering: optimizeLegibility;
   }
   /* Prevent mobile browsers from auto-zooming on inputs and text size inflation */
-  input, select, textarea, button {
+  input, select, textarea {
     font-size: 16px !important;
     max-height: 100vh;
   }
