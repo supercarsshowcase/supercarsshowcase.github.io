@@ -62,11 +62,11 @@ export function ChatPanel({
   if (!open) return null;
 
   return (
-    <div className="hidden h-full w-[17rem] shrink-0 flex-col rounded-xl border border-apex-line bg-apex-panel lg:flex">
+    <div className="hidden h-[calc(100vh-6rem)] max-h-[780px] min-h-[32rem] w-[20rem] shrink-0 flex-col rounded-xl border border-apex-line bg-apex-panel lg:flex">
       {/* Header */}
       <div className="flex items-center gap-2 border-b border-apex-line px-3 py-1.5">
         <MessageCircle className="size-3 text-apex-red" />
-        <span className="font-display text-[9px] font-bold uppercase tracking-[0.16em] text-white">
+        <span className="font-display text-xs font-bold uppercase tracking-[0.16em] text-white">
           Live Chat
         </span>
         <span className="rounded-full bg-green-500/20 px-1.5 py-0.5 text-[6px] font-bold text-green-400">
@@ -88,7 +88,7 @@ export function ChatPanel({
         className="flex-1 space-y-1 overflow-y-auto px-2 py-1.5"
       >
         {messages.length === 0 && (
-          <p className="mt-6 text-center text-[9px] text-white/25">
+          <p className="mt-6 text-center text-xs text-white/25">
             No messages yet. Say hello!
           </p>
         )}
@@ -111,7 +111,7 @@ export function ChatPanel({
                     {msg.name.charAt(0).toUpperCase()}
                   </div>
                 )}
-                <span className="truncate font-display text-[8px] font-bold text-white/80">
+                <span className="truncate font-display text-[10px] font-bold text-white/80">
                   {msg.name}
                 </span>
                 {badge && (
@@ -128,7 +128,7 @@ export function ChatPanel({
                   {formatTime(msg.createdAt)}
                 </span>
               </div>
-              <p className="mt-0.5 pl-[20px] text-[9px] leading-relaxed text-white/60 break-words">
+              <p className="mt-0.5 pl-[20px] text-sm leading-relaxed text-white/60 break-words">
                 {msg.text}
               </p>
             </div>
@@ -154,7 +154,7 @@ export function ChatPanel({
             placeholder={error ?? "Type a message..."}
             disabled={sending}
             className={cn(
-              "flex-1 rounded-md border bg-white/5 px-2 py-1 text-[9px] text-white placeholder:text-white/25 focus:border-apex-red/50 focus:outline-none",
+              "flex-1 rounded-md border bg-white/5 px-2.5 py-2 text-sm text-white placeholder:text-white/25 focus:border-apex-red/50 focus:outline-none",
               error ? "border-red-500/40 placeholder:text-red-300/70" : "border-white/10",
             )}
           />

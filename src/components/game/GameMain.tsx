@@ -237,7 +237,7 @@ export function GameMain({
   };
 
   return (
-    <div className="h-dvh flex flex-col overflow-hidden px-1 py-1 sm:px-2 lg:px-3">
+    <div className="min-h-[calc(100vh-4rem)] flex flex-col overflow-visible px-2 py-2 sm:px-4 lg:px-5">
       {/* ── Active Event Banner ── */}
       {activeEvent && (
         <motion.div
@@ -331,9 +331,9 @@ export function GameMain({
         </button>
       </div>
 
-      <div className="flex min-h-0 flex-1 items-stretch gap-2 overflow-hidden">
+      <div className="flex min-h-0 flex-1 items-stretch gap-3 overflow-visible">
         {/* ── Left sidebar (desktop) ── */}
-        <aside className="hidden w-[16rem] shrink-0 flex-col gap-1.5 lg:flex">
+        <aside className="hidden w-[18rem] shrink-0 flex-col gap-2 lg:flex">
           {/* Balance */}
           <div className="rounded-xl border border-apex-line bg-apex-panel px-2.5 py-1.5">
             <p className="text-[7px] font-semibold uppercase tracking-[0.22em] text-white/40">
@@ -452,7 +452,7 @@ export function GameMain({
         </aside>
 
         {/* ── Main area ── */}
-        <main className="min-h-0 min-w-0 flex-1 overflow-y-auto">
+        <main className="min-h-0 min-w-0 flex-1 overflow-visible">
           {tab === "earn" ? (
             <EarnZone
               state={state}
@@ -475,7 +475,7 @@ export function GameMain({
           )}
 
           {/* Mobile nav */}
-          <div className="mt-2 flex gap-0.5 overflow-x-auto border-b border-apex-line pb-px lg:hidden">
+          <div className="mt-4 flex gap-1 overflow-x-auto border-b border-apex-line pb-px lg:hidden">
             {NAV.map((item) => {
               const Icon = item.icon;
               const isActive = tab === item.id;
