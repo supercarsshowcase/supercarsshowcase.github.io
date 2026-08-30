@@ -563,6 +563,124 @@ function PrestigePanel({ state, dispatch }: { state: GameState; dispatch: any })
   );
 }
 
+/* ─── IndexPanel (car catalog) ─── */
+function IndexPanel({ state }: { state: GameState }) {
+  const allCars = Object.values(Te).filter((c) => !c.secret).sort((a: any, b: any) => a.value - b.value);
+  const owned = state.ownedCars;
+  const level = levelFrom(state);
+  const [filter, setFilter] = useState<string>("all");
+  const rarities = ["common","uncommon","rare","epic","legendary","exotic","hyper","mythic","ultimate"];
+  const filtered = filter === "all" ? allCars : allCars.filter((c: any) => c.rarity === filter);
+
+  return (
+    <div>
+      <SectionHeader eyebrow="Catalog" title="CAR INDEX" hint={allCars.length + " cars · " + Object.keys(owned).length + " owned"} />
+      <div className="mb-4 flex flex-wrap gap-1">
+        <button type="button" onClick={() => setFilter("all")} className={ce("rounded-md px-2 py-1 font-display text-[9px] font-bold uppercase tracking-[0.1em]", filter === "all" ? "bg-apex-red text-white" : "border border-white/15 text-white/50 hover:text-white")}>All</button>
+        {rarities.map((r) => {
+          const m = dp[r as Rarity];
+          if (!m) return null;
+          return (
+            <button key={r} type="button" onClick={() => setFilter(r)} className={ce("rounded-md px-2 py-1 font-display text-[9px] font-bold uppercase tracking-[0.1em]", filter === r ? "text-white" : "text-white/50 hover:text-white")} style={{ background: filter === r ? m.color + "30" : "transparent", border: "1px solid " + (filter === r ? m.color + "60" : "rgba(255,255,255,0.15)") }}>{m.label}</button>
+          );
+        })}
+      </div>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {filtered.map((car: any) => {
+          const isOwned = !!owned[car.id];
+          const canBuy = level >= car.unlockLevel && !isOwned && state.cash >= car.value;
+          return (
+            <div key={car.id} className={ce("overflow-hidden rounded-lg border bg-apex-panel", isOwned ? "border-apex-red/40" : "border-white/10")}>
+              <div className="relative h-20 bg-[#0a0a0b]">
+                <Ha src={es(car)} alt={car.name} seed={car.id} className="h-full w-full object-cover" />
+                <div className="absolute left-1.5 top-1.5"><RarityBadge rarity={car.rarity} /></div>
+                {isOwned && <span className="absolute right-1.5 top-1.5 rounded-sm bg-apex-red px-1 py-0.5 text-[8px] font-bold uppercase text-white">Owned</span>}
+              </div>
+              <div className="p-2.5">
+                <p className="truncate text-[9px] font-semibold uppercase tracking-[0.14em] text-white/40">{car.brand} · {car.year}</p>
+                <p className="truncate font-display text-sm font-black text-white">{car.name}</p>
+                <div className="mt-1 flex items-center justify-between text-[10px]">
+                  <span className="font-display font-black text-apex-red">{Ie(car.value)}</span>
+                  <span className="text-white/40">{Qi(car.hp)} hp · Lv{car.unlockLevel}</span>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ─── WantedPanel (bounties) ─── */
+function WantedPanel({ state, dispatch }: { state: GameState; dispatch: any }) {
+  const now = Date.now();
+  const bounties = state.wantedBounties.filter((b) => !b.claimed && b.expiresAt > now);
+  const expiredCount = state.wantedBounties.filter((b) => !b.claimed && b.expiresAt <= now).length;
+
+  return (
+    <div>
+      <SectionHeader eyebrow="Bounties" title="WANTED BOARD" hint="Sell the right cars for bonus rewards" />
+      {bounties.length === 0 && expiredCount === 0 && (
+        <div className="rounded-xl border border-apex-line bg-apex-panel p-8 text-center">
+          <p className="font-display text-sm text-white/40">No active bounties. Check back later!</p>
+          <button type="button" onClick={() => dispatch({ type: "REFRESH_WANTED", now })}
+            className="mt-3 rounded-md border border-white/15 px-3 py-1.5 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-white/70 transition-colors hover:border-apex-red hover:text-white">
+            Refresh Board
+          </button>
+        </div>
+      )}
+      <div className="space-y-3">
+        {bounties.map((bounty) => {
+          const canComplete = (() => {
+            for (const { carId } of bounty.wants) {
+              if (!state.ownedCars[carId]) return false;
+            }
+            return true;
+          })();
+          const msLeft = Math.max(0, bounty.expiresAt - now);
+          const h = Math.floor(msLeft / 3_600_000);
+          const m = Math.floor((msLeft % 3_600_000) / 60_000);
+          return (
+            <div key={bounty.id} className={ce("rounded-xl border bg-apex-panel p-4", canComplete ? "border-amber-400/40" : "border-apex-line")}>
+              <div className="mb-2 flex items-start justify-between">
+                <div>
+                  <p className="font-display text-[9px] font-semibold uppercase tracking-[0.22em] text-amber-300">WANTED</p>
+                  <div className="mt-1 flex flex-wrap gap-2">
+                    {bounty.wants.map((w, i) => {
+                      const car = Te[w.carId];
+                      const hasCar = !!state.ownedCars[w.carId];
+                      return (
+                        <span key={i} className={ce("inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[10px] font-bold", hasCar ? "border-green-400/40 bg-green-400/10 text-green-400" : "border-white/15 text-white/50")}>
+                        {w.count}x {car?.name ?? w.carId}
+                      </span>
+                      );
+                    })}
+                  </div>
+                </div>
+                <span className="font-display text-[9px] font-bold text-white/30">{h}h {m}m left</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="font-display text-sm font-black text-apex-red">Reward: {Ie(bounty.reward)}</span>
+                <button type="button" disabled={!canComplete} onClick={() => { if (window.confirm("Sell bounty cars for " + Ie(bounty.reward) + "?")) dispatch({ type: "SELL_FOR_BOUNTY", bountyId: bounty.id }); }}
+                  className={ce("rounded-md px-3 py-1.5 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-white transition-colors", canComplete ? "bg-amber-400 hover:bg-amber-300 text-black" : "bg-white/10 text-white/30 cursor-not-allowed")}>
+                  {canComplete ? "Claim Bounty" : "Need cars"}
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {bounties.length > 0 && (
+        <button type="button" onClick={() => dispatch({ type: "REFRESH_WANTED", now })}
+          className="mt-4 w-full rounded-md border border-white/15 py-2 font-display text-[10px] font-bold uppercase tracking-[0.14em] text-white/50 transition-colors hover:border-apex-red hover:text-white">
+          Refresh Board
+        </button>
+      )}
+    </div>
+  );
+}
+
 /* ─── GamePanels Router ─── */
 export function GamePanels({ tab, state, dispatch }: { tab: string; state: GameState; dispatch: any }) {
   switch (tab) {
@@ -575,6 +693,8 @@ export function GamePanels({ tab, state, dispatch }: { tab: string; state: GameS
     case "prestige": return <PrestigePanel state={state} dispatch={dispatch} />;
     case "casino": return <CasinoPanel state={state} dispatch={dispatch} />;
     case "leaderboard": return <LeaderboardPanel />;
+    case "index": return <IndexPanel state={state} />;
+    case "wanted": return <WantedPanel state={state} dispatch={dispatch} />;
     default: return <GaragePanel state={state} dispatch={dispatch} />;
   }
 }

@@ -10,6 +10,7 @@ import {
   nextSupercarSwapAt,
   rollDealerStock,
   rollSpin,
+  FUEL_MAX,
   SPIN_COOLDOWN_MS,
   spinCashSlices,
   spinReadyAt,
@@ -108,7 +109,7 @@ describe("reducer: crates", () => {
     const s: GameState = {
       ...rich(),
       cash: 100_000_000,
-      ownedCars: { ...rich().ownedCars, "civic-lx-95": { upgrades: {} } },
+      ownedCars: { ...rich().ownedCars, "civic-lx-95": { upgrades: {}, fuel: FUEL_MAX, clicksSinceFuel: 0 } },
     };
     const cost = crateCost("scrapyard");
     const carVal = buyPrice("civic-lx-95");
@@ -146,7 +147,7 @@ describe("reducer: tick and prestige", () => {
       achievements: ["first-click"],
       totalEarned: 90_000,
       cash: 500_000,
-      ownedCars: { "rusty-hatch-91": { upgrades: {} }, "civic-lx-95": { upgrades: {} } },
+      ownedCars: { "rusty-hatch-91": { upgrades: {}, fuel: FUEL_MAX, clicksSinceFuel: 0 }, "civic-lx-95": { upgrades: {}, fuel: FUEL_MAX, clicksSinceFuel: 0 } },
     };
     const next = gameReducer(ready, { type: "PRESTIGE" });
     expect(next.prestigeLevel).toBe(1);

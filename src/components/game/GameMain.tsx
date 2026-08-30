@@ -41,6 +41,8 @@ import {
   clickValue,
   critChance,
   dailyReward,
+  fuelCost,
+  FUEL_MAX,
   passivePerSec,
   type Action,
 } from "@/game/engine";
@@ -53,6 +55,8 @@ import { ChatPanel } from "./ChatPanel";
 
 const NAV: { id: TabId; label: string; icon: LucideIcon }[] = [
   { id: "earn", label: "Earn", icon: MousePointerClick },
+  { id: "index", label: "Index", icon: BarChart3 },
+  { id: "wanted", label: "Wanted", icon: Shield },
   { id: "challenges", label: "Challenges", icon: Target },
   { id: "spin", label: "Spin", icon: CircleDollarSign },
   { id: "garage", label: "Garage", icon: CarIcon },
@@ -69,6 +73,8 @@ const NAV: { id: TabId; label: string; icon: LucideIcon }[] = [
 
 type TabId =
   | "earn"
+  | "index"
+  | "wanted"
   | "challenges"
   | "spin"
   | "garage"
@@ -450,6 +456,7 @@ export function GameMain({
           {tab === "earn" ? (
             <EarnZone
               state={state}
+              dispatch={dispatch}
               active={active}
               rarityMeta={rarityMeta}
               condition={condition}
@@ -506,6 +513,7 @@ export function GameMain({
 
 function EarnZone({
   state,
+  dispatch,
   active,
   rarityMeta,
   condition,
@@ -516,6 +524,7 @@ function EarnZone({
   clickBlocked,
 }: {
   state: GameState;
+  dispatch: React.Dispatch<Action>;
   active: NonNullable<typeof GAME_CAR_MAP[string]>;
   rarityMeta: { label: string; color: string; glow: string };
   condition: number;
@@ -645,7 +654,7 @@ function EarnZone({
             />
           </motion.div>
 
-          {/* Condition bar + car specs row */}
+          {/* Condition + Fuel bars + car specs row */}
           <div className="mt-2 w-full max-w-xl space-y-2">
             <div>
               <div className="mb-1 flex items-center justify-between text-[9px] font-semibold uppercase tracking-[0.18em] text-white/35">
@@ -660,6 +669,56 @@ function EarnZone({
                 />
               </div>
             </div>
+            {/* Fuel bar */}
+            {(() => {
+              const fuel = state.ownedCars[state.activeCarId]?.fuel ?? FUEL_MAX;
+              const fuelPct = (fuel / FUEL_MAX) * 100;
+              const cost = fuelCost(state, state.activeCarId);
+              const outOfFuel = fuel <= 0;
+              return (
+                <div>
+                  <div className="mb-1 flex items-center justify-between text-[9px] font-semibold uppercase tracking-[0.18em] text-white/35">
+                    <span>Fuel</span>
+                    <span className={cn(outOfFuel ? "text-red-400 font-bold" : "")}>{fuel}/{FUEL_MAX}{outOfFuel ? " — STOPPED" : ""}</span>
+                  </div>
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                    <motion.div
+                      className={cn("h-full rounded-full", outOfFuel ? "bg-red-500" : fuelPct < 25 ? "bg-amber-400" : "bg-emerald-400")}
+                      animate={{ width: `${fuelPct}%` }}
+                      transition={{ duration: 0.4 }}
+                    />
+                  </div>
+                  {outOfFuel && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (state.cash < cost) { toast.error("Not enough cash to refuel!"); return; }
+                        dispatch({ type: "BUY_FUEL", carId: state.activeCarId });
+                        toast.success(`Refueled for ${fmtMoney(cost)}`);
+                      }}
+                      className="mt-1 w-full rounded-md border border-amber-400/40 bg-amber-400/10 px-2 py-1 font-display text-[9px] font-bold uppercase tracking-[0.12em] text-amber-300 transition-colors hover:bg-amber-400/20"
+                    >
+                      ⛽ Buy Fuel — {fmtMoney(cost)}
+                    </button>
+                  )}
+                  {!outOfFuel && fuel < FUEL_MAX && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (state.cash < cost) { toast.error("Not enough cash to refuel!"); return; }
+                        dispatch({ type: "BUY_FUEL", carId: state.activeCarId });
+                        toast.success(`Refueled for ${fmtMoney(cost)}`);
+                      }}
+                      className="mt-1 w-full rounded-md border border-white/15 px-2 py-1 font-display text-[9px] font-bold uppercase tracking-[0.12em] text-white/50 transition-colors hover:border-emerald-400 hover:text-emerald-400"
+                    >
+                      ⛽ Refuel — {fmtMoney(cost)}
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
             {/* Quick specs */}
             <div className="flex items-center justify-center gap-4 text-[9px] uppercase tracking-[0.14em] text-white/40">
               <span className="flex items-center gap-1"><Zap className="size-3 text-apex-red" /> {carPower(state, state.activeCarId).toLocaleString()} hp</span>

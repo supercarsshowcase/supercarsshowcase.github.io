@@ -104,6 +104,22 @@ export interface DealerDef {
 
 export interface OwnedCar {
   upgrades: Record<string, number>;
+  /** Fuel level 0–100. At 0 the car stops earning. */
+  fuel: number;
+  /** Total clicks on this car since last refuel (tracks fuel drain). */
+  clicksSinceFuel: number;
+}
+
+export interface WantedBounty {
+  id: string;
+  /** Car IDs wanted (count matters). */
+  wants: { carId: string; count: number }[];
+  /** Cash reward for completing the bounty. */
+  reward: number;
+  /** Timestamp when this bounty expires. */
+  expiresAt: number;
+  /** Whether the player has claimed this bounty. */
+  claimed: boolean;
 }
 
 export interface GameState {
@@ -129,6 +145,8 @@ export interface GameState {
   freeSpins: number;
   /** Weekly challenges reset every Monday. */
   weekly: WeeklyState;
+  /** Active wanted bounties. */
+  wantedBounties: WantedBounty[];
 }
 
 export interface SpinResult {

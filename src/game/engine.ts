@@ -14,7 +14,7 @@ import {
   generateWeeklyChallenges,
   initialWeeklyState,
 } from "./data";
-import type { CrateResult, DealerDef, GameState, SpinResult, WeeklyState, WeeklyChallenge } from "./types";
+import type { CrateResult, DealerDef, GameState, SpinResult, WeeklyState, WeeklyChallenge, WantedBounty } from "./types";
 
 const SAVE_KEY = "supercars.game.v1";
 const STORAGE_VERSION = 1;
@@ -33,6 +33,18 @@ const UPGRADE_EFFECT_MULT = 0.05;
 const CRATE_COST_MULT = 50;
 /** Spin cash rewards are 3% of original (10x nerf). */
 const SPIN_REWARD_MULT = 0.03;
+/** Fuel cost to refuel a car. */
+export const FUEL_COST = 500;
+/** Maximum fuel level. */
+export const FUEL_MAX = 100;
+/** Fuel drains 1 unit every N clicks. */
+const FUEL_DRAIN_INTERVAL = 100;
+/** How many bounties to show at once. */
+const WANTED_BOUNTY_COUNT = 3;
+/** Bounty duration: 24 hours. */
+const BOUNTY_DURATION_MS = 24 * 60_000;
+/** Reward multiplier for wanted bounties (relative to car value). */
+const BOUNTY_REWARD_MULT = 3;
 
 // ── Initial state ─────────────────────────────────────────────────────────────
 
@@ -65,7 +77,7 @@ export function initialGameState(): GameState {
     reputation: 0,
     prestigeLevel: 0,
     activeCarId: STARTER_ID,
-    ownedCars: { [STARTER_ID]: { upgrades: {} } },
+    ownedCars: { [STARTER_ID]: { upgrades: {}, fuel: FUEL_MAX, clicksSinceFuel: 0 } },
     inventory: {},
     cratesOpened: 0,
     totalClicks: 0,
@@ -79,6 +91,7 @@ export function initialGameState(): GameState {
     lastSpinAt: 0,
     freeSpins: 0,
     weekly: initialWeeklyState(now),
+    wantedBounties: [],
   };
 }
 
@@ -180,6 +193,9 @@ export function clickValue(state: GameState): number {
   if (!def) return 1;
   // Secret cars are display trophies — they never earn money.
   if (def.secret) return 1;
+  // Car stops earning when fuel is empty
+  const fuel = state.ownedCars[state.activeCarId]?.fuel;
+  if (fuel !== undefined && fuel <= 0) return 0;
   const cond = conditionOf(state, state.activeCarId);
   const condMult = 0.5 + 0.5 * cond;
   const mults = carUpgradeMults(state, state.activeCarId);
@@ -192,6 +208,9 @@ export function passivePerSec(state: GameState): number {
   for (const carId of Object.keys(state.ownedCars)) {
     const def = GAME_CAR_MAP[carId];
     if (!def || def.secret) continue; // secret cars never generate income
+    // Car stops earning when fuel is empty
+    const fuel = state.ownedCars[carId]?.fuel;
+    if (fuel !== undefined && fuel <= 0) continue;
     const cond = conditionOf(state, carId);
     const condMult = 0.5 + 0.5 * cond;
     const mults = carUpgradeMults(state, carId);
@@ -410,6 +429,9 @@ export type Action =
   | { type: "GIVE_SPINS"; amount: number }
   | { type: "WEEKLY_CHECK"; now: number }
   | { type: "CLAIM_WEEKLY"; challengeId: string }
+  | { type: "BUY_FUEL"; carId: string }
+  | { type: "SELL_FOR_BOUNTY"; bountyId: string }
+  | { type: "REFRESH_WANTED"; now: number }
   | { type: "LOAD"; state: GameState };
 
 /** Ensure the weekly state is for the current week, resetting if needed. */
@@ -435,6 +457,55 @@ function getMondayStr(now: number): string {
   d.setDate(diff);
   d.setHours(0, 0, 0, 0);
   return d.toISOString().split("T")[0];
+}
+
+/** Generate a set of wanted bounties. */
+export function generateBounties(now: number): WantedBounty[] {
+  const allCars = Object.values(GAME_CAR_MAP).filter((c) => !c.secret);
+  const bounties: WantedBounty[] = [];
+  for (let i = 0; i < WANTED_BOUNTY_COUNT; i++) {
+    // Pick 1–3 random cars for this bounty
+    const count = 1 + Math.floor(Math.random() * 3);
+    const shuffled = [...allCars].sort(() => Math.random() - 0.5);
+    const wants: { carId: string; count: number }[] = [];
+    const usedIds = new Set<string>();
+    let totalValue = 0;
+    for (let j = 0; j < Math.min(count, shuffled.length); j++) {
+      const car = shuffled[j];
+      if (usedIds.has(car.id)) continue;
+      usedIds.add(car.id);
+      const qty = 1 + Math.floor(Math.random() * 2);
+      wants.push({ carId: car.id, count: qty });
+      totalValue += car.value * qty;
+    }
+    if (wants.length === 0) continue;
+    bounties.push({
+      id: `bounty-${now}-${i}`,
+      wants,
+      reward: Math.round(totalValue * BOUNTY_REWARD_MULT),
+      expiresAt: now + BOUNTY_DURATION_MS,
+      claimed: false,
+    });
+  }
+  return bounties;
+}
+
+/** Check if a player can complete a bounty (owns all required cars). */
+export function canCompleteBounty(state: GameState, bounty: WantedBounty): boolean {
+  for (const { carId, count } of bounty.wants) {
+    if (!state.ownedCars[carId]) return false;
+    // For now, simple check: just needs to own the car
+    // (counts > 1 mean they need that many of the same car type, which is rare)
+  }
+  return true;
+}
+
+/** Fuel cost to fully refuel a car. */
+export function fuelCost(state: GameState, carId: string): number {
+  const owned = state.ownedCars[carId];
+  if (!owned) return 0;
+  const missing = FUEL_MAX - (owned.fuel ?? FUEL_MAX);
+  return missing > 0 ? Math.round(FUEL_COST * (missing / FUEL_MAX)) : 0;
 }
 
 /** Track a weekly metric and update challenge progress. */
@@ -490,6 +561,28 @@ export function gameReducer(state: GameState, action: Action): GameState {
       const nextClicks = state.clicksOnStarter + (wasStarter ? 1 : 0);
       const weeklyEarned = trackWeekly(state, "earned", amount);
       const weeklyClicks = trackWeekly({ ...state, weekly: weeklyEarned }, "clicks", 1);
+
+      // Fuel depletion: every FUEL_DRAIN_INTERVAL clicks on a car, fuel drops 1
+      const activeOwned = state.ownedCars[state.activeCarId];
+      let ownedCars = state.ownedCars;
+      if (activeOwned) {
+        const prevClicks = activeOwned.clicksSinceFuel ?? 0;
+        const newClicks = prevClicks + 1;
+        const fuel = activeOwned.fuel ?? FUEL_MAX;
+        if (newClicks >= FUEL_DRAIN_INTERVAL && fuel > 0) {
+          const newFuel = fuel - 1;
+          ownedCars = {
+            ...ownedCars,
+            [state.activeCarId]: { ...activeOwned, fuel: newFuel, clicksSinceFuel: 0 },
+          };
+        } else {
+          ownedCars = {
+            ...ownedCars,
+            [state.activeCarId]: { ...activeOwned, clicksSinceFuel: newClicks },
+          };
+        }
+      }
+
       const next = {
         ...state,
         cash: state.cash + amount,
@@ -498,6 +591,7 @@ export function gameReducer(state: GameState, action: Action): GameState {
         clicksOnStarter: nextClicks,
         lastTick: Date.now(),
         weekly: weeklyClicks,
+        ownedCars,
       };
       return applyAchievements(next);
     }
@@ -527,7 +621,7 @@ export function gameReducer(state: GameState, action: Action): GameState {
       return applyAchievements({
         ...state,
         cash: state.cash - price,
-        ownedCars: { ...state.ownedCars, [action.id]: { upgrades: {} } },
+        ownedCars: { ...state.ownedCars, [action.id]: { upgrades: {}, fuel: FUEL_MAX, clicksSinceFuel: 0 } },
         weekly,
       });
     }
@@ -588,7 +682,7 @@ export function gameReducer(state: GameState, action: Action): GameState {
         if (def && ownedCars[r.carId]) {
           cash += Math.round(def.value * 0.2);
         } else if (def) {
-          ownedCars = { ...ownedCars, [r.carId]: { upgrades: {} } };
+          ownedCars = { ...ownedCars, [r.carId]: { upgrades: {}, fuel: FUEL_MAX, clicksSinceFuel: 0 } };
         }
       } else if (r.kind === "part" && r.partId) {
         inventory = { ...inventory, [r.partId]: (inventory[r.partId] ?? 0) + 1 };
@@ -651,7 +745,7 @@ export function gameReducer(state: GameState, action: Action): GameState {
         }
         return applyAchievements({
           ...state,
-          ownedCars: { ...state.ownedCars, [r.carId]: { upgrades: {} } },
+          ownedCars: { ...state.ownedCars, [r.carId]: { upgrades: {}, fuel: FUEL_MAX, clicksSinceFuel: 0 } },
           lastSpinAt: action.now,
           freeSpins: nextFreeSpins,
           weekly: weeklySpin,
@@ -717,9 +811,9 @@ export function gameReducer(state: GameState, action: Action): GameState {
       // When upgrading, strip all upgrades from owned cars (keep the cars themselves).
       let ownedCars = state.ownedCars;
       if (opts.upgrades) {
-        const stripped: Record<string, { upgrades: Record<string, number> }> = {};
+        const stripped: Record<string, { upgrades: Record<string, number>; fuel: number; clicksSinceFuel: number }> = {};
         for (const [id, owned] of Object.entries(ownedCars)) {
-          stripped[id] = { upgrades: {} };
+          stripped[id] = { upgrades: {}, fuel: FUEL_MAX, clicksSinceFuel: 0 };
         }
         ownedCars = stripped;
       }
@@ -727,7 +821,7 @@ export function gameReducer(state: GameState, action: Action): GameState {
         ...state,
         cash: opts.cash ? 0 : state.cash,
         ownedCars: opts.cars
-          ? { [state.activeCarId]: state.ownedCars[state.activeCarId] ?? { upgrades: {} } }
+          ? { [state.activeCarId]: state.ownedCars[state.activeCarId] ?? { upgrades: {}, fuel: FUEL_MAX, clicksSinceFuel: 0 } }
           : ownedCars,
         inventory: opts.parts ? {} : state.inventory,
         prestigeLevel: opts.prestige ? 0 : state.prestigeLevel,
@@ -757,8 +851,53 @@ export function gameReducer(state: GameState, action: Action): GameState {
       if (!GAME_CAR_MAP[action.carId]) return state;
       return applyAchievements({
         ...state,
-        ownedCars: { ...state.ownedCars, [action.carId]: { upgrades: {} } },
+        ownedCars: { ...state.ownedCars, [action.carId]: { upgrades: {}, fuel: FUEL_MAX, clicksSinceFuel: 0 } },
       });
+    }
+    case "BUY_FUEL": {
+      const owned = state.ownedCars[action.carId];
+      if (!owned) return state;
+      const currentFuel = owned.fuel ?? FUEL_MAX;
+      if (currentFuel >= FUEL_MAX) return state;
+      const cost = fuelCost(state, action.carId);
+      if (cost <= 0 || state.cash < cost) return state;
+      return {
+        ...state,
+        cash: state.cash - cost,
+        ownedCars: {
+          ...state.ownedCars,
+          [action.carId]: { ...owned, fuel: FUEL_MAX },
+        },
+      };
+    }
+    case "SELL_FOR_BOUNTY": {
+      const bounty = state.wantedBounties.find((b) => b.id === action.bountyId);
+      if (!bounty || bounty.claimed) return state;
+      if (bounty.expiresAt < Date.now()) return state;
+      if (!canCompleteBounty(state, bounty)) return state;
+      // Remove owned cars that were part of the bounty
+      const ownedCars = { ...state.ownedCars };
+      for (const { carId } of bounty.wants) {
+        delete ownedCars[carId];
+      }
+      const activeCarId =
+        state.activeCarId in ownedCars ? state.activeCarId : (Object.keys(ownedCars)[0] ?? STARTER_ID);
+      return applyAchievements({
+        ...state,
+        cash: state.cash + bounty.reward,
+        totalEarned: state.totalEarned + bounty.reward,
+        ownedCars,
+        activeCarId,
+        wantedBounties: state.wantedBounties.map((b) =>
+          b.id === action.bountyId ? { ...b, claimed: true } : b,
+        ),
+      });
+    }
+    case "REFRESH_WANTED": {
+      return {
+        ...state,
+        wantedBounties: generateBounties(action.now),
+      };
     }
     case "LOAD":
       return normalize(state, action.state);
@@ -776,7 +915,18 @@ function normalize(current: GameState, loaded: Partial<GameState>): GameState {
     inventory: loaded.inventory ?? current.inventory,
     daily: { ...initialGameState().daily, ...(loaded.daily ?? {}) },
     weekly: loaded.weekly ?? current.weekly ?? initialWeeklyState(Date.now()),
+    wantedBounties: loaded.wantedBounties ?? current.wantedBounties ?? [],
   };
+  // Ensure all owned cars have fuel fields (for old saves)
+  const ownedCars: Record<string, { upgrades: Record<string, number>; fuel: number; clicksSinceFuel: number }> = {};
+  for (const [id, owned] of Object.entries(base.ownedCars)) {
+    ownedCars[id] = {
+      upgrades: owned.upgrades,
+      fuel: owned.fuel ?? FUEL_MAX,
+      clicksSinceFuel: owned.clicksSinceFuel ?? 0,
+    };
+  }
+  base.ownedCars = ownedCars;
   // Fill any dealer that has no stock yet (old saves predate stock seeding).
   const dealerStock: Record<string, string[]> = {};
   for (const d of DEALERS) {
