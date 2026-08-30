@@ -4,9 +4,8 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 
 /** Maximum cash a player can gift to another player. */
 const MAX_PLAYER_GIFT = 10_000_000;
-
-/** Maximum random cars an admin can gift at once. */
-const MAX_RANDOM_CARS = 1_000_000;
+/** Daily gifting cap per sender (sum of all gifts). */
+const DAILY_GIFT_CAP = 50_000_000;
 
 async function requireAuth(ctx: MutationCtx | QueryCtx) {
   const userId = await getAuthUserId(ctx);
@@ -24,12 +23,6 @@ async function requireAdmin(ctx: MutationCtx | QueryCtx) {
 
 // ── Player-to-Player Cash Gift ─────────────────────────────────────────────
 
-/**
- * Any authenticated player can gift up to $10M cash to another player.
- * The sender's game state is localStorage-based, so we create a gift
- * record that the recipient can claim. The sender must confirm they
- * have the funds (client-side check + server-side max cap).
- */
 export const giftCash = mutation({
   args: {
     recipientId: v.id("users"),
@@ -51,37 +44,59 @@ export const giftCash = mutation({
     if (args.amount <= 0) {
       throw new Error("Amount must be at least $1.");
     }
+    if (!Number.isFinite(args.amount)) {
+      throw new Error("Invalid amount.");
+    }
     if (args.amount > MAX_PLAYER_GIFT) {
       throw new Error(`Maximum gift amount is $${MAX_PLAYER_GIFT.toLocaleString()}.`);
     }
 
-    // Check sender hasn't exceeded daily gifting limit (optional anti-abuse)
-    // For now, just create the gift
+    // Check daily gifting limit: sum all unclaimed + claimed gifts from today
+    const now = Date.now();
+    const dayStart = now - (now % (24 * 60 * 60 * 1000)); // start of today (UTC)
+    const recentGifts = await ctx.db
+      .query("adminGifts")
+      .withIndex("by_user", (q) => q.eq("userId", args.recipientId))
+      .collect();
+
+    // Check sender's total gifted today (across all recipients)
+    const allRecentGifts = await ctx.db.query("adminGifts").collect();
+    const senderTotalToday = allRecentGifts
+      .filter(
+        (g) =>
+          g.kind === "player_gift" &&
+          g.fromUserId === senderId &&
+          g.createdAt >= dayStart &&
+          g.amount,
+      )
+      .reduce((sum, g) => sum + (g.amount ?? 0), 0);
+
+    if (senderTotalToday + args.amount > DAILY_GIFT_CAP) {
+      throw new Error(
+        `Daily gift limit reached. You can gift $${Math.max(0, DAILY_GIFT_CAP - senderTotalToday).toLocaleString()} more today.`,
+      );
+    }
+
+    // Create the gift
     await ctx.db.insert("adminGifts", {
       userId: args.recipientId,
       kind: "player_gift",
       amount: Math.round(args.amount),
       fromUserId: senderId,
       claimed: false,
-      createdAt: Date.now(),
+      createdAt: now,
     });
 
-    const sender = await ctx.db.get(senderId);
     return {
       success: true,
       amount: Math.round(args.amount),
       recipientName: recipient.name ?? "Unknown",
-      senderName: sender?.name ?? "Unknown",
     };
   },
 });
 
 // ── Admin: Gift Random Cars ────────────────────────────────────────────────
 
-/**
- * Admin can gift up to 1M random cars to a player.
- * Cars are randomly selected from the game car pool.
- */
 export const giftRandomCars = mutation({
   args: {
     userId: v.id("users"),
@@ -96,12 +111,13 @@ export const giftRandomCars = mutation({
     if (args.count <= 0) {
       throw new Error("Count must be at least 1.");
     }
-    if (args.count > MAX_RANDOM_CARS) {
-      throw new Error(`Maximum is ${MAX_RANDOM_CARS.toLocaleString()} cars.`);
+    if (!Number.isFinite(args.count)) {
+      throw new Error("Invalid count.");
+    }
+    if (args.count > 1_000_000) {
+      throw new Error("Maximum is 1,000,000 cars.");
     }
 
-    // We'll create a single gift record with the count
-    // The client will handle rolling random cars when claiming
     await ctx.db.insert("adminGifts", {
       userId: args.userId,
       kind: "random_cars",
@@ -135,24 +151,58 @@ export const searchUsers = query({
   args: { search: v.string() },
   handler: async (ctx, args) => {
     await requireAuth(ctx);
-    const query = args.search.toLowerCase().trim();
-    if (query.length < 2) return [];
+    const q = args.search.toLowerCase().trim();
+    if (q.length < 2) return [];
 
-    const users = await ctx.db.query("users").collect();
-    return users
-      .filter((u) => {
+    // Use the email index for email lookups, username index for username lookups
+    const results: {
+      id: string;
+      name: string;
+      email: string | undefined;
+      username: string | undefined;
+      role: string | undefined;
+    }[] = [];
+
+    // Search by username index
+    const byUsername = await ctx.db
+      .query("users")
+      .withIndex("by_username")
+      .collect();
+
+    for (const u of byUsername) {
+      const username = (u.username ?? "").toLowerCase();
+      if (username.includes(q)) {
+        results.push({
+          id: u._id,
+          name: u.name ?? "Unknown",
+          email: u.email,
+          username: u.username,
+          role: u.role,
+        });
+      }
+    }
+
+    // Also search by scanning name field (no index, but only for short lists)
+    // This is a secondary fallback - the main search is username-based
+    if (results.length < 20) {
+      const allUsers = await ctx.db.query("users").collect();
+      for (const u of allUsers) {
         const name = (u.name ?? "").toLowerCase();
         const email = (u.email ?? "").toLowerCase();
-        const username = (u.username ?? "").toLowerCase();
-        return name.includes(query) || email.includes(query) || username.includes(query);
-      })
-      .slice(0, 20)
-      .map((u) => ({
-        id: u._id,
-        name: u.name ?? "Unknown",
-        email: u.email,
-        username: u.username,
-        role: u.role,
-      }));
+        const alreadyFound = results.some((r) => r.id === u._id);
+        if (!alreadyFound && (name.includes(q) || email.includes(q))) {
+          results.push({
+            id: u._id,
+            name: u.name ?? "Unknown",
+            email: u.email,
+            username: u.username,
+            role: u.role,
+          });
+        }
+        if (results.length >= 20) break;
+      }
+    }
+
+    return results.slice(0, 20);
   },
 });
