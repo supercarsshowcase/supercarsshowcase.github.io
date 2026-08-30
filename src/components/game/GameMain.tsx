@@ -130,6 +130,19 @@ const BURST_PENALTY_MS = 2000;
 const BURST_THRESHOLD = 8;
 const BURST_WINDOW_MS = 1000;
 
+/** Site header height (h-16) reserved above the game viewport. */
+const HEADER_PX = 64;
+/**
+ * Zoom-in target for the game UI on desktop. Large screens get a uniformly
+ * bigger game; the fit loop below clamps it to whatever actually fits.
+ */
+function targetZoom(): number {
+  if (typeof window === "undefined") return 1;
+  const w = window.innerWidth;
+  if (w < 1024) return 1;
+  return Math.min(1.45, Math.max(1, w / 1360));
+}
+
 export function GameMain({
   state,
   dispatch,
@@ -153,6 +166,11 @@ export function GameMain({
   const [clickLocked, setClickLocked] = useState(false);
   const [clickBlocked, setClickBlocked] = useState(false);
 
+  // ── UI zoom: scale the whole game up on large screens ──
+  const [uiZoom, setUiZoom] = useState(() => targetZoom());
+  const [fitTick, setFitTick] = useState(0);
+  const gameRootRef = useRef<HTMLDivElement>(null);
+
   const active = GAME_CAR_MAP[state.activeCarId] ?? GAME_CAR_MAP[STARTER_ID];
   const level = levelFrom(state);
   const cash = state.cash;
@@ -170,6 +188,56 @@ export function GameMain({
   const xpIntoLevel = Math.max(0, state.totalEarned - Math.pow(levelBase - 1, 2) * 500);
   const xpPct = Math.min(100, (xpIntoLevel / Math.max(1, xpForLevel)) * 100);
   const nextLevelEarned = Math.pow(levelBase, 2) * 500;
+
+  // Re-fit the zoom when the window is resized (debounced)…
+  useEffect(() => {
+    let t: number | undefined;
+    const onResize = () => {
+      window.clearTimeout(t);
+      t = window.setTimeout(() => {
+        setUiZoom(targetZoom());
+        setFitTick((n) => n + 1);
+      }, 150);
+    };
+    window.addEventListener("resize", onResize);
+    return () => {
+      window.clearTimeout(t);
+      window.removeEventListener("resize", onResize);
+    };
+  }, []);
+
+  // …and a few times shortly after mount so late layout (fonts, photos)
+  // is accounted for before the zoom is locked in.
+  useEffect(() => {
+    const timers = [600, 1600, 3200].map((ms) =>
+      window.setTimeout(() => setFitTick((n) => n + 1), ms),
+    );
+    return () => timers.forEach((t) => window.clearTimeout(t));
+  }, []);
+
+  // The fit loop: shrink the zoom until the game fits between the site header
+  // and the bottom of the viewport (nothing scrolls away), then grow back
+  // toward the width-based target when there is spare room. Only calibrated
+  // on the Earn tab; longer tabs (garage, casino…) simply scroll when long.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.innerWidth < 1024) return;
+    if (tab !== "earn") return;
+    const el = gameRootRef.current;
+    if (!el) return;
+    const avail = window.innerHeight - HEADER_PX;
+    const visual = el.getBoundingClientRect().height;
+    if (visual > avail + 6) {
+      const next = Math.max(1, Math.round(((uiZoom * avail) / visual) * 100) / 100);
+      if (next < uiZoom - 0.005) setUiZoom(next);
+    } else if (visual < avail * 0.9) {
+      const next = Math.min(
+        targetZoom(),
+        Math.round(uiZoom * (avail / visual) * 0.97 * 100) / 100,
+      );
+      if (next > uiZoom + 0.005) setUiZoom(next);
+    }
+  }, [uiZoom, fitTick, tab]);
 
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const now = Date.now();
@@ -203,10 +271,13 @@ export function GameMain({
     dispatch({ type: "CLICK", amount, globalMultiplier });
     const rect = e.currentTarget.getBoundingClientRect();
     const id = ++popupId.current;
+    // Popup coordinates live inside the zoom-scaled tree — convert the
+    // visual (post-scale) pointer offset back into local layout pixels.
+    const s = uiZoom || 1;
     const popup: Popup = {
       id,
-      x: e.clientX - rect.left + (Math.random() * 40 - 20),
-      y: e.clientY - rect.top - 10,
+      x: (e.clientX - rect.left) / s + (Math.random() * 40 - 20),
+      y: (e.clientY - rect.top) / s - 10,
       text: crit ? `CRITICAL +${fmtMoney(amount)}` : `+${fmtMoney(amount)}`,
       crit,
     };
@@ -237,7 +308,25 @@ export function GameMain({
   };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex flex-col overflow-visible px-2 py-2 sm:px-4 lg:px-5">
+    <>
+      {/* ── UI zoom wrapper: scales the whole game up, width-compensated so it
+          still spans the full screen ── */}
+      <div
+        style={
+          uiZoom > 1
+            ? {
+                width: `${100 / uiZoom}%`,
+                transform: `scale(${uiZoom})`,
+                transformOrigin: "top left",
+              }
+            : undefined
+        }
+      >
+      <div
+        ref={gameRootRef}
+        className="flex flex-col overflow-visible px-2 py-2 sm:px-4 lg:px-5"
+        style={{ minHeight: `calc((100dvh - 4rem) / ${uiZoom})` }}
+      >
       {/* ── Active Event Banner ── */}
       {activeEvent && (
         <motion.div
@@ -293,13 +382,6 @@ export function GameMain({
           )}
         </div>
       </div>
-
-      {/* ── Gift Modal ── */}
-      <GiftModal
-        open={showGiftModal}
-        onClose={() => setShowGiftModal(false)}
-        currentCash={cash}
-      />
 
       {/* ── Mobile action row ── */}
       <div className="mb-1 flex flex-wrap items-center gap-1.5 lg:hidden">
@@ -507,7 +589,16 @@ export function GameMain({
         {/* ── Chat panel (desktop) ── */}
         <ChatPanel open={chatOpen} onToggle={() => setChatOpen((v) => !v)} />
       </div>
-    </div>
+      </div>
+      </div>
+
+      {/* Gift modal sits outside the zoom wrapper so it stays viewport-fixed */}
+      <GiftModal
+        open={showGiftModal}
+        onClose={() => setShowGiftModal(false)}
+        currentCash={cash}
+      />
+    </>
   );
 }
 

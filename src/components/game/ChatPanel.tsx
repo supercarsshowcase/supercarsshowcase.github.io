@@ -62,7 +62,7 @@ export function ChatPanel({
   if (!open) return null;
 
   return (
-    <div className="hidden h-[calc(100vh-6rem)] max-h-[780px] min-h-[32rem] w-[20rem] shrink-0 flex-col rounded-xl border border-apex-line bg-apex-panel lg:flex">
+    <div className="hidden min-h-0 w-[20rem] shrink-0 flex-col rounded-xl border border-apex-line bg-apex-panel lg:flex">
       {/* Header */}
       <div className="flex items-center gap-2 border-b border-apex-line px-3 py-1.5">
         <MessageCircle className="size-3 text-apex-red" />
@@ -85,7 +85,7 @@ export function ChatPanel({
       <div
         ref={listRef}
         onScroll={handleScroll}
-        className="flex-1 space-y-1 overflow-y-auto px-2 py-1.5"
+        className="min-h-0 flex-1 space-y-1 overflow-y-auto px-2 py-1.5"
       >
         {messages.length === 0 && (
           <p className="mt-6 text-center text-xs text-white/25">
