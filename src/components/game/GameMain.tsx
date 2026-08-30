@@ -228,7 +228,7 @@ export function GameMain({
   };
 
   return (
-    <div className="h-dvh flex flex-col overflow-hidden px-3 py-3 sm:px-5 lg:px-7">
+    <div className="h-dvh flex flex-col overflow-hidden px-2 py-2 sm:px-4 lg:px-5">
       {/* ── Active Event Banner ── */}
       {activeEvent && (
         <motion.div
@@ -258,17 +258,17 @@ export function GameMain({
       )}
 
       {/* ── Header ── */}
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <div>
-          <p className="inline-flex items-center gap-2 font-display text-[11px] font-semibold uppercase tracking-[0.28em] text-apex-red">
-            <span className="inline-block size-2 rounded-full bg-apex-red" />
+          <p className="inline-flex items-center gap-1.5 font-display text-[9px] font-semibold uppercase tracking-[0.28em] text-apex-red">
+            <span className="inline-block size-1.5 rounded-full bg-apex-red" />
             The Garage Tycoon
           </p>
-          <h1 className="mt-1 font-display text-3xl font-black tracking-tight text-white sm:text-4xl">
+          <h1 className="mt-0.5 font-display text-xl font-black tracking-tight text-white sm:text-2xl">
             GAME
           </h1>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5">
           <StatPill icon={Coins} label="Cash" value={fmtMoney(cash)} accent />
           <StatPill icon={TrendingUp} label="Income/s" value={fmtMoney(income)} />
           <StatPill icon={Star} label="Level" value={String(level)} />
@@ -285,7 +285,7 @@ export function GameMain({
       />
 
       {/* ── Mobile action row ── */}
-      <div className="mb-4 flex flex-wrap items-center gap-2 lg:hidden">
+      <div className="mb-2 flex flex-wrap items-center gap-2 lg:hidden">
         <button
           type="button"
           onClick={claimDaily}
@@ -318,23 +318,23 @@ export function GameMain({
         {/* ── Left sidebar (desktop) ── */}
         <aside className="hidden w-[21rem] shrink-0 flex-col gap-2 lg:flex">
           {/* Balance */}
-          <div className="rounded-xl border border-apex-line bg-apex-panel p-3">
-            <p className="text-[8px] font-semibold uppercase tracking-[0.22em] text-white/40">
+          <div className="rounded-xl border border-apex-line bg-apex-panel px-3 py-2">
+            <p className="text-[7px] font-semibold uppercase tracking-[0.22em] text-white/40">
               Cash
             </p>
-            <p className="mt-0.5 font-display text-2xl font-black tracking-tight text-white">
+            <p className="mt-0.5 font-display text-lg font-black tracking-tight text-white">
               {fmtMoney(cash)}
             </p>
-            <div className="mt-2 grid grid-cols-2 gap-1.5 border-t border-apex-line pt-2 text-center">
+            <div className="mt-1 grid grid-cols-2 gap-1 border-t border-apex-line pt-1 text-center">
               <div>
-                <p className="font-display text-sm font-black text-apex-red">{fmtMoney(income)}</p>
-                <p className="text-[8px] font-semibold uppercase tracking-[0.18em] text-white/35">
+                <p className="font-display text-xs font-black text-apex-red">{fmtMoney(income)}</p>
+                <p className="text-[7px] font-semibold uppercase tracking-[0.18em] text-white/35">
                   /sec
                 </p>
               </div>
               <div>
-                <p className="font-display text-sm font-black text-white">{fmtMoney(perClick)}</p>
-                <p className="text-[8px] font-semibold uppercase tracking-[0.18em] text-white/35">
+                <p className="font-display text-xs font-black text-white">{fmtMoney(perClick)}</p>
+                <p className="text-[7px] font-semibold uppercase tracking-[0.18em] text-white/35">
                   click
                 </p>
               </div>
@@ -342,29 +342,29 @@ export function GameMain({
           </div>
 
           {/* Level / XP */}
-          <div className="rounded-xl border border-apex-line bg-apex-panel p-3">
+          <div className="rounded-xl border border-apex-line bg-apex-panel px-3 py-2">
             <div className="flex items-center justify-between">
-              <span className="font-display text-[11px] font-bold uppercase tracking-[0.18em] text-white">
+              <span className="font-display text-[10px] font-bold uppercase tracking-[0.18em] text-white">
                 Level {level}
               </span>
-              <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/40">
+              <span className="text-[8px] font-semibold uppercase tracking-[0.18em] text-white/40">
                 Prestige {state.prestigeLevel}
               </span>
             </div>
-            <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+            <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-white/10">
               <motion.div
                 className="h-full rounded-full bg-apex-red"
                 animate={{ width: `${xpPct}%` }}
                 transition={{ duration: 0.4 }}
               />
             </div>
-            <p className="mt-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-white/35">
-              {fmtMoney(xpIntoLevel)} / {fmtMoney(xpForLevel)} xp · next at {fmtMoney(nextLevelEarned)} earned
+            <p className="mt-1 text-[8px] font-semibold uppercase tracking-[0.14em] text-white/35">
+              {fmtMoney(xpIntoLevel)} / {fmtMoney(xpForLevel)} xp
             </p>
           </div>
 
           {/* Nav */}
-          <nav className="flex flex-col gap-0.5 rounded-xl border border-apex-line bg-apex-panel p-1.5">
+          <nav className="flex flex-col gap-px rounded-xl border border-apex-line bg-apex-panel p-1">
             {NAV.map((item) => {
               const Icon = item.icon;
               const isActive = tab === item.id;
@@ -380,13 +380,13 @@ export function GameMain({
                     }
                   }}
                   className={cn(
-                    "flex items-center gap-2.5 rounded-md px-2.5 py-1.5 font-display text-[10px] font-bold uppercase tracking-[0.14em] transition-colors",
+                    "flex items-center gap-2 rounded-md px-2 py-1 font-display text-[9px] font-bold uppercase tracking-[0.14em] transition-colors",
                     isActive
                       ? "border-l-2 border-apex-red bg-apex-red/10 text-white"
                       : "border-l-2 border-transparent text-white/45 hover:bg-white/5 hover:text-white",
                   )}
                 >
-                  <Icon className={cn("size-4", isActive ? "text-apex-red" : "text-white/40")} />
+                  <Icon className={cn("size-3.5", isActive ? "text-apex-red" : "text-white/40")} />
                   {item.label}
                 </button>
               );
@@ -394,41 +394,41 @@ export function GameMain({
           </nav>
 
           {/* Daily + save/reset */}
-          <div className="mt-auto rounded-xl border border-apex-line bg-apex-panel p-2.5">
+          <div className="mt-auto rounded-xl border border-apex-line bg-apex-panel px-2.5 py-2">
             <button
               type="button"
               onClick={claimDaily}
               disabled={!canClaim}
               className={cn(
-                "flex w-full items-center justify-center gap-2 rounded-md px-3 py-2.5 font-display text-[11px] font-bold uppercase tracking-[0.16em] transition-colors",
+                "flex w-full items-center justify-center gap-2 rounded-md px-3 py-2 font-display text-[10px] font-bold uppercase tracking-[0.16em] transition-colors",
                 canClaim
                   ? "bg-apex-red text-white hover:bg-apex-red/80"
                   : "cursor-not-allowed border border-white/10 bg-white/5 text-white/40",
               )}
             >
-              <Gift className={cn("size-4", canClaim ? "text-white" : "text-white/40")} />
+              <Gift className={cn("size-3.5", canClaim ? "text-white" : "text-white/40")} />
               {canClaim ? `Daily ${fmtMoney(daily)}` : `Daily in ${waitLabel}`}
               {state.daily.streak > 1 && (
                 <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-[9px]">×{state.daily.streak}</span>
               )}
             </button>
-            <div className="mt-2 grid grid-cols-2 gap-2">
+            <div className="mt-1.5 grid grid-cols-2 gap-1.5">
               <button
                 type="button"
                 onClick={saveNow}
-                className="inline-flex items-center justify-center gap-1.5 rounded-md border border-white/15 px-2 py-2 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-white/70 transition-colors hover:border-apex-red hover:text-white"
+                className="inline-flex items-center justify-center gap-1.5 rounded-md border border-white/15 px-2 py-1.5 font-display text-[9px] font-bold uppercase tracking-[0.12em] text-white/70 transition-colors hover:border-apex-red hover:text-white"
               >
-                <Save className="size-3.5" /> Save
+                <Save className="size-3" /> Save
               </button>
               <button
                 type="button"
                 onClick={resetNow}
-                className="inline-flex items-center justify-center gap-1.5 rounded-md border border-white/15 px-2 py-2 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-white/40 transition-colors hover:border-apex-red hover:text-apex-red"
+                className="inline-flex items-center justify-center gap-1.5 rounded-md border border-white/15 px-2 py-1.5 font-display text-[9px] font-bold uppercase tracking-[0.12em] text-white/40 transition-colors hover:border-apex-red hover:text-apex-red"
               >
-                <Trash2 className="size-3.5" /> Reset
+                <Trash2 className="size-3" /> Reset
               </button>
             </div>
-            <p className="mt-3 text-center text-[9px] font-semibold uppercase tracking-[0.2em] text-white/25">
+            <p className="mt-2 text-center text-[8px] font-semibold uppercase tracking-[0.2em] text-white/25">
               Garage Tycoon · v1
             </p>
           </div>
@@ -698,11 +698,11 @@ function EarnZone({
 
 function EarnStat({ value, label, accent }: { value: string; label: string; accent?: boolean }) {
   return (
-    <div className="bg-apex-panel px-3 py-4 text-center">
-      <p className={cn("font-display text-2xl font-black", accent ? "text-apex-red" : "text-white")}>
+    <div className="bg-apex-panel px-2 py-3 text-center">
+      <p className={cn("font-display text-lg font-black", accent ? "text-apex-red" : "text-white")}>
         {value}
       </p>
-      <p className="mt-0.5 text-[8px] font-semibold uppercase tracking-[0.2em] text-white/35">
+      <p className="mt-0.5 text-[7px] font-semibold uppercase tracking-[0.2em] text-white/35">
         {label}
       </p>
     </div>
@@ -721,12 +721,12 @@ function StatPill({
   accent?: boolean;
 }) {
   return (
-    <div className="flex items-center gap-2 rounded-md border border-apex-line bg-apex-panel px-3 py-1.5">
-      <Icon className={cn("size-3.5", accent ? "text-apex-red" : "text-white/40")} />
-      <span className="font-display text-[9px] font-semibold uppercase tracking-[0.14em] text-white/40">
+    <div className="flex items-center gap-1.5 rounded-md border border-apex-line bg-apex-panel px-2 py-1">
+      <Icon className={cn("size-3", accent ? "text-apex-red" : "text-white/40")} />
+      <span className="font-display text-[8px] font-semibold uppercase tracking-[0.14em] text-white/40">
         {label}
       </span>
-      <span className="font-display text-sm font-black text-white">{value}</span>
+      <span className="font-display text-xs font-black text-white">{value}</span>
     </div>
   );
 }
@@ -765,26 +765,26 @@ function WeeklyChallenges({
 
   return (
     <div>
-      <div className="mb-5">
+      <div className="mb-3">
         <div className="flex items-center justify-between">
           <div>
-            <p className="font-display text-[10px] font-semibold uppercase tracking-[0.28em] text-apex-red">
+            <p className="font-display text-[9px] font-semibold uppercase tracking-[0.28em] text-apex-red">
               Weekly Challenges
             </p>
-            <h3 className="mt-1 font-display text-2xl font-black tracking-tight text-white">
+            <h3 className="mt-0.5 font-display text-lg font-black tracking-tight text-white">
               CHALLENGES
             </h3>
           </div>
-          <div className="flex items-center gap-2 rounded-md border border-amber-300/30 bg-amber-300/5 px-3 py-1.5">
-            <Clock className="size-3.5 text-amber-300" />
-            <span className="font-display text-[11px] font-bold uppercase tracking-[0.12em] text-amber-300">
+          <div className="flex items-center gap-1.5 rounded-md border border-amber-300/30 bg-amber-300/5 px-2.5 py-1">
+            <Clock className="size-3 text-amber-300" />
+            <span className="font-display text-[10px] font-bold uppercase tracking-[0.12em] text-amber-300">
               Resets in {timeLabel}
             </span>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {weekly.challenges.map((ch) => {
           const pct = Math.min(100, (ch.progress / ch.target) * 100);
           const complete = ch.progress >= ch.target;
@@ -792,7 +792,7 @@ function WeeklyChallenges({
             <div
               key={ch.id}
               className={cn(
-                "rounded-xl border bg-apex-panel p-4 transition-colors",
+                "rounded-xl border bg-apex-panel px-3 py-2.5 transition-colors",
                 ch.claimed
                   ? "border-green-500/30"
                   : complete
@@ -800,12 +800,12 @@ function WeeklyChallenges({
                     : "border-apex-line",
               )}
             >
-              <div className="mb-2 flex items-start justify-between">
+              <div className="mb-1.5 flex items-start justify-between">
                 <div>
-                  <h4 className="font-display text-sm font-black text-white">
+                  <h4 className="font-display text-xs font-black text-white">
                     {ch.name}
                   </h4>
-                  <p className="mt-0.5 text-[10px] text-white/40">
+                  <p className="mt-0.5 text-[9px] text-white/40">
                     {ch.desc}
                   </p>
                 </div>
@@ -817,7 +817,7 @@ function WeeklyChallenges({
               </div>
 
               {/* Progress bar */}
-              <div className="mb-2">
+              <div className="mb-1.5">
                 <div className="mb-1 flex items-center justify-between text-[9px]">
                   <span className="text-white/40">
                     {fmtMoney(ch.progress)} / {fmtMoney(ch.target)}
@@ -826,7 +826,7 @@ function WeeklyChallenges({
                     {Math.round(pct)}%
                   </span>
                 </div>
-                <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                <div className="h-1 w-full overflow-hidden rounded-full bg-white/10">
                   <motion.div
                     className={cn(
                       "h-full rounded-full",
@@ -840,7 +840,7 @@ function WeeklyChallenges({
 
               {/* Reward + claim */}
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3 text-[10px]">
+                <div className="flex items-center gap-2 text-[9px]">
                   <span className="text-white/40">
                     Reward: <span className="font-bold text-apex-red">{fmtMoney(ch.rewardCash)}</span> cash
                   </span>
