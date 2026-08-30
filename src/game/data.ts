@@ -837,6 +837,8 @@ export const rarityIndex = (r: Rarity): number => RARITIES.indexOf(r);
 
 /** Money + number formatting for the game UI. */
 export function fmtMoney(n: number): string {
+  if (n >= 1e15) return `$${(n / 1e15).toFixed(n >= 1e16 ? 0 : 1)}Qa`;
+  if (n >= 1e12) return `$${(n / 1e12).toFixed(n >= 1e13 ? 0 : 1)}T`;
   if (n >= 1e9) return `$${(n / 1e9).toFixed(n >= 1e10 ? 0 : 1)}B`;
   if (n >= 1e6) return `$${(n / 1e6).toFixed(n >= 1e7 ? 0 : 1)}M`;
   if (n >= 1e4) return `$${Math.round(n / 1e3)}K`;
