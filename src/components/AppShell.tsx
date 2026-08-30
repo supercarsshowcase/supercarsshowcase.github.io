@@ -1,501 +1,500 @@
-import { Fragment, useEffect, useState } from "react";
-import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router";
+import { Fragment, useState } from "react";
+import { Link, NavLink, Outlet, useLocation } from "react-router";
 import {
-  Heart,
   Menu,
-  ChevronDown,
-  Shuffle,
   X,
-  User,
-  LogOut,
-  LogIn,
-  Shield,
-  Warehouse,
-  UserRound,
-  Verified,
+  Plus,
+  Bell,
+  Trophy,
+  Ticket,
+  Sparkles,
+  Star,
+  Send,
+  ChevronRight,
+  ChevronLeft,
+  MessageCircle,
 } from "lucide-react";
-import { useMutation, useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
-import { useApp } from "@/context/app-context";
+import { useGems, formatGems } from "@/context/gem-context";
 import { useAuth } from "@/hooks/use-auth";
-import { Analytics } from "./Analytics";
-import { AnnouncementOverlay } from "./AnnouncementOverlay";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { CURRENCIES } from "@/lib/format";
-import { carsList } from "@/data/cars";
-import { BRANDS } from "@/data/brands";
-import { NAV_COPY } from "@/data/page-copy";
-import type { CurrencyCode } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-const NAV_LINKS: { to: string; label: string; key: keyof typeof NAV_COPY; end?: boolean }[] = [
-  { to: "/", label: "Home", key: "home", end: true },
-  { to: "/garage", label: "Machines", key: "garage" },
-  { to: "/my-garage", label: "Garage", key: "myGarage" },
-  { to: "/rankings", label: "Rankings", key: "rankings" },
-  { to: "/favorites", label: "Favorites", key: "favorites" },
-  { to: "/game", label: "Game", key: "game" },
-  { to: "/feedback", label: "Feedback", key: "feedback" },
+type GameRoute = "/roulette" | "/tower" | "/mines" | "/blackjack" | "/multibattles";
+
+const GAMES: { to: GameRoute; label: string; icon: string; live: boolean }[] = [
+  { to: "/multibattles", label: "Multibattles", icon: "🎯", live: true },
+  { to: "/roulette", label: "Roulette", icon: "🎲", live: true },
+  { to: "/tower", label: "Tower", icon: "🏰", live: true },
+  { to: "/mines", label: "Mines", icon: "💣", live: true },
+  { to: "/blackjack", label: "Blackjack", icon: "🃏", live: true },
 ];
 
-const REGIONS = ["GB EN", "US EN", "DE DE", "FR FR", "IT IT", "AE EN"];
+const COMMUNITY_LINKS = [
+  { to: "/leaderboard", label: "Leaderboard", icon: Trophy },
+  { to: "/promo", label: "Promo Code", icon: Ticket },
+];
 
-function Logo({ name }: { name?: string }) {
-  const words = (name || "Supercars Showcase").split(/\s+/).filter(Boolean);
+const MORE_LINKS = [
+  { to: "/earn", label: "Earn", icon: Sparkles },
+];
+
+interface ChatMessage {
+  id: number;
+  user: string;
+  message: string;
+  time: string;
+  isBot?: boolean;
+  level?: number;
+}
+
+const MOCK_CHAT: ChatMessage[] = [
+  { id: 1, user: "PETBET BOT", message: "Rain started — join in the next 60s to win 100M", time: "", isBot: true },
+  { id: 2, user: "PETBET BOT", message: "PR3PPY_AZUKI10 won 100M in the rain", time: "", isBot: true },
+  { id: 3, user: "DONERNACHO1", message: "Yo wsp how is everyone doing?", time: "11:16", level: 8 },
+  { id: 4, user: "DONERNACHO1", message: "forget about this site join my server(no site) just gamble bot in server", time: "11:17", level: 8 },
+  { id: 5, user: "DONERNACHO1", message: "Bruh I'm getting nohems", time: "11:17", level: 8 },
+];
+
+function GemDiamond({ className }: { className?: string }) {
   return (
-    <Link to="/" className="group flex items-center gap-1.5">
-      {words.map((word, i) => (
-        <Fragment key={i}>
-          {i > 0 && (
-            <span className="size-1.5 shrink-0 rounded-full bg-apex-red transition-transform group-hover:scale-150" />
-          )}
-          <span className="font-display text-base font-black uppercase tracking-tight text-white sm:text-lg">
-            {word}
+    <svg viewBox="0 0 24 24" fill="currentColor" className={cn("text-petbet-gem", className)}>
+      <path d="M12 2L2 9l10 13L22 9l-10-7zm0 2.5L19 9l-7 9.5L5 9l7-4.5z" />
+    </svg>
+  );
+}
+
+function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
+  return (
+    <aside
+      className={cn(
+        "flex h-full flex-col border-r border-petbet-line bg-petbet-sidebar transition-all duration-300",
+        collapsed ? "w-[60px]" : "w-[220px]",
+      )}
+    >
+      {/* Menu toggle */}
+      <div className="flex items-center gap-3 px-4 py-4">
+        <button
+          type="button"
+          onClick={onToggle}
+          className="flex size-8 items-center justify-center rounded-md text-petbet-muted transition-colors hover:bg-petbet-panel hover:text-white"
+        >
+          <Menu className="size-4" />
+        </button>
+        {!collapsed && (
+          <span className="font-display text-sm font-bold uppercase tracking-[0.15em] text-white/60">
+            Menu
           </span>
-        </Fragment>
-      ))}
-    </Link>
+        )}
+      </div>
+
+      {/* Games */}
+      <div className="flex-1 overflow-y-auto px-2">
+        <div className="mb-2 px-2">
+          {!collapsed && (
+            <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-petbet-muted">
+              Games
+            </span>
+          )}
+        </div>
+        {GAMES.map((game) => (
+          <NavLink
+            key={game.to}
+            to={game.to}
+            className={({ isActive }) =>
+              cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
+                isActive
+                  ? "bg-petbet-blue/15 text-petbet-blue"
+                  : "text-white/60 hover:bg-petbet-panel hover:text-white",
+              )
+            }
+          >
+            <span className="text-base">{game.icon}</span>
+            {!collapsed && (
+              <>
+                <span className="flex-1">{game.label}</span>
+                {game.live && (
+                  <span className="rounded bg-petbet-green/20 px-1.5 py-0.5 text-[10px] font-bold text-petbet-green">
+                    LIVE
+                  </span>
+                )}
+              </>
+            )}
+          </NavLink>
+        ))}
+
+        {/* Community */}
+        <div className="mb-2 mt-6 px-2">
+          {!collapsed && (
+            <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-petbet-muted">
+              Community
+            </span>
+          )}
+        </div>
+        {COMMUNITY_LINKS.map((link) => (
+          <NavLink
+            key={link.to}
+            to={link.to}
+            className={({ isActive }) =>
+              cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
+                isActive
+                  ? "bg-petbet-blue/15 text-petbet-blue"
+                  : "text-white/60 hover:bg-petbet-panel hover:text-white",
+              )
+            }
+          >
+            <link.icon className="size-4 shrink-0" />
+            {!collapsed && <span>{link.label}</span>}
+          </NavLink>
+        ))}
+
+        {/* More */}
+        <div className="mb-2 mt-6 px-2">
+          {!collapsed && (
+            <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-petbet-muted">
+              More
+            </span>
+          )}
+        </div>
+        {MORE_LINKS.map((link) => (
+          <NavLink
+            key={link.to}
+            to={link.to}
+            className={({ isActive }) =>
+              cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
+                isActive
+                  ? "bg-petbet-blue/15 text-petbet-blue"
+                  : "text-white/60 hover:bg-petbet-panel hover:text-white",
+              )
+            }
+          >
+            <link.icon className="size-4 shrink-0" />
+            {!collapsed && <span>{link.label}</span>}
+          </NavLink>
+        ))}
+      </div>
+
+      {/* Discord link at bottom */}
+      {!collapsed && (
+        <div className="border-t border-petbet-line px-3 py-3">
+          <a
+            href="#"
+            className="flex items-center gap-2 text-sm text-petbet-muted transition-colors hover:text-white"
+          >
+            <MessageCircle className="size-4" />
+            Discord
+          </a>
+        </div>
+      )}
+    </aside>
+  );
+}
+
+function Header({ onOpenWithdraw }: { onOpenWithdraw: () => void }) {
+  const { gems } = useGems();
+  const { user } = useAuth();
+
+  return (
+    <header className="flex h-14 shrink-0 items-center justify-between border-b border-petbet-line bg-petbet-header px-4">
+      {/* Logo */}
+      <Link to="/" className="flex items-center gap-2">
+        <GemDiamond className="size-6" />
+        <span className="font-display text-xl font-black tracking-tight text-white">
+          PETBET99
+        </span>
+      </Link>
+
+      {/* Gem balance */}
+      <button
+        type="button"
+        onClick={onOpenWithdraw}
+        className="flex items-center gap-2 rounded-lg border border-petbet-line-strong bg-petbet-panel px-4 py-2 transition-colors hover:border-petbet-blue/50"
+      >
+        <GemDiamond className="size-4" />
+        <span className="text-sm font-bold text-white">{formatGems(gems)}</span>
+        <div className="flex size-5 items-center justify-center rounded-md bg-petbet-blue/20 text-petbet-blue">
+          <Plus className="size-3" />
+        </div>
+      </button>
+
+      {/* Right actions */}
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          className="relative flex size-9 items-center justify-center rounded-lg border border-petbet-line-strong bg-petbet-panel text-white/60 transition-colors hover:text-white"
+        >
+          <Bell className="size-4" />
+          <span className="absolute -right-1 -top-1 flex size-4 items-center justify-center rounded-full bg-petbet-blue text-[9px] font-bold text-white">
+            10
+          </span>
+        </button>
+        <div className="flex size-9 items-center justify-center rounded-lg border border-petbet-line-strong bg-petbet-panel">
+          {user?.image ? (
+            <img
+              src={user.image}
+              alt=""
+              className="size-7 rounded-full object-cover"
+            />
+          ) : (
+            <span className="text-sm font-bold text-white/60">
+              {user?.name?.[0] ?? "P"}
+            </span>
+          )}
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function ChatPanel({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
+  const [message, setMessage] = useState("");
+
+  if (collapsed) {
+    return (
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex h-full w-[40px] shrink-0 items-center justify-center border-l border-petbet-line bg-petbet-sidebar text-petbet-muted transition-colors hover:text-white"
+      >
+        <ChevronLeft className="size-4" />
+      </button>
+    );
+  }
+
+  return (
+    <aside className="flex w-[280px] shrink-0 flex-col border-l border-petbet-line bg-petbet-sidebar">
+      <div className="flex items-center justify-between border-b border-petbet-line px-3 py-2">
+        <span className="text-xs font-semibold text-white/60">Chat</span>
+        <button
+          type="button"
+          onClick={onToggle}
+          className="text-petbet-muted hover:text-white"
+        >
+          <ChevronRight className="size-4" />
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-3 py-2">
+        {MOCK_CHAT.map((msg) => (
+          <div key={msg.id} className="mb-3">
+            {msg.isBot ? (
+              <div className="rounded-lg bg-petbet-panel-2 p-2.5">
+                <div className="mb-1 flex items-center gap-1.5">
+                  <GemDiamond className="size-3" />
+                  <span className="text-[10px] font-bold uppercase text-petbet-blue">
+                    {msg.user.replace(" ", "\u00A0")}
+                  </span>
+                </div>
+                <p className="text-xs leading-relaxed text-white/70">{msg.message}</p>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-petbet-panel-3 text-xs">
+                  {msg.user[0]}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-semibold text-white/80">
+                      @{msg.user}
+                    </span>
+                    {msg.level && (
+                      <span className="rounded bg-petbet-blue/20 px-1 py-0.5 text-[9px] font-bold text-petbet-blue">
+                        {msg.level}
+                      </span>
+                    )}
+                    <span className="ml-auto text-[10px] text-petbet-muted">
+                      {msg.time}
+                    </span>
+                  </div>
+                  <p className="mt-0.5 text-xs text-white/60">{msg.message}</p>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+
+        {/* Content Creator promo */}
+        <div className="mt-2 rounded-lg border border-purple-500/30 bg-purple-500/10 p-3">
+          <p className="text-center text-xs text-white/70">
+            🎁 Want to become a{" "}
+            <span className="font-bold text-white">Content Creator</span> and get{" "}
+            <span className="font-bold text-white">sponsored by PetBet</span>? Create
+            a ticket on our Discord!
+          </p>
+        </div>
+      </div>
+
+      {/* Chat input */}
+      <div className="border-t border-petbet-line p-3">
+        <div className="flex items-center gap-2 rounded-lg bg-petbet-panel-2 px-3 py-2">
+          <input
+            type="text"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            placeholder="Drop a message..."
+            className="flex-1 bg-transparent text-xs text-white placeholder:text-petbet-muted focus:outline-none"
+          />
+          <button type="button" className="text-petbet-muted hover:text-white">
+            <span className="text-sm">😊</span>
+          </button>
+          <button type="button" className="text-petbet-blue hover:text-petbet-blue-bright">
+            <Send className="size-3.5" />
+          </button>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+function WithdrawModal({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
+  const { gems } = useGems();
+  const [amount, setAmount] = useState("");
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+      <div className="w-full max-w-md rounded-2xl border border-petbet-line-strong bg-petbet-panel p-6">
+        <div className="mb-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex size-10 items-center justify-center rounded-lg bg-petbet-blue/20">
+              <svg
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                className="size-5 text-petbet-blue"
+              >
+                <path d="M12 2l-8 8h5v10h6V10h5l-8-8z" />
+              </svg>
+            </div>
+            <h2 className="font-display text-xl font-black uppercase tracking-tight text-white">
+              Withdraw
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex size-8 items-center justify-center rounded-full bg-petbet-panel-2 text-petbet-muted hover:text-white"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+
+        <div className="mb-4 flex items-center justify-between text-sm">
+          <span className="text-petbet-muted">Available:</span>
+          <span className="font-bold text-petbet-gem">{formatGems(gems)}</span>
+        </div>
+
+        <div className="mb-4 rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-3">
+          <p className="text-center text-xs text-yellow-400">
+            ⚠️ Mailbox must be ON — if OFF, withdrawn gems are lost.
+          </p>
+        </div>
+
+        <div className="mb-4 rounded-lg bg-petbet-panel-2 p-4">
+          <p className="mb-2 text-sm font-bold text-white">0 locked</p>
+          <div className="mb-2 h-2 overflow-hidden rounded-full bg-petbet-panel-3">
+            <div className="h-full w-0 rounded-full bg-petbet-gem" />
+          </div>
+          <p className="text-[11px] text-petbet-muted">
+            Wager <span className="text-white">1.7B</span> more to unlock <span className="text-white">0</span> gems.
+          </p>
+          <p className="text-[11px] text-petbet-muted">
+            Progress: <span className="text-petbet-blue">847.5M</span> / 2.5B ·{" "}
+            <span className="text-white">1.7B</span> to go
+          </p>
+        </div>
+
+        <div className="mb-4 flex gap-2">
+          <button
+            type="button"
+            className="flex-1 rounded-lg bg-petbet-blue py-2.5 text-sm font-bold text-white"
+          >
+            Mailbox
+          </button>
+          <button
+            type="button"
+            className="flex-1 rounded-lg bg-petbet-panel-2 py-2.5 text-sm font-bold text-petbet-muted"
+          >
+            Trade soon
+          </button>
+        </div>
+
+        <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-petbet-muted">
+          Select a Bot
+        </p>
+
+        <div className="mb-3 rounded-lg border border-red-500/30 bg-red-500/10 p-3">
+          <p className="text-center text-xs text-red-400">
+            ⚠️ No bots with gems are online
+          </p>
+        </div>
+
+        <input
+          type="text"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          placeholder="e.g. 100M, 1B"
+          className="mb-4 w-full rounded-lg border border-petbet-line-strong bg-petbet-panel-2 px-4 py-3 text-sm text-white placeholder:text-petbet-muted focus:border-petbet-blue focus:outline-none"
+        />
+
+        <button
+          type="button"
+          className="w-full rounded-lg bg-petbet-blue py-3 text-sm font-bold text-white transition-colors hover:bg-petbet-blue-bright"
+        >
+          Withdraw
+        </button>
+      </div>
+    </div>
   );
 }
 
 export function AppShell() {
-  const { currency, setCurrency, region, setRegion, favorites } = useApp();
-  const { isAuthenticated, user, signOut } = useAuth();
-  const navigate = useNavigate();
   const location = useLocation();
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const isGame = location.pathname === "/game";
-
-  const isAdmin = user?.role === "owner" || user?.role === "admin" || user?.role === "moderator";
-
-  // Site settings (banner + accent) from the admin panel.
-  const settings = useQuery(api.site.getSiteSettings);
-
-  // Owner-editable navigation labels.
-  const navContent = useQuery(api.pages.getPageContent, { page: "nav" });
-  const nav = { ...NAV_COPY, ...(navContent ?? {}) };
-
-  useEffect(() => {
-    if (!settings) return;
-    const root = document.documentElement;
-    root.style.setProperty("--color-apex-red", settings.accent);
-    root.style.setProperty(
-      "--color-apex-red-bright",
-      `color-mix(in srgb, ${settings.accent}, white 18%)`,
-    );
-    root.style.setProperty(
-      "--color-apex-red-deep",
-      `color-mix(in srgb, ${settings.accent}, black 30%)`,
-    );
-  }, [settings]);
-
-  // ── Online presence heartbeat ──
-  const heartbeat = useMutation(api.presence.heartbeat);
-  const removePresence = useMutation(api.presence.removePresence);
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    void heartbeat();
-    const id = setInterval(() => void heartbeat(), 30_000);
-    return () => {
-      clearInterval(id);
-      void removePresence();
-    };
-  }, [isAuthenticated, heartbeat, removePresence]);
-
-  const surpriseMe = () => {
-    const all = carsList();
-    const car = all[Math.floor(Math.random() * all.length)];
-    navigate(`/cars/${car.slug}`);
-  };
-
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      navigate("/");
-    } catch (error) {
-      console.error("Sign out error:", error);
-    }
-  };
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [chatCollapsed, setChatCollapsed] = useState(false);
+  const [showWithdraw, setShowWithdraw] = useState(false);
+  const isLanding = location.pathname === "/";
 
   return (
-    <div className={isGame ? "flex h-dvh flex-col overflow-hidden bg-apex-ink text-white" : "flex min-h-screen flex-col bg-apex-ink text-white"}>
-      <Analytics />
-      <AnnouncementOverlay />
-      <header className={isGame ? "hidden" : "sticky top-0 z-50 border-b border-apex-line bg-black/85 backdrop-blur-md"}>
-        <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between gap-3 px-4 sm:px-6">
-          <div className="flex items-center gap-6">
-            <Logo name={settings?.siteName} />
-            <nav className="hidden items-center gap-1 lg:flex">
-              {NAV_LINKS.map((link) => (
-                <NavLink
-                  key={link.to}
-                  to={link.to}
-                  end={link.end}
-                  className={({ isActive }) =>
-                    cn(
-                      "relative px-3 py-2 font-display text-[13px] font-semibold uppercase tracking-[0.16em] transition-colors",
-                      isActive
-                        ? "text-white"
-                        : "text-white/55 hover:text-white",
-                    )
-                  }
-                >
-                  {({ isActive }) => (
-                    <>
-                      {nav[link.key] ?? link.label}
-                      {isActive && (
-                        <span className="absolute inset-x-3 -bottom-[1px] h-0.5 bg-apex-red" />
-                      )}
-                    </>
-                  )}
-                </NavLink>
-              ))}
-              {isAdmin && (
-                <NavLink
-                  to="/admin"
-                  className={({ isActive }) =>
-                    cn(
-                      "relative inline-flex items-center gap-1.5 px-3 py-2 font-display text-[13px] font-semibold uppercase tracking-[0.16em] transition-colors",
-                      isActive
-                        ? "text-apex-red"
-                        : "text-white/55 hover:text-apex-red",
-                    )
-                  }
-                >
-                  <Shield className="size-3.5" />
-                  {nav.admin}
-                </NavLink>
-              )}
-            </nav>
-          </div>
+    <div className="flex h-dvh flex-col overflow-hidden bg-petbet-ink text-white">
+      {/* Header */}
+      <Header onOpenWithdraw={() => setShowWithdraw(true)} />
 
-          <div className="flex items-center gap-2 sm:gap-3">
-            <button
-              type="button"
-              onClick={surpriseMe}
-              className="hidden items-center gap-2 rounded-md border border-white/15 px-3 py-2 font-display text-[12px] font-semibold uppercase tracking-[0.14em] text-white/80 transition-colors hover:border-apex-red hover:text-white md:flex"
-            >
-              <Shuffle className="size-3.5" />
-              {nav.surprise}
-            </button>
-
-            {/* Region selector */}
-            <div className="relative hidden sm:block">
-              <select
-                value={region}
-                onChange={(e) => setRegion(e.target.value)}
-                aria-label="Region"
-                className="h-9 cursor-pointer appearance-none rounded-md border border-white/15 bg-transparent pl-3 pr-8 font-display text-[12px] font-semibold uppercase tracking-[0.1em] text-white/80 outline-none transition-colors hover:border-white/30 focus:border-apex-red"
-              >
-                {REGIONS.map((r) => (
-                  <option key={r} value={r} className="bg-[#0b0b0c] text-white">
-                    {r}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 size-3.5 -translate-y-1/2 text-white/50" />
-            </div>
-
-            {/* Currency selector */}
-            <div className="relative">
-              <select
-                value={currency}
-                onChange={(e) => setCurrency(e.target.value as CurrencyCode)}
-                aria-label="Currency"
-                className="h-9 cursor-pointer appearance-none rounded-md border border-white/15 bg-transparent pl-3 pr-8 font-display text-[12px] font-semibold uppercase tracking-[0.1em] text-white/80 outline-none transition-colors hover:border-white/30 focus:border-apex-red"
-              >
-                {(Object.keys(CURRENCIES) as CurrencyCode[]).map((code) => (
-                  <option key={code} value={code} className="bg-[#0b0b0c] text-white">
-                    {CURRENCIES[code].symbol} {code}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 size-3.5 -translate-y-1/2 text-white/50" />
-            </div>
-
-            <Link
-              to="/favorites"
-              className="relative flex size-9 items-center justify-center rounded-md border border-white/15 text-white/80 transition-colors hover:border-apex-red hover:text-white"
-              aria-label="Favorites"
-            >
-              <Heart className="size-4" />
-              {favorites.length > 0 && (
-                <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-apex-red px-1 text-[10px] font-bold text-white">
-                  {favorites.length}
-                </span>
-              )}
-            </Link>
-
-            {/* Auth */}
-            {isAuthenticated ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    className="flex size-9 items-center justify-center rounded-md border border-white/15 text-white/80 transition-colors hover:border-apex-red hover:text-white"
-                    aria-label="Account"
-                  >
-                    {user?.image ? (
-                      <img
-                        src={user.image}
-                        alt=""
-                        referrerPolicy="no-referrer"
-                        className="size-5 rounded-full object-cover"
-                        style={
-                          user?.accent
-                            ? { boxShadow: `0 0 0 2px ${user.accent}` }
-                            : undefined
-                        }
-                      />
-                    ) : (
-                      <span
-                        className="flex size-5 items-center justify-center rounded-full"
-                        style={
-                          user?.accent
-                            ? { boxShadow: `0 0 0 2px ${user.accent}` }
-                            : undefined
-                        }
-                      >
-                        <User className="size-4" />
-                      </span>
-                    )}
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <div className="px-3 py-2">
-                    <p className="flex items-center gap-1 truncate text-sm font-semibold text-white">
-                      {user?.name ?? "Signed in"}
-                      {user?.role === "owner" && (
-                        <span title="Verified Owner">
-                          <Verified className="size-3.5 text-blue-400" />
-                        </span>
-                      )}
-                    </p>
-                    {user?.email && (
-                      <p className="truncate text-xs text-white/50">
-                        {user.email}
-                      </p>
-                    )}
-                  </div>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={() => navigate("/favorites")}
-                    className="cursor-pointer"
-                  >
-                    <Heart className="mr-2 size-4" />
-                    {nav.myFavorites}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => navigate("/my-garage")}
-                    className="cursor-pointer"
-                  >
-                    <Warehouse className="mr-2 size-4" />
-                    {nav.myGarage}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => navigate("/profile")}
-                    className="cursor-pointer"
-                  >
-                    <UserRound className="mr-2 size-4" />
-                    {nav.editProfile}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => navigate("/compare")}
-                    className="cursor-pointer"
-                  >
-                    <Shuffle className="mr-2 size-4" />
-                    {nav.compareMachines}
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={handleSignOut}
-                    className="cursor-pointer text-apex-red focus:text-apex-red"
-                  >
-                    <LogOut className="mr-2 size-4" />
-                    {nav.signOut}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <Link
-                to="/auth"
-                className="inline-flex items-center gap-2 rounded-md border border-apex-red/50 bg-apex-red/10 px-3 py-2 font-display text-[12px] font-semibold uppercase tracking-[0.12em] text-white transition-colors hover:bg-apex-red hover:text-white"
-              >
-                <LogIn className="size-3.5" />
-                <span className="hidden sm:inline">{nav.signIn}</span>
-              </Link>
-            )}
-
-            <button
-              type="button"
-              onClick={() => setMobileOpen((v) => !v)}
-              className="flex size-9 items-center justify-center rounded-md border border-white/15 text-white/80 lg:hidden"
-              aria-label="Menu"
-            >
-              {mobileOpen ? <X className="size-4" /> : <Menu className="size-4" />}
-            </button>
-          </div>
-        </div>
-
-        {mobileOpen && (
-          <nav className="border-t border-apex-line bg-black px-4 py-3 lg:hidden">
-            <div className="flex flex-col">
-              {NAV_LINKS.map((link) => (
-                <NavLink
-                  key={link.to}
-                  to={link.to}
-                  end={link.end}
-                  onClick={() => setMobileOpen(false)}
-                  className={({ isActive }) =>
-                    cn(
-                      "border-b border-apex-line py-3 font-display text-sm font-semibold uppercase tracking-[0.16em] last:border-0",
-                      isActive ? "text-apex-red" : "text-white/70",
-                    )
-                  }
-                >
-                  {nav[link.key] ?? link.label}
-                </NavLink>
-              ))}
-              <NavLink
-                to="/compare"
-                onClick={() => setMobileOpen(false)}
-                className="border-b border-apex-line py-3 font-display text-sm font-semibold uppercase tracking-[0.16em] text-white/70"
-              >
-                {nav.compare}
-              </NavLink>
-              {isAdmin && (
-                <NavLink
-                  to="/admin"
-                  onClick={() => setMobileOpen(false)}
-                  className="border-b border-apex-line py-3 font-display text-sm font-semibold uppercase tracking-[0.16em] text-apex-red"
-                >
-                  <Shield className="mr-2 inline size-4" /> {nav.admin}
-                </NavLink>
-              )}
-              {!isAuthenticated && (
-                <NavLink
-                  to="/auth"
-                  onClick={() => setMobileOpen(false)}
-                  className="border-b border-apex-line py-3 font-display text-sm font-semibold uppercase tracking-[0.16em] text-apex-red"
-                >
-                  {nav.signIn}
-                </NavLink>
-              )}
-              <button
-                type="button"
-                onClick={() => {
-                  setMobileOpen(false);
-                  surpriseMe();
-                }}
-                className="mt-1 flex items-center gap-2 py-3 font-display text-sm font-semibold uppercase tracking-[0.16em] text-white/70"
-              >
-                <Shuffle className="size-4" /> Surprise Me
-              </button>
-            </div>
-          </nav>
+      <div className="flex min-h-0 flex-1">
+        {/* Sidebar */}
+        {!isLanding && (
+          <Sidebar
+            collapsed={sidebarCollapsed}
+            onToggle={() => setSidebarCollapsed((v) => !v)}
+          />
         )}
-      </header>
 
-      <main className={isGame ? "min-h-0 flex-1 overflow-hidden" : "flex-1"}>
-        <Outlet />
-      </main>
+        {/* Main content */}
+        <main className="flex-1 overflow-y-auto">
+          <Outlet />
+        </main>
 
-      <footer className={isGame ? "hidden" : "border-t border-apex-line bg-black"}>
-        <div className="mx-auto max-w-[1400px] px-4 py-12 sm:px-6">
-          <div className="flex flex-col gap-10 md:flex-row md:justify-between">
-            <div className="max-w-sm">
-              <Logo name={settings?.siteName} />
-              <p className="mt-4 text-sm leading-6 text-apex-muted">
-                A cinematic archive of the world&apos;s greatest machines. Real
-                specs. Real prices. Nothing for sale — just for the eyes.
-              </p>
-            </div>
-            <div className="grid grid-cols-2 gap-8 sm:grid-cols-3">
-              <div className="flex flex-col gap-2">
-                <span className="mb-2 font-display text-xs font-semibold uppercase tracking-[0.2em] text-white/40">
-                  Explore
-                </span>
-                {NAV_LINKS.map((l) => (
-                  <Link
-                    key={l.to}
-                    to={l.to}
-                    className="text-sm text-white/70 transition-colors hover:text-apex-red"
-                  >
-                    {nav[l.key] ?? l.label}
-                  </Link>
-                ))}
-                <Link
-                  to="/compare"
-                  className="text-sm text-white/70 transition-colors hover:text-apex-red"
-                >
-                  {nav.compare}
-                </Link>
-              </div>
-              <div className="flex flex-col gap-2">
-                <span className="mb-2 font-display text-xs font-semibold uppercase tracking-[0.2em] text-white/40">
-                  Marques
-                </span>
-                {BRANDS.slice(0, 8).map((b) => (
-                  <Link
-                    key={b.slug}
-                    to={`/brands/${b.slug}`}
-                    className="text-sm text-white/70 transition-colors hover:text-apex-red"
-                  >
-                    {b.name}
-                  </Link>
-                ))}
-              </div>
-              <div className="flex flex-col gap-2">
-                <span className="mb-2 font-display text-xs font-semibold uppercase tracking-[0.2em] text-white/40">
-                  Account
-                </span>
-                {isAuthenticated ? (
-                  <button
-                    type="button"
-                    onClick={handleSignOut}
-                    className="text-left text-sm text-white/70 transition-colors hover:text-apex-red"
-                  >
-                    {nav.signOut}
-                  </button>
-                ) : (
-                  <Link
-                    to="/auth"
-                    className="text-sm text-white/70 transition-colors hover:text-apex-red"
-                  >
-                    {nav.signIn}
-                  </Link>
-                )}
-                <Link
-                  to="/favorites"
-                  className="text-sm text-white/70 transition-colors hover:text-apex-red"
-                >
-                  {nav.myFavorites}
-                </Link>
-                {isAdmin && (
-                  <Link
-                    to="/admin"
-                    className="text-sm text-white/70 transition-colors hover:text-apex-red"
-                  >
-                    {nav.adminPanel}
-                  </Link>
-                )}
-              </div>
-            </div>
-          </div>
-          <div className="mt-12 flex flex-col items-center justify-between gap-3 border-t border-apex-line pt-6 text-xs text-apex-muted sm:flex-row">
-            <span>© {new Date().getFullYear()} Supercars Showcase. A viewing archive — nothing is for sale.</span>
-            <span className="font-display uppercase tracking-[0.2em]">
-              Engineered for the eyes
-            </span>
-          </div>
-        </div>
-      </footer>
+        {/* Chat panel */}
+        {!isLanding && (
+          <ChatPanel
+            collapsed={chatCollapsed}
+            onToggle={() => setChatCollapsed((v) => !v)}
+          />
+        )}
+      </div>
+
+      {/* Withdraw modal */}
+      <WithdrawModal
+        open={showWithdraw}
+        onClose={() => setShowWithdraw(false)}
+      />
     </div>
   );
 }

@@ -2,8 +2,8 @@ import '@vly-ai/integrations';
 import { Toaster } from "@/components/ui/sonner";
 import { VlyToolbar } from "../vly-toolbar-readonly.tsx";
 import { InstrumentationProvider } from "@/instrumentation.tsx";
-import { AppProvider } from "@/context/app-context";
 import { AppShell } from "@/components/AppShell";
+import { GemProvider } from "@/context/gem-context";
 import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import { ConvexReactClient } from "convex/react";
 import { StrictMode, useEffect } from "react";
@@ -15,18 +15,15 @@ import "./types/global.d.ts";
 import { RequireAuth } from "./components/RequireAuth";
 import { RequireAdmin } from "./components/RequireAdmin";
 import Landing from "./pages/Landing.tsx";
-import Feedback from "./pages/Feedback.tsx";
-import MyGarage from "./pages/MyGarage.tsx";
-import Profile from "./pages/Profile.tsx";
-import Admin from "./pages/Admin.tsx";
-import Garage from "./pages/Garage.tsx";
-import CarDetail from "./pages/CarDetail.tsx";
-import BrandDetail from "./pages/BrandDetail.tsx";
-import Rankings from "./pages/Rankings.tsx";
-import Favorites from "./pages/Favorites.tsx";
-import Compare from "./pages/Compare.tsx";
+import Roulette from "./pages/Roulette.tsx";
+import Tower from "./pages/Tower.tsx";
+import Mines from "./pages/Mines.tsx";
+import Blackjack from "./pages/Blackjack.tsx";
+import Multibattles from "./pages/Multibattles.tsx";
+import Leaderboard from "./pages/Leaderboard.tsx";
+import Promo from "./pages/Promo.tsx";
+import Earn from "./pages/Earn.tsx";
 import AuthPage from "./pages/Auth.tsx";
-import Game from "./pages/Game.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
@@ -54,7 +51,6 @@ function RouteSyncer() {
   return null;
 }
 
-/** Scroll to the top whenever the URL changes so every new page starts from the top. */
 function ScrollToTop() {
   const location = useLocation();
   useEffect(() => {
@@ -68,61 +64,30 @@ createRoot(document.getElementById("root")!).render(
     <VlyToolbar />
     <InstrumentationProvider>
       <ConvexAuthProvider client={convex}>
-        <AppProvider>
+        <GemProvider>
           <BrowserRouter>
             <RouteSyncer />
             <ScrollToTop />
             <Routes>
               <Route element={<AppShell />}>
                 <Route path="/" element={<Landing />} />
-                <Route path="/garage" element={<Garage />} />
-                <Route path="/game" element={<Game />} />
-                <Route path="/cars/:slug" element={<CarDetail />} />
-                <Route path="/brands/:slug" element={<BrandDetail />} />
-                <Route path="/rankings" element={<Rankings />} />
-                <Route path="/favorites" element={<Favorites />} />
-                <Route
-                  path="/my-garage"
-                  element={
-                    <RequireAuth>
-                      <MyGarage />
-                    </RequireAuth>
-                  }
-                />
-                <Route
-                  path="/profile"
-                  element={
-                    <RequireAuth>
-                      <Profile />
-                    </RequireAuth>
-                  }
-                />
-                <Route path="/compare" element={<Compare />} />
-                <Route
-                  path="/feedback"
-                  element={
-                    <RequireAuth>
-                      <Feedback />
-                    </RequireAuth>
-                  }
-                />
-                <Route
-                  path="/admin"
-                  element={
-                    <RequireAdmin>
-                      <Admin />
-                    </RequireAdmin>
-                  }
-                />
+                <Route path="/roulette" element={<Roulette />} />
+                <Route path="/tower" element={<Tower />} />
+                <Route path="/mines" element={<Mines />} />
+                <Route path="/blackjack" element={<Blackjack />} />
+                <Route path="/multibattles" element={<Multibattles />} />
+                <Route path="/leaderboard" element={<Leaderboard />} />
+                <Route path="/promo" element={<Promo />} />
+                <Route path="/earn" element={<Earn />} />
                 <Route path="*" element={<NotFound />} />
               </Route>
               <Route
                 path="/auth"
-                element={<AuthPage redirectAfterAuth="/favorites" />}
+                element={<AuthPage redirectAfterAuth="/roulette" />}
               />
             </Routes>
           </BrowserRouter>
-        </AppProvider>
+        </GemProvider>
         <Toaster />
       </ConvexAuthProvider>
     </InstrumentationProvider>
