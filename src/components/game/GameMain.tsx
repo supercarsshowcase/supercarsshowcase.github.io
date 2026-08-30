@@ -4,6 +4,7 @@ import {
   Boxes,
   Car as CarIcon,
   CircleDollarSign,
+  Clock,
   Coins,
   Dice5,
   Flame,
@@ -15,6 +16,7 @@ import {
   Sparkles,
   Star,
   Store,
+  Target,
   Trash2,
   TrendingUp,
   Trophy,
@@ -48,6 +50,7 @@ import { GamePanels } from "./GamePanels";
 
 const NAV: { id: TabId; label: string; icon: LucideIcon }[] = [
   { id: "earn", label: "Earn", icon: MousePointerClick },
+  { id: "challenges", label: "Challenges", icon: Target },
   { id: "spin", label: "Spin", icon: CircleDollarSign },
   { id: "garage", label: "Garage", icon: CarIcon },
   { id: "dealer", label: "Dealers", icon: Store },
@@ -62,6 +65,7 @@ const NAV: { id: TabId; label: string; icon: LucideIcon }[] = [
 
 type TabId =
   | "earn"
+  | "challenges"
   | "spin"
   | "garage"
   | "dealer"
@@ -427,6 +431,8 @@ export function GameMain({
               onCarClick={handleClick}
               clickBlocked={clickBlocked}
             />
+          ) : tab === "challenges" ? (
+            <WeeklyChallenges state={state} dispatch={dispatch} />
           ) : (
             <div>
               <GamePanels tab={tab} state={state} dispatch={dispatch} />
@@ -698,6 +704,141 @@ function StatPill({
         {label}
       </span>
       <span className="font-display text-sm font-black text-white">{value}</span>
+    </div>
+  );
+}
+
+function WeeklyChallenges({
+  state,
+  dispatch,
+}: {
+  state: GameState;
+  dispatch: React.Dispatch<Action>;
+}) {
+  const weekly = state.weekly;
+  const now = Date.now();
+  // Calculate remaining time until next Monday
+  const nextMonday = new Date();
+  const day = nextMonday.getDay();
+  const daysUntilMonday = day === 0 ? 1 : (8 - day);
+  nextMonday.setDate(nextMonday.getDate() + daysUntilMonday);
+  nextMonday.setHours(0, 0, 0, 0);
+  const msLeft = Math.max(0, nextMonday.getTime() - now);
+  const daysLeft = Math.floor(msLeft / 86_400_000);
+  const hoursLeft = Math.floor((msLeft % 86_400_000) / 3_600_000);
+  const timeLabel = daysLeft > 0 ? `${daysLeft}d ${hoursLeft}h` : `${hoursLeft}h`;
+
+  // Ensure weekly state is current
+  const currentMonday = new Date(now);
+  const d = currentMonday.getDay();
+  currentMonday.setDate(currentMonday.getDate() - d + (d === 0 ? -6 : 1));
+  currentMonday.setHours(0, 0, 0, 0);
+  const currentMondayStr = currentMonday.toISOString().split("T")[0];
+  useEffect(() => {
+    if (weekly.weekStart !== currentMondayStr) {
+      dispatch({ type: "WEEKLY_CHECK", now });
+    }
+  }, [weekly.weekStart, currentMondayStr, now, dispatch]);
+
+  return (
+    <div>
+      <div className="mb-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="font-display text-[10px] font-semibold uppercase tracking-[0.28em] text-apex-red">
+              Weekly Challenges
+            </p>
+            <h3 className="mt-1 font-display text-2xl font-black tracking-tight text-white">
+              CHALLENGES
+            </h3>
+          </div>
+          <div className="flex items-center gap-2 rounded-md border border-amber-300/30 bg-amber-300/5 px-3 py-1.5">
+            <Clock className="size-3.5 text-amber-300" />
+            <span className="font-display text-[11px] font-bold uppercase tracking-[0.12em] text-amber-300">
+              Resets in {timeLabel}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {weekly.challenges.map((ch) => {
+          const pct = Math.min(100, (ch.progress / ch.target) * 100);
+          const complete = ch.progress >= ch.target;
+          return (
+            <div
+              key={ch.id}
+              className={cn(
+                "rounded-xl border bg-apex-panel p-4 transition-colors",
+                ch.claimed
+                  ? "border-green-500/30"
+                  : complete
+                    ? "border-amber-400/40"
+                    : "border-apex-line",
+              )}
+            >
+              <div className="mb-2 flex items-start justify-between">
+                <div>
+                  <h4 className="font-display text-sm font-black text-white">
+                    {ch.name}
+                  </h4>
+                  <p className="mt-0.5 text-[10px] text-white/40">
+                    {ch.desc}
+                  </p>
+                </div>
+                {ch.claimed && (
+                  <span className="rounded-sm bg-green-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase text-green-400">
+                    Claimed
+                  </span>
+                )}
+              </div>
+
+              {/* Progress bar */}
+              <div className="mb-2">
+                <div className="mb-1 flex items-center justify-between text-[9px]">
+                  <span className="text-white/40">
+                    {fmtMoney(ch.progress)} / {fmtMoney(ch.target)}
+                  </span>
+                  <span className="font-bold text-white/60">
+                    {Math.round(pct)}%
+                  </span>
+                </div>
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                  <motion.div
+                    className={cn(
+                      "h-full rounded-full",
+                      ch.claimed ? "bg-green-500" : complete ? "bg-amber-400" : "bg-apex-red",
+                    )}
+                    animate={{ width: `${pct}%` }}
+                    transition={{ duration: 0.4 }}
+                  />
+                </div>
+              </div>
+
+              {/* Reward + claim */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3 text-[10px]">
+                  <span className="text-white/40">
+                    Reward: <span className="font-bold text-apex-red">{fmtMoney(ch.rewardCash)}</span> cash
+                  </span>
+                  <span className="text-white/40">
+                    + <span className="font-bold text-emerald-400">{ch.rewardRep.toLocaleString()}</span> rep
+                  </span>
+                </div>
+                {!ch.claimed && complete && (
+                  <button
+                    type="button"
+                    onClick={() => dispatch({ type: "CLAIM_WEEKLY", challengeId: ch.id })}
+                    className="rounded-md bg-amber-400 px-3 py-1.5 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-black transition-colors hover:bg-amber-300"
+                  >
+                    Claim
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

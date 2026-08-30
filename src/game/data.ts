@@ -11,6 +11,8 @@ import type {
   RarityMeta,
   StatKey,
   UpgradeDef,
+  WeeklyChallenge,
+  WeeklyState,
 } from "./types";
 
 // ── Rarity metadata ───────────────────────────────────────────────────────────
@@ -708,6 +710,119 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     rewardRep: 10000,
   },
 ];
+
+// ── Weekly Challenges ─────────────────────────────────────────────────────────
+
+/** Get the ISO date string (YYYY-MM-DD) for the most recent Monday. */
+export function getMonday(date: Date): string {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  d.setDate(diff);
+  return d.toISOString().split("T")[0];
+}
+
+/** Challenge templates — rotated each week. */
+const CHALLENGE_TEMPLATES: { name: string; desc: string; target: number; rewardCash: number; rewardRep: number }[] = [
+  { name: "Earn $1M this week", desc: "Earn $1,000,000 in total this week.", target: 1_000_000, rewardCash: 500_000, rewardRep: 100 },
+  { name: "Earn $10M this week", desc: "Earn $10,000,000 in total this week.", target: 10_000_000, rewardCash: 3_000_000, rewardRep: 300 },
+  { name: "Earn $50M this week", desc: "Earn $50,000,000 in total this week.", target: 50_000_000, rewardCash: 15_000_000, rewardRep: 1_000 },
+  { name: "Earn $250M this week", desc: "Earn $250,000,000 in total this week.", target: 250_000_000, rewardCash: 80_000_000, rewardRep: 5_000 },
+  { name: "Earn $1B this week", desc: "Earn $1,000,000,000 in total this week.", target: 1_000_000_000, rewardCash: 400_000_000, rewardRep: 20_000 },
+  { name: "Click 500 times this week", desc: "Click your car 500 times this week.", target: 500, rewardCash: 250_000, rewardRep: 50 },
+  { name: "Click 2,000 times this week", desc: "Click your car 2,000 times this week.", target: 2_000, rewardCash: 1_500_000, rewardRep: 200 },
+  { name: "Buy 2 cars this week", desc: "Purchase 2 new cars this week.", target: 2, rewardCash: 1_000_000, rewardRep: 150 },
+  { name: "Buy 5 cars this week", desc: "Purchase 5 new cars this week.", target: 5, rewardCash: 5_000_000, rewardRep: 500 },
+  { name: "Open 3 crates this week", desc: "Open 3 car crates this week.", target: 3, rewardCash: 2_000_000, rewardRep: 200 },
+  { name: "Open 10 crates this week", desc: "Open 10 car crates this week.", target: 10, rewardCash: 10_000_000, rewardRep: 800 },
+  { name: "Spin 5 times this week", desc: "Spin the wheel 5 times this week.", target: 5, rewardCash: 3_000_000, rewardRep: 300 },
+  { name: "Earn $500M this week", desc: "Earn $500,000,000 in total this week.", target: 500_000_000, rewardCash: 200_000_000, rewardRep: 10_000 },
+  { name: "Earn $5B this week", desc: "Earn $5,000,000,000 in total this week.", target: 5_000_000_000, rewardCash: 2_000_000_000, rewardRep: 50_000 },
+  { name: "Prestige this week", desc: "Prestige at least once this week.", target: 1, rewardCash: 10_000_000, rewardRep: 1_000 },
+];
+
+/** A weekly metric tracked on the state. */
+export type WeeklyMetric = "earned" | "clicks" | "carsBought" | "cratesOpened" | "spins" | "prestiges";
+
+/** Which state field each metric maps to for progress counting. */
+export const WEEKLY_METRIC_FIELDS: Record<WeeklyMetric, string> = {
+  earned: "weeklyEarned",
+  clicks: "weeklyClicks",
+  carsBought: "weeklyCarsBought",
+  cratesOpened: "weeklyCratesOpened",
+  spins: "weeklySpins",
+  prestiges: "weeklyPrestiges",
+};
+
+/** Map from a challenge template name to the metric it tracks. */
+const CHALLENGE_METRIC: Record<string, WeeklyMetric> = {
+  "Earn $1M this week": "earned",
+  "Earn $10M this week": "earned",
+  "Earn $50M this week": "earned",
+  "Earn $250M this week": "earned",
+  "Earn $1B this week": "earned",
+  "Earn $500M this week": "earned",
+  "Earn $5B this week": "earned",
+  "Click 500 times this week": "clicks",
+  "Click 2,000 times this week": "clicks",
+  "Buy 2 cars this week": "carsBought",
+  "Buy 5 cars this week": "carsBought",
+  "Open 3 crates this week": "cratesOpened",
+  "Open 10 crates this week": "cratesOpened",
+  "Spin 5 times this week": "spins",
+  "Prestige this week": "prestiges",
+};
+
+/** Return the metric a challenge tracks. */
+export function challengeMetric(challenge: { name: string }): WeeklyMetric {
+  return CHALLENGE_METRIC[challenge.name] ?? "earned";
+}
+
+/** Generate 4 weekly challenges seeded by the week start date. */
+export function generateWeeklyChallenges(weekStart: string): WeeklyChallenge[] {
+  // Simple hash from weekStart string for deterministic but varied selection
+  let seed = 0;
+  for (let i = 0; i < weekStart.length; i++) {
+    seed = ((seed << 5) - seed + weekStart.charCodeAt(i)) | 0;
+  }
+  const rng = () => {
+    seed = (seed * 16807 + 0) % 2147483647;
+    return (seed & 0x7fffffff) / 0x7fffffff;
+  };
+
+  // Pick 4 unique challenges
+  const shuffled = [...CHALLENGE_TEMPLATES];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+
+  return shuffled.slice(0, 4).map((t, idx) => ({
+    id: `weekly-${weekStart}-${idx}`,
+    name: t.name,
+    desc: t.desc,
+    target: t.target,
+    progress: 0,
+    rewardCash: t.rewardCash,
+    rewardRep: t.rewardRep,
+    claimed: false,
+  }));
+}
+
+/** Create a fresh WeeklyState for the current date. */
+export function initialWeeklyState(now: number): WeeklyState {
+  const weekStart = getMonday(new Date(now));
+  return {
+    weekStart,
+    weeklyEarned: 0,
+    weeklyClicks: 0,
+    weeklyCarsBought: 0,
+    weeklyCratesOpened: 0,
+    weeklySpins: 0,
+    weeklyPrestiges: 0,
+    challenges: generateWeeklyChallenges(weekStart),
+  };
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

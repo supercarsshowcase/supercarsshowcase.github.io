@@ -10,8 +10,11 @@ import {
   UPGRADE_MAP,
   levelFrom,
   rarityIndex,
+  challengeMetric,
+  generateWeeklyChallenges,
+  initialWeeklyState,
 } from "./data";
-import type { CrateResult, DealerDef, GameState, SpinResult } from "./types";
+import type { CrateResult, DealerDef, GameState, SpinResult, WeeklyState, WeeklyChallenge } from "./types";
 
 const SAVE_KEY = "supercars.game.v1";
 const STORAGE_VERSION = 1;
@@ -75,6 +78,7 @@ export function initialGameState(): GameState {
     lastTick: now,
     lastSpinAt: 0,
     freeSpins: 0,
+    weekly: initialWeeklyState(now),
   };
 }
 
@@ -404,7 +408,58 @@ export type Action =
   | { type: "HARD_RESET" }
   | { type: "RESET_PROGRESS"; resetOptions: Record<string, boolean> }
   | { type: "GIVE_SPINS"; amount: number }
+  | { type: "WEEKLY_CHECK"; now: number }
+  | { type: "CLAIM_WEEKLY"; challengeId: string }
   | { type: "LOAD"; state: GameState };
+
+/** Ensure the weekly state is for the current week, resetting if needed. */
+function ensureWeekly(s: GameState, now: number): WeeklyState {
+  const currentMonday = getMondayStr(now);
+  if (s.weekly.weekStart === currentMonday) return s.weekly;
+  return {
+    weekStart: currentMonday,
+    weeklyEarned: 0,
+    weeklyClicks: 0,
+    weeklyCarsBought: 0,
+    weeklyCratesOpened: 0,
+    weeklySpins: 0,
+    weeklyPrestiges: 0,
+    challenges: generateWeeklyChallenges(currentMonday),
+  };
+}
+
+function getMondayStr(now: number): string {
+  const d = new Date(now);
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  d.setDate(diff);
+  d.setHours(0, 0, 0, 0);
+  return d.toISOString().split("T")[0];
+}
+
+/** Track a weekly metric and update challenge progress. */
+function trackWeekly(s: GameState, metric: string, amount: number): WeeklyState {
+  const weekly = { ...s.weekly };
+  // Update metric counters
+  if (metric === "earned") weekly.weeklyEarned += amount;
+  else if (metric === "clicks") weekly.weeklyClicks += amount;
+  else if (metric === "carsBought") weekly.weeklyCarsBought += amount;
+  else if (metric === "cratesOpened") weekly.weeklyCratesOpened += amount;
+  else if (metric === "spins") weekly.weeklySpins += amount;
+  else if (metric === "prestiges") weekly.weeklyPrestiges += amount;
+
+  // Update challenge progress
+  weekly.challenges = weekly.challenges.map((ch) => {
+    if (ch.claimed) return ch;
+    const m = challengeMetric(ch);
+    if (m === metric) {
+      return { ...ch, progress: Math.min(ch.target, ch.progress + amount) };
+    }
+    return ch;
+  });
+
+  return weekly;
+}
 
 function applyAchievements(s: GameState): GameState {
   const earned = newAchievements(s);
@@ -433,6 +488,8 @@ export function gameReducer(state: GameState, action: Action): GameState {
       const amount = Math.max(1, Math.round(action.amount));
       const wasStarter = state.activeCarId === STARTER_ID;
       const nextClicks = state.clicksOnStarter + (wasStarter ? 1 : 0);
+      const weeklyEarned = trackWeekly(state, "earned", amount);
+      const weeklyClicks = trackWeekly({ ...state, weekly: weeklyEarned }, "clicks", 1);
       const next = {
         ...state,
         cash: state.cash + amount,
@@ -440,6 +497,7 @@ export function gameReducer(state: GameState, action: Action): GameState {
         totalClicks: state.totalClicks + 1,
         clicksOnStarter: nextClicks,
         lastTick: Date.now(),
+        weekly: weeklyClicks,
       };
       return applyAchievements(next);
     }
@@ -449,11 +507,13 @@ export function gameReducer(state: GameState, action: Action): GameState {
       const mult = action.globalMultiplier ?? 1;
       const gain = Math.floor(raw * mult);
       if (gain <= 0) return { ...state, lastTick: action.now };
+      const weekly = trackWeekly(state, "earned", gain);
       return applyAchievements({
         ...state,
         cash: state.cash + gain,
         totalEarned: state.totalEarned + gain,
         lastTick: action.now,
+        weekly,
       });
     }
     case "BUY_CAR": {
@@ -463,10 +523,12 @@ export function gameReducer(state: GameState, action: Action): GameState {
       if (levelFrom(state) < def.unlockLevel) return state;
       const price = buyPrice(action.id);
       if (state.cash < price) return state;
+      const weekly = trackWeekly(state, "carsBought", 1);
       return applyAchievements({
         ...state,
         cash: state.cash - price,
         ownedCars: { ...state.ownedCars, [action.id]: { upgrades: {} } },
+        weekly,
       });
     }
     case "REMOVE_CAR": {
@@ -533,12 +595,14 @@ export function gameReducer(state: GameState, action: Action): GameState {
       } else if (r.kind === "cash") {
         cash += r.cash ?? 0;
       }
+      const weekly = trackWeekly(state, "cratesOpened", 1);
       return applyAchievements({
         ...state,
         cash,
         ownedCars,
         inventory,
         cratesOpened: state.cratesOpened + 1,
+        weekly,
       });
     }
     case "SELL_PART": {
@@ -571,16 +635,18 @@ export function gameReducer(state: GameState, action: Action): GameState {
       const hasFreeSpin = state.freeSpins > 0;
       if (!hasFreeSpin && action.now < state.lastSpinAt + SPIN_COOLDOWN_MS) return state;
       const nextFreeSpins = hasFreeSpin ? state.freeSpins - 1 : state.freeSpins;
+      const weeklySpin = trackWeekly(state, "spins", 1);
       const r = action.result;
       if (r.kind === "car" && r.carId) {
         const def = GAME_CAR_MAP[r.carId];
-        if (!def) return { ...state, lastSpinAt: action.now, freeSpins: nextFreeSpins };
+        if (!def) return { ...state, lastSpinAt: action.now, freeSpins: nextFreeSpins, weekly: weeklySpin };
         if (state.ownedCars[r.carId]) {
           return applyAchievements({
             ...state,
             cash: state.cash + Math.round(def.value * 0.2),
             lastSpinAt: action.now,
             freeSpins: nextFreeSpins,
+            weekly: weeklySpin,
           });
         }
         return applyAchievements({
@@ -588,6 +654,7 @@ export function gameReducer(state: GameState, action: Action): GameState {
           ownedCars: { ...state.ownedCars, [r.carId]: { upgrades: {} } },
           lastSpinAt: action.now,
           freeSpins: nextFreeSpins,
+          weekly: weeklySpin,
         });
       }
       return applyAchievements({
@@ -595,6 +662,7 @@ export function gameReducer(state: GameState, action: Action): GameState {
         cash: state.cash + (r.amount ?? 0),
         lastSpinAt: action.now,
         freeSpins: nextFreeSpins,
+        weekly: weeklySpin,
       });
     }
     case "REFRESH_DEALER":
@@ -607,16 +675,39 @@ export function gameReducer(state: GameState, action: Action): GameState {
     case "PRESTIGE": {
       const requirement = 5000 * (state.prestigeLevel + 1);
       if (state.reputation < requirement) return state;
+      const weeklyP = trackWeekly(state, "prestiges", 1);
       return normalize(state, {
         ...initialGameState(),
         prestigeLevel: state.prestigeLevel + 1,
         achievements: state.achievements,
         totalEarned: 0,
         lastTick: Date.now(),
+        weekly: weeklyP,
       });
     }
     case "GIVE_SPINS":
       return { ...state, freeSpins: state.freeSpins + Math.max(0, Math.round(action.amount)) };
+
+    case "WEEKLY_CHECK": {
+      const weekly = ensureWeekly(state, action.now);
+      return { ...state, weekly };
+    }
+    case "CLAIM_WEEKLY": {
+      const challenge = state.weekly.challenges.find((c) => c.id === action.challengeId);
+      if (!challenge || challenge.claimed || challenge.progress < challenge.target) return state;
+      const updated = {
+        ...state,
+        cash: state.cash + challenge.rewardCash,
+        reputation: state.reputation + challenge.rewardRep,
+        weekly: {
+          ...state.weekly,
+          challenges: state.weekly.challenges.map((c) =>
+            c.id === action.challengeId ? { ...c, claimed: true } : c,
+          ),
+        },
+      };
+      return applyAchievements(updated);
+    }
 
     case "HARD_RESET":
       return initialGameState();
@@ -684,6 +775,7 @@ function normalize(current: GameState, loaded: Partial<GameState>): GameState {
     ownedCars: loaded.ownedCars ?? current.ownedCars,
     inventory: loaded.inventory ?? current.inventory,
     daily: { ...initialGameState().daily, ...(loaded.daily ?? {}) },
+    weekly: loaded.weekly ?? current.weekly ?? initialWeeklyState(Date.now()),
   };
   // Fill any dealer that has no stock yet (old saves predate stock seeding).
   const dealerStock: Record<string, string[]> = {};

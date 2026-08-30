@@ -127,6 +127,8 @@ export interface GameState {
   lastSpinAt: number;
   /** Bonus spins granted by admin that skip the cooldown. */
   freeSpins: number;
+  /** Weekly challenges reset every Monday. */
+  weekly: WeeklyState;
 }
 
 export interface SpinResult {
@@ -137,6 +139,36 @@ export interface SpinResult {
   slice: number;
   /** Which car tier was won: 1 = 1% ($10-30M), 2 = 0.01% ($100-300M), 3 = 0.001% ($1B+) */
   tier?: 1 | 2 | 3;
+}
+
+export interface WeeklyChallenge {
+  id: string;
+  name: string;
+  desc: string;
+  target: number;
+  progress: number;
+  rewardCash: number;
+  rewardRep: number;
+  claimed: boolean;
+}
+
+export interface WeeklyState {
+  /** ISO date string (YYYY-MM-DD) for the start of the current week (Monday). */
+  weekStart: string;
+  /** Total cash earned during this week. */
+  weeklyEarned: number;
+  /** Clicks made during this week. */
+  weeklyClicks: number;
+  /** Cars purchased during this week. */
+  weeklyCarsBought: number;
+  /** Crates opened during this week. */
+  weeklyCratesOpened: number;
+  /** Wheel spins during this week. */
+  weeklySpins: number;
+  /** Prestiges during this week. */
+  weeklyPrestiges: number;
+  /** Challenges with their current progress. */
+  challenges: WeeklyChallenge[];
 }
 
 export interface CrateResult {
