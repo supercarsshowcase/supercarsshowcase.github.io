@@ -48,6 +48,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { GamePanels } from "./GamePanels";
 import { GiftModal } from "./GiftModal";
+import { ChatPanel } from "./ChatPanel";
 
 const NAV: { id: TabId; label: string; icon: LucideIcon }[] = [
   { id: "earn", label: "Earn", icon: MousePointerClick },
@@ -483,6 +484,9 @@ export function GameMain({
             })}
           </div>
         </main>
+
+        {/* ── Chat panel (desktop) ── */}
+        <ChatPanel />
       </div>
     </div>
   );

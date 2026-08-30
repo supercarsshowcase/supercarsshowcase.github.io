@@ -188,6 +188,16 @@ const schema = defineSchema(
       updatedAt: v.number(),
     }).index("by_user", ["userId"]),
 
+    // In-game chat messages.
+    chatMessages: defineTable({
+      userId: v.id("users"),
+      name: v.string(),
+      image: v.optional(v.string()),
+      role: v.optional(v.string()),
+      text: v.string(),
+      createdAt: v.number(),
+    }).index("by_created", ["createdAt"]),
+
   },
   {
     schemaValidation: false,
