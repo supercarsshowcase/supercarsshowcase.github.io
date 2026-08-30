@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -50,12 +50,65 @@ function timeAgo(ts: number) {
   return new Date(ts).toLocaleDateString();
 }
 
-const QUICK_IDEAS = [
-  "Add an engine-reel with real sound for every machine.",
+const ALL_IDEAS = [
+  // Audio & Video
+  "Add real engine sound clips for every car — let me hear the V12 scream.",
+  "Include short cinematic trailer reels on each detail page.",
+  "Let me record and share my own car-spotting videos.",
+  "Add an ambient 'garage radio' that plays classic motorsport commentary.",
+  "Show 0-60 acceleration animations with real telemetry data.",
+  // Social & Sharing
   "Let me generate a shareable poster card for my favorite car.",
-  "Show which cars appeared in which movies and shows.",
+  "Add a 'Car of the Day' vote so the community picks daily favorites.",
+  "Let me follow other users and see their garage collections.",
+  "Add a comment section on each car page for enthusiasts to discuss.",
+  "Let me send a car as a virtual gift to a friend.",
+  // Data & Research
+  "Show which cars appeared in which movies and TV shows.",
+  "Add historical price charts — how has each car's value changed over the years?",
+  "Include racing pedigree: every win, lap record, and championship for each model.",
+  "Show factory production numbers and how rare each variant really is.",
+  "Add a 'Similar Cars' section comparing specs of rival machines.",
+  // Visual & Design
   "Add a night-mode wallpaper download for each car.",
+  "Let me customize the site accent color to match my favorite brand.",
+  "Show 360-degree interior panoramas where available.",
+  "Add a color configurator — see each car in every factory paint option.",
+  "Include a side-by-side visual comparison tool with overlaid silhouettes.",
+  // Game & Gamification
+  "Add weekly challenges in the game: 'Earn $1M this week' for bonus rewards.",
+  "Let me trade cars with other players in the game.",
+  "Add a 'Garage Score' that rates the rarity and value of my collection.",
+  "Include seasonal limited-edition crates with exclusive cars.",
+  "Let me display my top 3 favorite cars on my profile page.",
+  // Misc
+  "Add a dark immersive mode with zero UI chrome — just the car and specs.",
+  "Let me toggle between metric and imperial units across the whole site.",
+  "Add a 'Random Car' button that takes me to a completely random page.",
+  "Include a world map showing where each car was manufactured.",
+  "Add a timeline view of automotive history decade by decade.",
+  "Let me bookmark cars into custom named collections (e.g. 'Dream Garage').",
+  "Show real-time auction prices for cars currently on the market.",
+  "Add a 'Compare 3 Cars' mode for the detailed spec battle.",
+  "Include filter by engine type: V8, V10, V12, hybrid, electric.",
+  "Add a quiz mode: 'Guess the car from these 3 stats'.",
+  "Let me export my entire garage as a beautiful PDF lookbook.",
 ];
+
+const IDEAS_PER_PAGE = 6;
+
+function shuffleArray<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function useRandomIdeas(pool: string[], count: number): string[] {
+  return useMemo(() => shuffleArray(pool).slice(0, count), []);
+}
 
 export default function Feedback() {
   const { user } = useAuth();
@@ -68,6 +121,8 @@ export default function Feedback() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [submitted, setSubmitted] = useState(false);
+
+  const quickIdeas = useRandomIdeas(ALL_IDEAS, IDEAS_PER_PAGE);
 
   const canSubmit = message.trim().length >= 10 && !submitting;
 
@@ -260,7 +315,7 @@ export default function Feedback() {
                 Tap an idea to drop it in — then make it yours.
               </p>
               <div className="mt-4 flex flex-col gap-2">
-                {QUICK_IDEAS.map((idea) => (
+                {quickIdeas.map((idea) => (
                   <button
                     key={idea}
                     type="button"
