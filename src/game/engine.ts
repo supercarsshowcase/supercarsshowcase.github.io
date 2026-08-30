@@ -679,7 +679,7 @@ export function gameReducer(state: GameState, action: Action): GameState {
       return normalize(state, {
         ...initialGameState(),
         prestigeLevel: state.prestigeLevel + 1,
-        achievements: state.achievements,
+        achievements: [],
         totalEarned: 0,
         lastTick: Date.now(),
         weekly: weeklyP,
