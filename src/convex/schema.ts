@@ -196,7 +196,9 @@ const schema = defineSchema(
       role: v.optional(v.string()),
       text: v.string(),
       createdAt: v.number(),
-    }).index("by_created", ["createdAt"]),
+    })
+      .index("by_created", ["createdAt"])
+      .index("by_user_created", ["userId", "createdAt"]),
 
   },
   {

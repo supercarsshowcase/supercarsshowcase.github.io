@@ -27,12 +27,20 @@ export const sendMessage = mutation({
     }
 
     // Rate limit: max 1 message per 2 seconds
-    const userId = identity.subject as any;
+    const user = await ctx.db
+      .query("users")
+      .withIndex("email", (q) =>
+        identity.email ? q.eq("email", identity.email) : q,
+      )
+      .first();
+    const userId = user?._id;
+
+    if (!userId) throw new Error("User profile not found");
+
     const recent = await ctx.db
       .query("chatMessages")
-      .withIndex("by_created")
+      .withIndex("by_user_created", (q) => q.eq("userId", userId))
       .order("desc")
-      .filter((q) => q.eq(q.field("userId"), userId))
       .take(1);
 
     if (recent.length > 0 && Date.now() - recent[0].createdAt < 2000) {
@@ -40,7 +48,6 @@ export const sendMessage = mutation({
     }
 
     // Fetch user profile for name/image
-    const user = await ctx.db.get("users", userId as any);
     const name =
       user?.username ?? user?.name ?? identity.name ?? "Anonymous";
     const image = user?.image ?? identity.pictureUrl ?? undefined;
@@ -56,16 +63,13 @@ export const sendMessage = mutation({
     });
 
     // Prune old messages: keep only last 200
-    const count = await ctx.db
+    const oldMessages = await ctx.db
       .query("chatMessages")
       .withIndex("by_created")
       .order("desc")
-      .collect();
-    if (count.length > 200) {
-      const toDelete = count.slice(200);
-      for (const msg of toDelete) {
-        await ctx.db.delete(msg._id);
-      }
+      .take(201);
+    for (const msg of oldMessages.slice(200)) {
+      await ctx.db.delete(msg._id);
     }
   },
 });

@@ -28,6 +28,8 @@ export function ChatPanel({
   const bottomRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (autoScroll && bottomRef.current) {
@@ -45,11 +47,15 @@ export function ChatPanel({
   const handleSend = async () => {
     const msg = text.trim();
     if (!msg) return;
-    setText("");
+    setSending(true);
+    setError(null);
     try {
       await sendMessage({ text: msg });
-    } catch {
-      // silently dropped
+      setText("");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Unable to send message");
+    } finally {
+      setSending(false);
     }
   };
 
@@ -145,12 +151,16 @@ export function ChatPanel({
             value={text}
             onChange={(e) => setText(e.target.value)}
             maxLength={500}
-            placeholder="Type a message..."
-            className="flex-1 rounded-md border border-white/10 bg-white/5 px-2 py-1 text-[9px] text-white placeholder:text-white/25 focus:border-apex-red/50 focus:outline-none"
+            placeholder={error ?? "Type a message..."}
+            disabled={sending}
+            className={cn(
+              "flex-1 rounded-md border bg-white/5 px-2 py-1 text-[9px] text-white placeholder:text-white/25 focus:border-apex-red/50 focus:outline-none",
+              error ? "border-red-500/40 placeholder:text-red-300/70" : "border-white/10",
+            )}
           />
           <button
             type="submit"
-            disabled={!text.trim()}
+            disabled={!text.trim() || sending}
             className="flex size-6 shrink-0 items-center justify-center rounded-md bg-apex-red text-white transition-colors hover:bg-apex-red/80 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/30"
           >
             <Send className="size-2.5" />
