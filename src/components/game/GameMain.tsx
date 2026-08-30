@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Boxes,
@@ -217,9 +217,11 @@ export function GameMain({
 
   // The fit loop: shrink the zoom until the game fits between the site header
   // and the bottom of the viewport (nothing scrolls away), then grow back
-  // toward the width-based target when there is spare room. Only calibrated
-  // on the Earn tab; longer tabs (garage, casino…) simply scroll when long.
-  useEffect(() => {
+  // toward the width-based target when there is spare room. Runs in a layout
+  // effect so adjustments land before the browser paints (no overflow flash).
+  // Only calibrated on the Earn tab; longer tabs (garage, casino…) simply
+  // scroll when long. Re-fits when the event banner mounts/unmounts.
+  useLayoutEffect(() => {
     if (typeof window === "undefined") return;
     if (window.innerWidth < 1024) return;
     if (tab !== "earn") return;
@@ -237,7 +239,7 @@ export function GameMain({
       );
       if (next > uiZoom + 0.005) setUiZoom(next);
     }
-  }, [uiZoom, fitTick, tab]);
+  }, [uiZoom, fitTick, tab, activeEvent]);
 
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const now = Date.now();
