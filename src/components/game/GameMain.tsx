@@ -9,6 +9,7 @@ import {
   Dice5,
   Flame,
   Gift,
+  MessageCircle,
   MousePointerClick,
   Package,
   Save,
@@ -136,6 +137,7 @@ export function GameMain({
 }) {
   const [tab, setTab] = useState<TabId>("earn");
   const [showGiftModal, setShowGiftModal] = useState(false);
+  const [chatOpen, setChatOpen] = useState(true);
   const [popups, setPopups] = useState<Popup[]>([]);
   const popupId = useRef(0);
 
@@ -273,6 +275,16 @@ export function GameMain({
           <StatPill icon={Star} label="Level" value={String(level)} />
           <StatPill icon={Shield} label="Rep" value={String(Math.round(state.reputation).toLocaleString())} />
           <StatPill icon={CarIcon} label="Cars" value={String(Object.keys(state.ownedCars).length)} />
+          {!chatOpen && (
+            <button
+              type="button"
+              onClick={() => setChatOpen(true)}
+              className="inline-flex items-center gap-1 rounded-md border border-white/15 bg-apex-panel px-1.5 py-0.5 text-[9px] font-bold text-white/50 transition-colors hover:border-apex-red hover:text-white lg:flex"
+            >
+              <MessageCircle className="size-2.5" />
+              Chat
+            </button>
+          )}
         </div>
       </div>
 
@@ -486,7 +498,7 @@ export function GameMain({
         </main>
 
         {/* ── Chat panel (desktop) ── */}
-        <ChatPanel />
+        <ChatPanel open={chatOpen} onToggle={() => setChatOpen((v) => !v)} />
       </div>
     </div>
   );
