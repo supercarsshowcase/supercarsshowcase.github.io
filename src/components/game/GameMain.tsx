@@ -163,7 +163,6 @@ export function GameMain({
   // ── Anti-autoclicker state ──
   const lastClickAt = useRef(0);
   const clickTimestamps = useRef<number[]>([]);
-  const [clickLocked, setClickLocked] = useState(false);
   const [clickBlocked, setClickBlocked] = useState(false);
 
   // ── UI zoom: scale the whole game up on large screens ──
@@ -215,10 +214,11 @@ export function GameMain({
     return () => timers.forEach((t) => window.clearTimeout(t));
   }, []);
 
-  // The fit loop: shrink the zoom until the game fits between the site header
-  // and the bottom of the viewport (nothing scrolls away), then grow back
-  // toward the width-based target when there is spare room. Runs in a layout
-  // effect so adjustments land before the browser paints (no overflow flash).
+  // Fit loop: shrink the zoom until the game fits between the site header and
+  // the bottom of the viewport (nothing scrolls away). The compensated
+  // min-height already stretches the game to fill shorter screens, so the
+  // only failure mode is overflow — which this shrinks away. Runs in a
+  // layout effect so adjustments land before the browser paints (no flash).
   // Only calibrated on the Earn tab; longer tabs (garage, casino…) simply
   // scroll when long. Re-fits when the event banner mounts/unmounts.
   useLayoutEffect(() => {
@@ -232,12 +232,6 @@ export function GameMain({
     if (visual > avail + 6) {
       const next = Math.max(1, Math.round(((uiZoom * avail) / visual) * 100) / 100);
       if (next < uiZoom - 0.005) setUiZoom(next);
-    } else if (visual < avail * 0.9) {
-      const next = Math.min(
-        targetZoom(),
-        Math.round(uiZoom * (avail / visual) * 0.97 * 100) / 100,
-      );
-      if (next > uiZoom + 0.005) setUiZoom(next);
     }
   }, [uiZoom, fitTick, tab, activeEvent]);
 
@@ -255,14 +249,12 @@ export function GameMain({
     if (clickTimestamps.current.length >= BURST_THRESHOLD) {
       clickTimestamps.current = [];
       setClickBlocked(true);
-      setClickLocked(true);
       toast.error("Too fast! Auto-clicking detected. Clicking paused.", {
         duration: BURST_PENALTY_MS,
         style: { background: "#1a0404", border: "1px solid rgba(255,0,0,0.4)", color: "#fff" },
       });
       setTimeout(() => {
         setClickBlocked(false);
-        setClickLocked(false);
         clickTimestamps.current = [];
       }, BURST_PENALTY_MS);
       return;
@@ -629,7 +621,9 @@ function EarnZone({
 }) {
   const totalEarned = state.totalEarned;
   const totalClicks = state.totalClicks ?? 0;
-  const critChance = Math.min(0.15 + (state.prestigeLevel * 0.01), 0.30);
+  // Real crit chance from the engine — the old local formula (prestige-based)
+  // showed a different percentage than the one actually used on click.
+  const crit = critChance(state);
   const ownedCount = Object.keys(state.ownedCars).length;
   const upgradeCount = Object.values(state.ownedCars).reduce(
     (sum: number, c: any) => sum + Object.values(c?.upgrades ?? {}).reduce((s: number, v: any) => s + (v as number), 0),
@@ -670,7 +664,7 @@ function EarnZone({
         </div>
         <div className="rounded-lg border border-apex-line bg-apex-panel px-2 py-1.5">
           <p className="text-[7px] font-semibold uppercase tracking-[0.2em] text-white/35">Crit Chance</p>
-          <p className="font-display text-xs font-black text-amber-400">{Math.round(critChance * 100)}%</p>
+          <p className="font-display text-xs font-black text-amber-400">{Math.round(crit * 100)}%</p>
           <p className="text-[8px] text-white/40">5× multiplier</p>
         </div>
         <div className="rounded-lg border border-apex-line bg-apex-panel px-2 py-1.5">

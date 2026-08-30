@@ -27,17 +27,19 @@ export function ChatPanel({
   const messages = useQuery(api.chat.getMessages) ?? [];
   const sendMessage = useMutation(api.chat.sendMessage);
   const [text, setText] = useState("");
-  const bottomRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Keep the list scrolled to the bottom via its own scrollTop —
+  // scrollIntoView would also scroll every scrollable ancestor (including
+  // the page itself), yanking the whole game when new messages arrive.
   useEffect(() => {
-    if (autoScroll && bottomRef.current) {
-      bottomRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [messages.length, autoScroll]);
+    const el = listRef.current;
+    if (!open || !el || !autoScroll) return;
+    el.scrollTop = el.scrollHeight;
+  }, [open, messages.length, autoScroll]);
 
   const handleScroll = () => {
     const el = listRef.current;
@@ -158,7 +160,6 @@ export function ChatPanel({
             </div>
           );
         })}
-        <div ref={bottomRef} />
       </div>
 
       {/* Input */}
