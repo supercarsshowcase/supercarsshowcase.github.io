@@ -16,6 +16,7 @@ import type * as cars from "../cars.js";
 import type * as feedback from "../feedback.js";
 import type * as gameSaves from "../gameSaves.js";
 import type * as garage from "../garage.js";
+import type * as gifting from "../gifting.js";
 import type * as http from "../http.js";
 import type * as leaderboard from "../leaderboard.js";
 import type * as pages from "../pages.js";
@@ -39,6 +40,7 @@ declare const fullApi: ApiFromModules<{
   feedback: typeof feedback;
   gameSaves: typeof gameSaves;
   garage: typeof garage;
+  gifting: typeof gifting;
   http: typeof http;
   leaderboard: typeof leaderboard;
   pages: typeof pages;

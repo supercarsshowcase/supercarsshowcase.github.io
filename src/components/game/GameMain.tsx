@@ -47,6 +47,7 @@ import type { GameState } from "@/game/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { GamePanels } from "./GamePanels";
+import { GiftModal } from "./GiftModal";
 
 const NAV: { id: TabId; label: string; icon: LucideIcon }[] = [
   { id: "earn", label: "Earn", icon: MousePointerClick },
@@ -61,6 +62,7 @@ const NAV: { id: TabId; label: string; icon: LucideIcon }[] = [
   { id: "leaderboard", label: "Leaderboard", icon: BarChart3 },
   { id: "achievements", label: "Achievements", icon: Trophy },
   { id: "prestige", label: "Prestige", icon: Sparkles },
+  { id: "gift", label: "Gift", icon: Gift },
 ];
 
 type TabId =
@@ -75,7 +77,8 @@ type TabId =
   | "casino"
   | "leaderboard"
   | "achievements"
-  | "prestige";
+  | "prestige"
+  | "gift";
 
 interface Popup {
   id: number;
@@ -131,6 +134,7 @@ export function GameMain({
   activeEvent?: { multiplier: number; label: string; expiresAt: number } | null;
 }) {
   const [tab, setTab] = useState<TabId>("earn");
+  const [showGiftModal, setShowGiftModal] = useState(false);
   const [popups, setPopups] = useState<Popup[]>([]);
   const popupId = useRef(0);
 
@@ -273,6 +277,13 @@ export function GameMain({
         </div>
       </div>
 
+      {/* ── Gift Modal ── */}
+      <GiftModal
+        open={showGiftModal}
+        onClose={() => setShowGiftModal(false)}
+        currentCash={cash}
+      />
+
       {/* ── Mobile action row ── */}
       <div className="mb-4 flex flex-wrap items-center gap-2 lg:hidden">
         <button
@@ -361,7 +372,13 @@ export function GameMain({
                 <button
                   key={item.id}
                   type="button"
-                  onClick={() => setTab(item.id)}
+                  onClick={() => {
+                    if (item.id === "gift") {
+                      setShowGiftModal(true);
+                    } else {
+                      setTab(item.id);
+                    }
+                  }}
                   className={cn(
                     "flex items-center gap-2.5 rounded-md px-2.5 py-1.5 font-display text-[10px] font-bold uppercase tracking-[0.14em] transition-colors",
                     isActive
@@ -448,7 +465,13 @@ export function GameMain({
                 <button
                   key={item.id}
                   type="button"
-                  onClick={() => setTab(item.id)}
+                  onClick={() => {
+                    if (item.id === "gift") {
+                      setShowGiftModal(true);
+                    } else {
+                      setTab(item.id);
+                    }
+                  }}
                   className={cn(
                     "relative flex shrink-0 items-center gap-1.5 px-3 py-2.5 font-display text-[10px] font-bold uppercase tracking-[0.14em] transition-colors",
                     isActive ? "text-white" : "text-white/45 hover:text-white",

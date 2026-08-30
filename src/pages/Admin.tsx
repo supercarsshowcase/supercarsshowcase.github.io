@@ -405,6 +405,7 @@ export default function Admin() {
   const clearMultiplierEvent = useMutation(api.adminAbuse.clearMultiplierEvent);
   const resetPlayerProgress = useMutation(api.adminAbuse.resetPlayerProgress);
   const giveSpins = useMutation(api.adminAbuse.giveSpins);
+  const giftRandomCars = useMutation(api.gifting.giftRandomCars);
   const setFeedbackStatus = useMutation(api.feedback.setFeedbackStatus);
   const deleteFeedback = useMutation(api.feedback.deleteFeedback);
   const saveCarEdit = useMutation(api.cars.saveCarEdit);
@@ -419,6 +420,7 @@ export default function Admin() {
   const [eventDuration, setEventDuration] = useState("30");
   const [eventLabel, setEventLabel] = useState("100x EVENT");
   const [abuseSpins, setAbuseSpins] = useState("");
+  const [abuseRandomCarCount, setAbuseRandomCarCount] = useState("10");
   const [resetCash, setResetCash] = useState(false);
   const [resetCars, setResetCars] = useState(false);
   const [resetParts, setResetParts] = useState(false);
@@ -763,6 +765,79 @@ export default function Admin() {
                   >
                     Send Car
                   </button>
+                </div>
+              </div>
+
+              {/* Give Random Cars Card */}
+              <div className="rounded-xl border border-apex-line bg-[#08080a] p-4">
+                <h3 className="mb-3 flex items-center gap-2 font-display text-xs font-bold uppercase tracking-[0.16em] text-white/70">
+                  <span className="flex size-6 items-center justify-center rounded-md bg-cyan-500/10"><Car className="size-3.5 text-cyan-400" /></span>
+                  Gift Random Cars
+                </h3>
+                <p className="mb-3 text-[11px] text-white/35">
+                  Send random cars to a player. Up to 1M cars at once.
+                </p>
+
+                <div className="flex items-end gap-2">
+                  <div className="flex-1">
+                    <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40">
+                      Number of cars
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="1000000"
+                      value={abuseRandomCarCount}
+                      onChange={(e) => setAbuseRandomCarCount(e.target.value)}
+                      placeholder="10"
+                      className="w-full rounded-md border border-white/[0.08] bg-[#0b0b0c] px-3 py-2 text-sm text-white outline-none focus:border-apex-red"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!abuseTarget || !abuseRandomCarCount) {
+                        toast.error("Select a user and enter a count");
+                        return;
+                      }
+                      const count = Math.min(Number(abuseRandomCarCount), 1_000_000);
+                      if (count <= 0 || !isFinite(count)) {
+                        toast.error("Invalid count");
+                        return;
+                      }
+                      if (!window.confirm(`Send ${count.toLocaleString()} random cars to this player?`)) {
+                        return;
+                      }
+                      try {
+                        await giftRandomCars({
+                          userId: abuseTarget as Id<"users">,
+                          count,
+                        });
+                        toast.success(`Gave ${count.toLocaleString()} random cars!`);
+                        setAbuseRandomCarCount("10");
+                      } catch (e: unknown) {
+                        toast.error(
+                          e instanceof Error ? e.message : "Failed",
+                        );
+                      }
+                    }}
+                    className="rounded-md bg-cyan-600 px-4 py-2 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-white hover:opacity-90"
+                  >
+                    Send Cars
+                  </button>
+                </div>
+                {/* Quick presets */}
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {[10, 50, 100, 500, 1000, 5000, 10000, 100000, 1000000].map((v) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => setAbuseRandomCarCount(String(v))}
+                      className="rounded bg-white/5 px-2 py-1 text-[10px] font-bold text-white/60 hover:bg-white/10"
+                    >
+                      {v >= 1_000_000 ? "1M" : v >= 1_000 ? `${v / 1_000}K` : v}
+                    </button>
+                  ))}
                 </div>
               </div>
 

@@ -150,10 +150,11 @@ const schema = defineSchema(
     // Admin gifts (money / cars / resets) pending for individual users.
     adminGifts: defineTable({
       userId: v.id("users"),
-      kind: v.string(), // "money" | "car" | "reset"
+      kind: v.string(), // "money" | "car" | "reset" | "player_gift" | "random_cars" | "spins"
       amount: v.optional(v.number()),
       carId: v.optional(v.string()),
       resetOptions: v.optional(v.record(v.string(), v.boolean())),
+      fromUserId: v.optional(v.id("users")), // for player-to-player gifts
       claimed: v.boolean(),
       createdAt: v.number(),
     })
