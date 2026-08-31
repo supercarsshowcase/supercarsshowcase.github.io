@@ -124,7 +124,13 @@ export function AppShell() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-apex-ink text-white">
+    <div
+      className={
+        isGame
+          ? "flex h-screen flex-col overflow-hidden bg-apex-ink text-white"
+          : "flex min-h-screen flex-col bg-apex-ink text-white"
+      }
+    >
       <Analytics />
       <AnnouncementOverlay />
       <header className="sticky top-0 z-50 border-b border-apex-line bg-black/85 backdrop-blur-md">
@@ -402,11 +408,11 @@ export function AppShell() {
         )}
       </header>
 
-      <main className="flex-1">
+      <main className={isGame ? "min-h-0 flex-1 overflow-hidden" : "flex-1"}>
         <Outlet />
       </main>
 
-      <footer className="border-t border-apex-line bg-black">
+      <footer className={isGame ? "hidden" : "border-t border-apex-line bg-black"}>
         <div className="mx-auto max-w-[1400px] px-4 py-12 sm:px-6">
           <div className="flex flex-col gap-10 md:flex-row md:justify-between">
             <div className="max-w-sm">

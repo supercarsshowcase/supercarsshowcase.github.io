@@ -133,15 +133,12 @@ const BURST_WINDOW_MS = 1000;
 /** Site header height (h-16) reserved above the game viewport. */
 const HEADER_PX = 64;
 /**
- * Zoom-in target for the game UI on desktop. Large screens get a uniformly
- * bigger game; the fit loop below clamps it to whatever actually fits.
+ * The game renders at its natural size (matching the rest of the site and
+ * whatever zoom the browser is set to). The fit loop below only ever SHRINKS
+ * when the content is taller than the space available, so the game always
+ * fits exactly — at any screen size and any browser zoom percentage.
  */
-function targetZoom(): number {
-  if (typeof window === "undefined") return 1;
-  const w = window.innerWidth;
-  if (w < 1024) return 1;
-  return Math.min(1.45, Math.max(1, w / 1360));
-}
+const MIN_FIT_ZOOM = 0.6;
 
 export function GameMain({
   state,
@@ -165,8 +162,8 @@ export function GameMain({
   const clickTimestamps = useRef<number[]>([]);
   const [clickBlocked, setClickBlocked] = useState(false);
 
-  // ── UI zoom: scale the whole game up on large screens ──
-  const [uiZoom, setUiZoom] = useState(() => targetZoom());
+  // ── UI fit: natural size, shrink-only when the content overflows ──
+  const [uiZoom, setUiZoom] = useState(1);
   const [fitTick, setFitTick] = useState(0);
   const gameRootRef = useRef<HTMLDivElement>(null);
 
@@ -188,21 +185,29 @@ export function GameMain({
   const xpPct = Math.min(100, (xpIntoLevel / Math.max(1, xpForLevel)) * 100);
   const nextLevelEarned = Math.pow(levelBase, 2) * 500;
 
-  // Re-fit the zoom when the window is resized (debounced)…
+  // Re-fit when the window is resized (debounced).
   useEffect(() => {
     let t: number | undefined;
     const onResize = () => {
       window.clearTimeout(t);
-      t = window.setTimeout(() => {
-        setUiZoom(targetZoom());
-        setFitTick((n) => n + 1);
-      }, 150);
+      t = window.setTimeout(() => setFitTick((n) => n + 1), 150);
     };
     window.addEventListener("resize", onResize);
     return () => {
       window.clearTimeout(t);
       window.removeEventListener("resize", onResize);
     };
+  }, []);
+
+  // Re-fit whenever the game's own content changes size — event banner
+  // mounting/unmounting, chat opening/closing, fonts and photos finishing
+  // load, etc. ResizeObserver catches all of them without listing deps.
+  useEffect(() => {
+    const el = gameRootRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => setFitTick((n) => n + 1));
+    ro.observe(el);
+    return () => ro.disconnect();
   }, []);
 
   // …and a few times shortly after mount so late layout (fonts, photos)
@@ -214,13 +219,13 @@ export function GameMain({
     return () => timers.forEach((t) => window.clearTimeout(t));
   }, []);
 
-  // Fit loop: shrink the zoom until the game fits between the site header and
-  // the bottom of the viewport (nothing scrolls away). The compensated
-  // min-height already stretches the game to fill shorter screens, so the
-  // only failure mode is overflow — which this shrinks away. Runs in a
-  // layout effect so adjustments land before the browser paints (no flash).
-  // Only calibrated on the Earn tab; longer tabs (garage, casino…) simply
-  // scroll when long. Re-fits when the event banner mounts/unmounts.
+  // Fit loop: the game sits at its natural size and only ever shrinks when
+  // the content is taller than the space between the site header and the
+  // bottom of the viewport — so it always fits exactly, at any screen size
+  // or browser zoom level. When the content shrinks again it returns to
+  // natural size (never larger). Runs in a layout effect so adjustments
+  // land before the browser paints. Only calibrated on the Earn tab; longer
+  // tabs (garage, casino…) scroll internally as before.
   useLayoutEffect(() => {
     if (typeof window === "undefined") return;
     if (window.innerWidth < 1024) return;
@@ -228,10 +233,16 @@ export function GameMain({
     const el = gameRootRef.current;
     if (!el) return;
     const avail = window.innerHeight - HEADER_PX;
-    const visual = el.getBoundingClientRect().height;
-    if (visual > avail + 6) {
-      const next = Math.max(1, Math.round(((uiZoom * avail) / visual) * 100) / 100);
+    const natural = el.offsetHeight; // layout height — unaffected by the scale
+    if (avail <= 0 || natural <= 0) return;
+    if (natural > avail + 2) {
+      // Floor rounds down so the scaled height never exceeds the space.
+      const next = Math.max(MIN_FIT_ZOOM, Math.floor((avail / natural) * 100) / 100);
       if (next < uiZoom - 0.005) setUiZoom(next);
+    } else if (uiZoom < 1 && natural < avail - 2) {
+      // Content got shorter (banner unmounted, chat closed…): return to
+      // natural size, still capped at 1.
+      setUiZoom(1);
     }
   }, [uiZoom, fitTick, tab, activeEvent]);
 
@@ -303,11 +314,11 @@ export function GameMain({
 
   return (
     <>
-      {/* ── UI zoom wrapper: scales the whole game up, width-compensated so it
-          still spans the full screen ── */}
+      {/* ── UI fit wrapper: only scaled DOWN when the content overflows a
+          short viewport; width-compensated so it still spans the screen ── */}
       <div
         style={
-          uiZoom > 1
+          uiZoom < 1
             ? {
                 width: `${100 / uiZoom}%`,
                 transform: `scale(${uiZoom})`,
@@ -319,7 +330,7 @@ export function GameMain({
       <div
         ref={gameRootRef}
         className="flex flex-col overflow-visible px-2 py-2 sm:px-4 lg:px-5"
-        style={{ minHeight: `calc((100dvh - 4rem) / ${uiZoom})` }}
+        style={uiZoom === 1 ? { minHeight: "calc(100dvh - 4rem)" } : undefined}
       >
       {/* ── Active Event Banner ── */}
       {activeEvent && (
