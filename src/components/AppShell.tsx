@@ -408,7 +408,7 @@ export function AppShell() {
         )}
       </header>
 
-      <main className={isGame ? "min-h-0 flex-1 overflow-hidden" : "flex-1"}>
+      <main className={isGame ? "min-h-0 flex-1 overflow-y-auto" : "flex-1"}>
         <Outlet />
       </main>
 

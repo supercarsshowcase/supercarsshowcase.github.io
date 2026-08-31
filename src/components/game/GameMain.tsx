@@ -329,7 +329,7 @@ export function GameMain({
       >
       <div
         ref={gameRootRef}
-        className="flex flex-col overflow-visible px-2 py-2 sm:px-4 lg:px-5"
+        className="mx-auto flex w-full max-w-[1280px] flex-col overflow-visible px-2 py-2 sm:px-4 lg:px-5"
         style={uiZoom === 1 ? { minHeight: "calc(100dvh - 4rem)" } : undefined}
       >
       {/* ── Active Event Banner ── */}
@@ -644,7 +644,7 @@ function EarnZone({
   const streak = state.daily.streak;
 
   return (
-    <div className="relative">
+    <div className="relative flex min-h-0 flex-col lg:h-full">
       {/* ── Earn header with stats row ── */}
       <div className="mb-2">
         <div className="flex items-center justify-between">
@@ -694,7 +694,7 @@ function EarnZone({
       <div
         onClick={onCarClick}
         className={cn(
-          "group relative cursor-pointer select-none overflow-hidden rounded-2xl border bg-[#0b0b0c] transition-all",
+          "group relative flex min-h-0 flex-col lg:min-h-[420px] cursor-pointer select-none overflow-hidden rounded-2xl border bg-[#0b0b0c] transition-all lg:flex-1",
           clickBlocked
             ? "border-red-500/30"
             : "border-apex-line hover:border-apex-red/30",
