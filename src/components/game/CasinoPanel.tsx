@@ -109,7 +109,7 @@ function checkCasinoPrize(dispatch: React.Dispatch<Action>): string | null {
 
 /* ── Custom Styled Icon Components ─────────────────────────────────────── */
 function CoinIcon({ side, size = "md" }: { side: "heads" | "tails" | "unknown"; size?: "sm" | "md" | "lg" }) {
-  const sizes = { sm: "size-8 text-[10px]", md: "size-12 text-sm", lg: "size-16 text-lg" };
+  const sizes = { sm: "size-8 text-[11px]", md: "size-12 text-sm", lg: "size-16 text-lg" };
   return (
     <div className={cn("rounded-full border-2 flex items-center justify-center font-display font-black transition-all duration-300", sizes[size],
       side === "heads" ? "border-amber-500 bg-gradient-to-br from-amber-400 to-amber-600 text-amber-900 shadow-lg shadow-amber-500/30"
@@ -215,7 +215,7 @@ function CasinoLobby({ state, dispatch, onSelect }: { state: GameState; dispatch
                 <div className="flex-1">
                   <p className="font-display text-sm font-bold text-white group-hover:text-apex-red transition-colors">
                     {g.name}
-                    {g.id === "online-jackpot" && <span className="ml-2 rounded bg-apex-red px-2 py-0.5 text-[10px] font-bold uppercase text-white">NEW!</span>}
+                    {g.id === "online-jackpot" && <span className="ml-2 rounded bg-apex-red px-2 py-0.5 text-[11px] font-bold uppercase text-white">NEW!</span>}
                   </p>
                   <p className="text-xs text-white/35 mt-0.5">{g.desc}</p>
                 </div>
@@ -260,10 +260,10 @@ function TradeCarsPanel({ state, dispatch }: { state: GameState; dispatch: React
               <Car className="size-4 shrink-0 text-white/30" />
               <div className="flex-1 min-w-0">
                 <p className="truncate text-xs font-bold text-white">{car.brand} {car.name}</p>
-                <p className="text-[10px] text-white/30">${Math.floor(car.value * 0.7).toLocaleString()} chips</p>
+                <p className="text-[11px] text-white/30">${Math.floor(car.value * 0.7).toLocaleString()} chips</p>
               </div>
               <button type="button" onClick={() => trade(car.id)}
-                className="shrink-0 rounded-lg bg-apex-red/80 px-3 py-1.5 text-[10px] font-bold uppercase text-white hover:bg-apex-red">
+                className="shrink-0 rounded-lg bg-apex-red/80 px-3 py-1.5 text-[11px] font-bold uppercase text-white hover:bg-apex-red">
                 Trade
               </button>
             </div>

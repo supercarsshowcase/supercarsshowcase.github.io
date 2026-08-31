@@ -14,9 +14,9 @@ function fmtMoney(n: number): string {
 function SectionHeader({ eyebrow, title, hint }: { eyebrow: string; title: string; hint?: string }) {
   return (
     <div className="mb-6">
-      <p className="font-display text-[10px] font-semibold uppercase tracking-[0.28em] text-apex-red">{eyebrow}</p>
+      <p className="font-display text-[11px] font-semibold uppercase tracking-[0.28em] text-apex-red">{eyebrow}</p>
       <h3 className="mt-1 font-display text-2xl font-black tracking-tight text-white">{title}</h3>
-      {hint && <p className="mt-1 text-[10px] text-white/30">{hint}</p>}
+      {hint && <p className="mt-1 text-[11px] text-white/30">{hint}</p>}
     </div>
   );
 }
@@ -47,19 +47,19 @@ export function LeaderboardPanel() {
         <div className="rounded-xl border border-apex-line bg-apex-panel p-4 text-center">
           <Users className="mx-auto mb-2 size-4 text-white/30" />
           <p className="font-display text-lg font-black text-white">{totalPlayers}</p>
-          <p className="text-[8px] font-semibold uppercase tracking-[0.2em] text-white/30">Players</p>
+          <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-white/30">Players</p>
         </div>
         <div className="rounded-xl border border-apex-line bg-apex-panel p-4 text-center">
           <TrendingUp className="mx-auto mb-2 size-4 text-apex-red/60" />
           <p className="font-display text-lg font-black text-apex-red">{fmtMoney(topCash)}</p>
-          <p className="text-[8px] font-semibold uppercase tracking-[0.2em] text-white/30">Top Cash</p>
+          <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-white/30">Top Cash</p>
         </div>
         <div className="rounded-xl border border-apex-line bg-apex-panel p-4 text-center">
           <Car className="mx-auto mb-2 size-4 text-white/30" />
           <p className="font-display text-lg font-black text-white">
             {players ? players.reduce((s, p) => s + p.carCount, 0) : 0}
           </p>
-          <p className="text-[8px] font-semibold uppercase tracking-[0.2em] text-white/30">Total Cars</p>
+          <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-white/30">Total Cars</p>
         </div>
       </div>
 
@@ -76,7 +76,7 @@ export function LeaderboardPanel() {
             </div>
             <div className="text-right">
               <p className="font-display text-xl font-black text-apex-red">{fmtMoney(myRank.cash)}</p>
-              <p className="text-[9px] text-white/30">in your account</p>
+              <p className="text-[11px] text-white/30">in your account</p>
             </div>
           </div>
         </div>
@@ -91,16 +91,16 @@ export function LeaderboardPanel() {
         <div className="rounded-xl border border-apex-line bg-apex-panel py-16 text-center">
           <Trophy className="mx-auto size-12 text-white/10" />
           <p className="mt-4 font-display text-sm font-bold text-white/40">No players yet</p>
-          <p className="mt-1 text-[10px] text-white/20">Play the game to appear on the leaderboard.</p>
+          <p className="mt-1 text-[11px] text-white/20">Play the game to appear on the leaderboard.</p>
         </div>
       ) : (
         <div className="space-y-px overflow-hidden rounded-xl border border-apex-line bg-apex-line">
           {/* Header row */}
           <div className="grid grid-cols-[3rem_1fr_8rem_6rem] gap-3 bg-[#0a0a0c] px-4 py-2.5">
-            <span className="text-[8px] font-semibold uppercase tracking-[0.2em] text-white/25">#</span>
-            <span className="text-[8px] font-semibold uppercase tracking-[0.2em] text-white/25">Player</span>
-            <span className="text-right text-[8px] font-semibold uppercase tracking-[0.2em] text-white/25">Cash</span>
-            <span className="text-right text-[8px] font-semibold uppercase tracking-[0.2em] text-white/25">Earned</span>
+            <span className="text-[9px] font-semibold uppercase tracking-[0.2em] text-white/25">#</span>
+            <span className="text-[9px] font-semibold uppercase tracking-[0.2em] text-white/25">Player</span>
+            <span className="text-right text-[9px] font-semibold uppercase tracking-[0.2em] text-white/25">Cash</span>
+            <span className="text-right text-[9px] font-semibold uppercase tracking-[0.2em] text-white/25">Earned</span>
           </div>
 
           {players.map((p, i) => {
@@ -143,7 +143,7 @@ export function LeaderboardPanel() {
                   )}>
                     {p.name}
                   </p>
-                  <p className="text-[9px] text-white/25">
+                  <p className="text-[11px] text-white/25">
                     Lv {p.level} &middot; P{p.prestigeLevel} &middot; {p.carCount} cars
                   </p>
                 </div>
@@ -160,7 +160,7 @@ export function LeaderboardPanel() {
 
                 {/* Total earned */}
                 <div className="text-right">
-                  <p className="text-[10px] text-white/30 tabular-nums">
+                  <p className="text-[11px] text-white/30 tabular-nums">
                     {fmtMoney(p.totalEarned)}
                   </p>
                 </div>
@@ -171,7 +171,7 @@ export function LeaderboardPanel() {
           {/* Footer */}
           {totalPlayers >= 100 && (
             <div className="bg-[#0a0a0c] px-4 py-3 text-center">
-              <p className="text-[9px] text-white/20">Showing top 100 players</p>
+              <p className="text-[11px] text-white/20">Showing top 100 players</p>
             </div>
           )}
         </div>

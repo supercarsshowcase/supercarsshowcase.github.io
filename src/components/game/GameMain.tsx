@@ -348,7 +348,7 @@ export function GameMain({
                 <p className="font-display text-sm font-black uppercase tracking-wider text-apex-red">
                   {activeEvent.label}
                 </p>
-                <p className="text-[11px] text-white/50">
+                <p className="text-[12px] text-white/50">
                   All earnings multiplied · Expires in <CountdownTimer expiresAt={activeEvent.expiresAt} />
                 </p>
               </div>
@@ -361,7 +361,7 @@ export function GameMain({
       )}      {/* ── Header ── */}
       <div className="mb-1 flex items-center justify-between gap-1">
         <div>
-          <p className="inline-flex items-center gap-1 font-display text-[8px] font-semibold uppercase tracking-[0.28em] text-apex-red">
+          <p className="inline-flex items-center gap-1 font-display text-[9px] font-semibold uppercase tracking-[0.28em] text-apex-red">
             <span className="inline-block size-1 rounded-full bg-apex-red" />
             The Garage Tycoon
           </p>
@@ -379,7 +379,7 @@ export function GameMain({
             <button
               type="button"
               onClick={() => setChatOpen(true)}
-              className="inline-flex items-center gap-1 rounded-md border border-white/15 bg-apex-panel px-1.5 py-0.5 text-[9px] font-bold text-white/50 transition-colors hover:border-apex-red hover:text-white lg:flex"
+              className="inline-flex items-center gap-1 rounded-md border border-white/15 bg-apex-panel px-1.5 py-0.5 text-[10px] font-bold text-white/50 transition-colors hover:border-apex-red hover:text-white lg:flex"
             >
               <MessageCircle className="size-2.5" />
               Chat
@@ -394,25 +394,25 @@ export function GameMain({
           type="button"
           onClick={claimDaily}
           disabled={!canClaim}
-          className="inline-flex items-center gap-1.5 rounded-md border border-apex-red/40 bg-apex-red/10 px-2.5 py-1.5 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-white transition-colors hover:bg-apex-red disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-white/40"
+          className="inline-flex items-center gap-1.5 rounded-md border border-apex-red/40 bg-apex-red/10 px-2.5 py-1.5 font-display text-[11px] font-bold uppercase tracking-[0.12em] text-white transition-colors hover:bg-apex-red disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-white/40"
         >
           <Gift className="size-4 text-apex-red" />
           {canClaim ? `Daily ${fmtMoney(daily)}` : `Daily in ${waitLabel}`}
           {state.daily.streak > 1 && (
-            <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-[9px]">×{state.daily.streak}</span>
+            <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-[10px]">×{state.daily.streak}</span>
           )}
         </button>
         <button
           type="button"
           onClick={saveNow}
-          className="inline-flex items-center gap-1.5 rounded-md border border-white/15 px-2.5 py-1.5 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-white/70 transition-colors hover:border-apex-red hover:text-white"
+          className="inline-flex items-center gap-1.5 rounded-md border border-white/15 px-2.5 py-1.5 font-display text-[11px] font-bold uppercase tracking-[0.12em] text-white/70 transition-colors hover:border-apex-red hover:text-white"
         >
           <Save className="size-4" /> Save
         </button>
         <button
           type="button"
           onClick={resetNow}
-          className="inline-flex items-center gap-1.5 rounded-md border border-white/15 px-2.5 py-1.5 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-white/40 transition-colors hover:border-apex-red hover:text-apex-red"
+          className="inline-flex items-center gap-1.5 rounded-md border border-white/15 px-2.5 py-1.5 font-display text-[11px] font-bold uppercase tracking-[0.12em] text-white/40 transition-colors hover:border-apex-red hover:text-apex-red"
         >
           <Trash2 className="size-4" /> Reset
         </button>
@@ -423,7 +423,7 @@ export function GameMain({
         <aside className="hidden w-[18rem] shrink-0 flex-col gap-2 lg:flex">
           {/* Balance */}
           <div className="rounded-xl border border-apex-line bg-apex-panel px-2.5 py-1.5">
-            <p className="text-[7px] font-semibold uppercase tracking-[0.22em] text-white/40">
+            <p className="text-[9px] font-semibold uppercase tracking-[0.22em] text-white/40">
               Cash
             </p>
             <p className="font-display text-base font-black tracking-tight text-white">
@@ -432,13 +432,13 @@ export function GameMain({
             <div className="mt-1 grid grid-cols-2 gap-1 border-t border-apex-line pt-1 text-center">
               <div>
                 <p className="font-display text-xs font-black text-apex-red">{fmtMoney(income)}</p>
-                <p className="text-[7px] font-semibold uppercase tracking-[0.18em] text-white/35">
+                <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/35">
                   /sec
                 </p>
               </div>
               <div>
                 <p className="font-display text-xs font-black text-white">{fmtMoney(perClick)}</p>
-                <p className="text-[7px] font-semibold uppercase tracking-[0.18em] text-white/35">
+                <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/35">
                   click
                 </p>
               </div>
@@ -448,10 +448,10 @@ export function GameMain({
           {/* Level / XP */}
           <div className="rounded-xl border border-apex-line bg-apex-panel px-2.5 py-1.5">
             <div className="flex items-center justify-between">
-              <span className="font-display text-[9px] font-bold uppercase tracking-[0.18em] text-white">
+              <span className="font-display text-[10px] font-bold uppercase tracking-[0.18em] text-white">
                 Level {level}
               </span>
-              <span className="text-[8px] font-semibold uppercase tracking-[0.18em] text-white/40">
+              <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/40">
                 Prestige {state.prestigeLevel}
               </span>
             </div>
@@ -462,7 +462,7 @@ export function GameMain({
                 transition={{ duration: 0.4 }}
               />
             </div>
-            <p className="mt-1 text-[8px] font-semibold uppercase tracking-[0.14em] text-white/35">
+            <p className="mt-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-white/35">
               {fmtMoney(xpIntoLevel)} / {fmtMoney(xpForLevel)} xp
             </p>
           </div>
@@ -484,7 +484,7 @@ export function GameMain({
                     }
                   }}
                   className={cn(
-                    "flex items-center gap-1 rounded-md px-1.5 py-[2px] font-display text-[9px] font-semibold uppercase tracking-[0.10em] transition-colors",
+                    "flex items-center gap-1 rounded-md px-1.5 py-[2px] font-display text-[10px] font-semibold uppercase tracking-[0.10em] transition-colors",
                     isActive
                       ? "border-l-2 border-apex-red bg-apex-red/10 text-white"
                       : "border-l-2 border-transparent text-white/45 hover:bg-white/5 hover:text-white",
@@ -504,7 +504,7 @@ export function GameMain({
               onClick={claimDaily}
               disabled={!canClaim}
               className={cn(
-                "flex w-full items-center justify-center gap-1.5 rounded-md px-2.5 py-1.5 font-display text-[9px] font-bold uppercase tracking-[0.16em] transition-colors",
+                "flex w-full items-center justify-center gap-1.5 rounded-md px-2.5 py-1.5 font-display text-[10px] font-bold uppercase tracking-[0.16em] transition-colors",
                 canClaim
                   ? "bg-apex-red text-white hover:bg-apex-red/80"
                   : "cursor-not-allowed border border-white/10 bg-white/5 text-white/40",
@@ -513,26 +513,26 @@ export function GameMain({
               <Gift className={cn("size-3.5", canClaim ? "text-white" : "text-white/40")} />
               {canClaim ? `Daily ${fmtMoney(daily)}` : `Daily in ${waitLabel}`}
               {state.daily.streak > 1 && (
-                <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-[9px]">×{state.daily.streak}</span>
+                <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-[10px]">×{state.daily.streak}</span>
               )}
             </button>
             <div className="mt-1 grid grid-cols-2 gap-1">
               <button
                 type="button"
                 onClick={saveNow}
-                className="inline-flex items-center justify-center gap-1.5 rounded-md border border-white/15 px-2 py-1.5 font-display text-[9px] font-bold uppercase tracking-[0.12em] text-white/70 transition-colors hover:border-apex-red hover:text-white"
+                className="inline-flex items-center justify-center gap-1.5 rounded-md border border-white/15 px-2 py-1.5 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-white/70 transition-colors hover:border-apex-red hover:text-white"
               >
                 <Save className="size-3" /> Save
               </button>
               <button
                 type="button"
                 onClick={resetNow}
-                className="inline-flex items-center justify-center gap-1.5 rounded-md border border-white/15 px-2 py-1.5 font-display text-[9px] font-bold uppercase tracking-[0.12em] text-white/40 transition-colors hover:border-apex-red hover:text-apex-red"
+                className="inline-flex items-center justify-center gap-1.5 rounded-md border border-white/15 px-2 py-1.5 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-white/40 transition-colors hover:border-apex-red hover:text-apex-red"
               >
                 <Trash2 className="size-3" /> Reset
               </button>
             </div>
-            <p className="mt-1.5 text-center text-[7px] font-semibold uppercase tracking-[0.2em] text-white/25">
+            <p className="mt-1.5 text-center text-[9px] font-semibold uppercase tracking-[0.2em] text-white/25">
               Garage Tycoon · v1
             </p>
           </div>
@@ -578,7 +578,7 @@ export function GameMain({
                     }
                   }}
                   className={cn(
-                    "relative flex shrink-0 items-center gap-1 px-2 py-1.5 font-display text-[9px] font-semibold uppercase tracking-[0.10em] transition-colors",
+                    "relative flex shrink-0 items-center gap-1 px-2 py-1.5 font-display text-[10px] font-semibold uppercase tracking-[0.10em] transition-colors",
                     isActive ? "text-white" : "text-white/45 hover:text-white",
                   )}
                 >
@@ -648,10 +648,10 @@ function EarnZone({
       {/* ── Earn header with stats row ── */}
       <div className="mb-2">
         <div className="flex items-center justify-between">
-          <p className="font-display text-[10px] font-semibold uppercase tracking-[0.28em] text-apex-red">
+          <p className="font-display text-[11px] font-semibold uppercase tracking-[0.28em] text-apex-red">
             Earn
           </p>
-          <span className="font-display text-[9px] font-bold uppercase tracking-[0.16em] text-white/30">
+          <span className="font-display text-[10px] font-bold uppercase tracking-[0.16em] text-white/30">
             Tap the car to earn cash
           </span>
         </div>
@@ -669,24 +669,24 @@ function EarnZone({
       {/* ── Detailed info strip ── */}
       <div className="mb-2 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
         <div className="rounded-lg border border-apex-line bg-apex-panel px-2 py-1.5">
-          <p className="text-[7px] font-semibold uppercase tracking-[0.2em] text-white/35">Daily Reward</p>
+          <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-white/35">Daily Reward</p>
           <p className="font-display text-xs font-black text-apex-red">{fmtMoney(daily)}</p>
-          {streak > 1 && <p className="text-[8px] text-white/40">Streak: {streak}×</p>}
+          {streak > 1 && <p className="text-[9px] text-white/40">Streak: {streak}×</p>}
         </div>
         <div className="rounded-lg border border-apex-line bg-apex-panel px-2 py-1.5">
-          <p className="text-[7px] font-semibold uppercase tracking-[0.2em] text-white/35">Crit Chance</p>
+          <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-white/35">Crit Chance</p>
           <p className="font-display text-xs font-black text-amber-400">{Math.round(crit * 100)}%</p>
-          <p className="text-[8px] text-white/40">5× multiplier</p>
+          <p className="text-[9px] text-white/40">5× multiplier</p>
         </div>
         <div className="rounded-lg border border-apex-line bg-apex-panel px-2 py-1.5">
-          <p className="text-[7px] font-semibold uppercase tracking-[0.2em] text-white/35">Garage</p>
+          <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-white/35">Garage</p>
           <p className="font-display text-xs font-black text-white">{ownedCount} cars</p>
-          <p className="text-[8px] text-white/40">{upgradeCount} upgrades</p>
+          <p className="text-[9px] text-white/40">{upgradeCount} upgrades</p>
         </div>
         <div className="rounded-lg border border-apex-line bg-apex-panel px-2 py-1.5">
-          <p className="text-[7px] font-semibold uppercase tracking-[0.2em] text-white/35">Reputation</p>
+          <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-white/35">Reputation</p>
           <p className="font-display text-xs font-black text-emerald-400">{Math.round(state.reputation).toLocaleString()}</p>
-          <p className="text-[8px] text-white/40">Prestige {state.prestigeLevel}</p>
+          <p className="text-[9px] text-white/40">Prestige {state.prestigeLevel}</p>
         </div>
       </div>
 
@@ -719,7 +719,7 @@ function EarnZone({
           {/* Car badge + name */}
           <div className="mb-3 flex items-center gap-2">
             <span
-              className="rounded-sm border px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.14em]"
+              className="rounded-sm border px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em]"
               style={{
                 borderColor: rarityMeta.color,
                 color: rarityMeta.color,
@@ -728,7 +728,7 @@ function EarnZone({
             >
               {rarityMeta.label}
             </span>
-            <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/40">
+            <span className="text-[12px] font-semibold uppercase tracking-[0.2em] text-white/40">
               {active.brand} · {active.year}
             </span>
           </div>
@@ -755,7 +755,7 @@ function EarnZone({
           {/* Condition + Fuel bars + car specs row */}
           <div className="mt-2 w-full max-w-xl space-y-2">
             <div>
-              <div className="mb-1 flex items-center justify-between text-[9px] font-semibold uppercase tracking-[0.18em] text-white/35">
+              <div className="mb-1 flex items-center justify-between text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">
                 <span>Condition</span>
                 <span>{Math.round(condition * 100)}%</span>
               </div>
@@ -775,7 +775,7 @@ function EarnZone({
               const outOfFuel = fuel <= 0;
               return (
                 <div>
-                  <div className="mb-1 flex items-center justify-between text-[9px] font-semibold uppercase tracking-[0.18em] text-white/35">
+                  <div className="mb-1 flex items-center justify-between text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">
                     <span>Fuel</span>
                     <span className={cn(outOfFuel ? "text-red-400 font-bold" : "")}>{fuel}/{FUEL_MAX}{outOfFuel ? " — STOPPED" : ""}</span>
                   </div>
@@ -795,7 +795,7 @@ function EarnZone({
                         dispatch({ type: "BUY_FUEL", carId: state.activeCarId });
                         toast.success(`Refueled for ${fmtMoney(cost)}`);
                       }}
-                      className="mt-1 w-full rounded-md border border-amber-400/40 bg-amber-400/10 px-2 py-1 font-display text-[9px] font-bold uppercase tracking-[0.12em] text-amber-300 transition-colors hover:bg-amber-400/20"
+                      className="mt-1 w-full rounded-md border border-amber-400/40 bg-amber-400/10 px-2 py-1 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-amber-300 transition-colors hover:bg-amber-400/20"
                     >
                       ⛽ Buy Fuel — {fmtMoney(cost)}
                     </button>
@@ -809,7 +809,7 @@ function EarnZone({
                         dispatch({ type: "BUY_FUEL", carId: state.activeCarId });
                         toast.success(`Refueled for ${fmtMoney(cost)}`);
                       }}
-                      className="mt-1 w-full rounded-md border border-white/15 px-2 py-1 font-display text-[9px] font-bold uppercase tracking-[0.12em] text-white/50 transition-colors hover:border-emerald-400 hover:text-emerald-400"
+                      className="mt-1 w-full rounded-md border border-white/15 px-2 py-1 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-white/50 transition-colors hover:border-emerald-400 hover:text-emerald-400"
                     >
                       ⛽ Refuel — {fmtMoney(cost)}
                     </button>
@@ -818,7 +818,7 @@ function EarnZone({
               );
             })()}
             {/* Quick specs */}
-            <div className="flex items-center justify-center gap-4 text-[9px] uppercase tracking-[0.14em] text-white/40">
+            <div className="flex items-center justify-center gap-4 text-[10px] uppercase tracking-[0.14em] text-white/40">
               <span className="flex items-center gap-1"><Zap className="size-3 text-apex-red" /> {carPower(state, state.activeCarId).toLocaleString()} hp</span>
               <span className="flex items-center gap-1"><TrendingUp className="size-3 text-emerald-400" /> {fmtMoney(perClick)}/click</span>
               <span className="flex items-center gap-1"><Coins className="size-3 text-amber-400" /> {fmtMoney(income)}/sec</span>
@@ -829,12 +829,12 @@ function EarnZone({
           {clickBlocked ? (
             <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-red-500/40 bg-red-500/10 px-4 py-1.5">
               <Shield className="size-4 text-red-400" />
-              <span className="font-display text-[11px] font-bold uppercase tracking-[0.2em] text-red-400">
+              <span className="font-display text-[12px] font-bold uppercase tracking-[0.2em] text-red-400">
                 Clicking paused — too fast
               </span>
             </div>
           ) : (
-            <p className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-apex-red/40 bg-apex-red/10 px-4 py-1.5 font-display text-[10px] font-bold uppercase tracking-[0.2em] text-white transition-colors group-hover:bg-apex-red">
+            <p className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-apex-red/40 bg-apex-red/10 px-4 py-1.5 font-display text-[11px] font-bold uppercase tracking-[0.2em] text-white transition-colors group-hover:bg-apex-red">
               <MousePointerClick className="size-4" />
               Click the car to earn
             </p>
@@ -873,7 +873,7 @@ function EarnStat({ value, label, accent }: { value: string; label: string; acce
       <p className={cn("font-display text-xs font-black", accent ? "text-apex-red" : "text-white")}>
         {value}
       </p>
-      <p className="text-[6px] font-semibold uppercase tracking-[0.2em] text-white/35">
+      <p className="text-[8px] font-semibold uppercase tracking-[0.2em] text-white/35">
         {label}
       </p>
     </div>
@@ -894,10 +894,10 @@ function StatPill({
   return (
     <div className="flex items-center gap-1 rounded-md border border-apex-line bg-apex-panel px-1.5 py-0.5">
       <Icon className={cn("size-2.5", accent ? "text-apex-red" : "text-white/40")} />
-      <span className="font-display text-[7px] font-semibold uppercase tracking-[0.14em] text-white/40">
+      <span className="font-display text-[9px] font-semibold uppercase tracking-[0.14em] text-white/40">
         {label}
       </span>
-      <span className="font-display text-[11px] font-black text-white">{value}</span>
+      <span className="font-display text-[12px] font-black text-white">{value}</span>
     </div>
   );
 }
@@ -939,7 +939,7 @@ function WeeklyChallenges({
       <div className="mb-3">
         <div className="flex items-center justify-between">
           <div>
-            <p className="font-display text-[9px] font-semibold uppercase tracking-[0.28em] text-apex-red">
+            <p className="font-display text-[10px] font-semibold uppercase tracking-[0.28em] text-apex-red">
               Weekly Challenges
             </p>
             <h3 className="mt-0.5 font-display text-lg font-black tracking-tight text-white">
@@ -948,7 +948,7 @@ function WeeklyChallenges({
           </div>
           <div className="flex items-center gap-1.5 rounded-md border border-amber-300/30 bg-amber-300/5 px-2.5 py-1">
             <Clock className="size-3 text-amber-300" />
-            <span className="font-display text-[10px] font-bold uppercase tracking-[0.12em] text-amber-300">
+            <span className="font-display text-[11px] font-bold uppercase tracking-[0.12em] text-amber-300">
               Resets in {timeLabel}
             </span>
           </div>
@@ -976,12 +976,12 @@ function WeeklyChallenges({
                   <h4 className="font-display text-xs font-black text-white">
                     {ch.name}
                   </h4>
-                  <p className="mt-0.5 text-[9px] text-white/40">
+                  <p className="mt-0.5 text-[10px] text-white/40">
                     {ch.desc}
                   </p>
                 </div>
                 {ch.claimed && (
-                  <span className="rounded-sm bg-green-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase text-green-400">
+                  <span className="rounded-sm bg-green-500/20 px-1.5 py-0.5 text-[10px] font-bold uppercase text-green-400">
                     Claimed
                   </span>
                 )}
@@ -989,7 +989,7 @@ function WeeklyChallenges({
 
               {/* Progress bar */}
               <div className="mb-1.5">
-                <div className="mb-1 flex items-center justify-between text-[9px]">
+                <div className="mb-1 flex items-center justify-between text-[10px]">
                   <span className="text-white/40">
                     {fmtMoney(ch.progress)} / {fmtMoney(ch.target)}
                   </span>
@@ -1011,7 +1011,7 @@ function WeeklyChallenges({
 
               {/* Reward + claim */}
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-[9px]">
+                <div className="flex items-center gap-2 text-[10px]">
                   <span className="text-white/40">
                     Reward: <span className="font-bold text-apex-red">{fmtMoney(ch.rewardCash)}</span> cash
                   </span>
@@ -1023,7 +1023,7 @@ function WeeklyChallenges({
                   <button
                     type="button"
                     onClick={() => dispatch({ type: "CLAIM_WEEKLY", challengeId: ch.id })}
-                    className="rounded-md bg-amber-400 px-3 py-1.5 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-black transition-colors hover:bg-amber-300"
+                    className="rounded-md bg-amber-400 px-3 py-1.5 font-display text-[11px] font-bold uppercase tracking-[0.12em] text-black transition-colors hover:bg-amber-300"
                   >
                     Claim
                   </button>

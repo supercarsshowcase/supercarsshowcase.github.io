@@ -111,7 +111,7 @@ export function GiftModal({ open, onClose, currentCash }: GiftModalProps) {
 
         {/* Balance */}
         <div className="mb-4 rounded-lg border border-white/5 bg-white/[0.02] px-4 py-2">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/30">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/30">
             Your Balance
           </p>
           <p className="font-display text-xl font-bold text-emerald-400">
@@ -121,7 +121,7 @@ export function GiftModal({ open, onClose, currentCash }: GiftModalProps) {
 
         {/* Search */}
         <div className="mb-4">
-          <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40">
+          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.14em] text-white/40">
             Recipient
           </label>
           {selectedUser ? (
@@ -135,7 +135,7 @@ export function GiftModal({ open, onClose, currentCash }: GiftModalProps) {
                     {selectedUser.name}
                   </p>
                   {selectedUser.email && (
-                    <p className="text-[10px] text-white/30">
+                    <p className="text-[11px] text-white/30">
                       {selectedUser.email}
                     </p>
                   )}
@@ -181,7 +181,7 @@ export function GiftModal({ open, onClose, currentCash }: GiftModalProps) {
                     }}
                     className="flex w-full items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-white/[0.04]"
                   >
-                    <div className="flex size-7 items-center justify-center rounded-full bg-white/5 text-[10px] font-bold text-white/60">
+                    <div className="flex size-7 items-center justify-center rounded-full bg-white/5 text-[11px] font-bold text-white/60">
                       {u.name.charAt(0).toUpperCase()}
                     </div>
                     <div className="min-w-0 flex-1">
@@ -192,7 +192,7 @@ export function GiftModal({ open, onClose, currentCash }: GiftModalProps) {
                         )}
                       </p>
                       {u.email && (
-                        <p className="truncate text-[10px] text-white/30">
+                        <p className="truncate text-[11px] text-white/30">
                           {u.email}
                         </p>
                       )}
@@ -206,7 +206,7 @@ export function GiftModal({ open, onClose, currentCash }: GiftModalProps) {
 
         {/* Amount */}
         <div className="mb-4">
-          <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40">
+          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.14em] text-white/40">
             Amount
           </label>
           <div className="relative">
@@ -232,7 +232,7 @@ export function GiftModal({ open, onClose, currentCash }: GiftModalProps) {
                 type="button"
                 onClick={() => setAmount(String(v))}
                 className={cn(
-                  "rounded-md px-2.5 py-1 text-[10px] font-bold transition-colors",
+                  "rounded-md px-2.5 py-1 text-[11px] font-bold transition-colors",
                   Number(amount) === v
                     ? "bg-emerald-500/20 text-emerald-400"
                     : "bg-white/5 text-white/50 hover:bg-white/10"
@@ -259,7 +259,7 @@ export function GiftModal({ open, onClose, currentCash }: GiftModalProps) {
           {sending ? "Sending..." : "Send Gift"}
         </button>
 
-        <p className="mt-3 text-center text-[10px] text-white/20">
+        <p className="mt-3 text-center text-[11px] text-white/20">
           Maximum gift: {fmtMoney(MAX_GIFT)} per transaction
         </p>
       </div>

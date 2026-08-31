@@ -69,7 +69,7 @@ const SLICE_CASH = [1, 2, 3, 5, 6, 7, 9, 10, 11];
 function SectionHeader({ eyebrow, title, hint }: { eyebrow: string; title: string; hint?: string }) {
   return (
     <div className="mb-5">
-      <p className="font-display text-[10px] font-semibold uppercase tracking-[0.28em] text-apex-red">{eyebrow}</p>
+      <p className="font-display text-[11px] font-semibold uppercase tracking-[0.28em] text-apex-red">{eyebrow}</p>
       <h3 className="mt-1 font-display text-2xl font-black tracking-tight text-white">{title}</h3>
       {hint && <p className="mt-1 text-xs text-white/40">{hint}</p>}
     </div>
@@ -80,7 +80,7 @@ function RarityBadge({ rarity }: { rarity: Rarity }) {
   const m = dp[rarity];
   if (!m) return null;
   return (
-    <span className="rounded-sm border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.14em]"
+    <span className="rounded-sm border px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em]"
       style={{ borderColor: m.color, color: m.color, background: m.color + "14" }}>
       {m.label}
     </span>
@@ -167,7 +167,7 @@ function SpinPanel({ state, dispatch }: { state: GameState; dispatch: any }) {
                 <div key={meta.tier} className={"absolute overflow-hidden rounded-md border-2 " + meta.borderClass}
                   style={{ left: (50 + 30 * Math.sin(angle)) + "%", top: (50 - 30 * Math.cos(angle)) + "%", width: "17%", aspectRatio: "16/10", transform: "translate(-50%, -50%)", boxShadow: "0 4px 18px rgba(0,0,0,0.55)", zIndex: 10 }}>
                   <Ha src={es(car)} alt={car.name} seed={car.id} className="h-full w-full object-cover" />
-                  <span className={"absolute left-1 top-1 rounded px-1 py-0.5 text-[7px] font-black uppercase " + meta.labelBg}>{meta.pct}</span>
+                  <span className={"absolute left-1 top-1 rounded px-1 py-0.5 text-[9px] font-black uppercase " + meta.labelBg}>{meta.pct}</span>
                 </div>
               );
             })}
@@ -181,14 +181,14 @@ function SpinPanel({ state, dispatch }: { state: GameState; dispatch: any }) {
               if (isCar) { label = isCar.pct; }
               else { const ci = SLICE_CASH.indexOf(i); const val = cashSlices[ci] ?? 0; label = val >= 1000 ? "$" + (val / 1000).toFixed(1) + "K" : "$" + val; }
               if (isCar) {
-                return <span key={i} className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-black/70 px-2 py-0.5 font-display text-[11px] font-black uppercase tracking-tight text-white"
+                return <span key={i} className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-black/70 px-2 py-0.5 font-display text-[12px] font-black uppercase tracking-tight text-white"
                   style={{ left: x + "%", top: y + "%", zIndex: 30, textShadow: "0 1px 4px rgba(0,0,0,0.9)", backdropFilter: "blur(4px)" }}>{"★ " + label}</span>;
               }
-              return <span key={i} className="absolute -translate-x-1/2 -translate-y-1/2 font-display text-[10px] font-black uppercase tracking-tight text-white/85"
+              return <span key={i} className="absolute -translate-x-1/2 -translate-y-1/2 font-display text-[11px] font-black uppercase tracking-tight text-white/85"
                 style={{ left: x + "%", top: y + "%", textShadow: "0 1px 4px rgba(0,0,0,0.9)", zIndex: 20 }}>{label}</span>;
             })}
             <div className="absolute left-1/2 top-1/2 z-10 flex size-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-[#3a3a40] bg-[#0b0b0c]">
-              <span className="font-display text-[9px] font-black uppercase tracking-[0.1em] text-apex-red">Spin</span>
+              <span className="font-display text-[10px] font-black uppercase tracking-[0.1em] text-apex-red">Spin</span>
             </div>
           </Ge.div>
         </div>
@@ -199,16 +199,16 @@ function SpinPanel({ state, dispatch }: { state: GameState; dispatch: any }) {
           </button>
           {spinning && (
             <button type="button" onClick={skipSpin}
-              className="mt-2 rounded-md border border-amber-400/30 bg-amber-400/5 py-2 font-display text-[10px] font-bold uppercase tracking-[0.16em] text-amber-300/70 transition-colors hover:border-amber-400/50 hover:text-amber-300">
+              className="mt-2 rounded-md border border-amber-400/30 bg-amber-400/5 py-2 font-display text-[11px] font-bold uppercase tracking-[0.16em] text-amber-300/70 transition-colors hover:border-amber-400/50 hover:text-amber-300">
               Skip Animation
             </button>
           )}
 
-          <p className="mt-2 text-center text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">1% ($10-30M) | 0.01% ($100-300M) | 0.001% ($1B+) | bonus spins available</p>
+          <p className="mt-2 text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-white/35">1% ($10-30M) | 0.01% ($100-300M) | 0.001% ($1B+) | bonus spins available</p>
           <div className="mt-6 space-y-3">
             <div className="flex items-center justify-between">
-              <p className="font-display text-[10px] font-semibold uppercase tracking-[0.22em] text-white/40">This hour{"'"}s cars</p>
-              <span className="inline-flex items-center gap-1 rounded-md border border-amber-300/30 bg-amber-300/5 px-2 py-1 font-display text-[9px] font-bold uppercase tracking-[0.12em] text-amber-300">
+              <p className="font-display text-[11px] font-semibold uppercase tracking-[0.22em] text-white/40">This hour{"'"}s cars</p>
+              <span className="inline-flex items-center gap-1 rounded-md border border-amber-300/30 bg-amber-300/5 px-2 py-1 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-amber-300">
                 <Wy className="size-2.5" />{swapLabel}
               </span>
             </div>
@@ -223,12 +223,12 @@ function SpinPanel({ state, dispatch }: { state: GameState; dispatch: any }) {
                     </div>
                     <div className="flex flex-1 flex-col justify-center min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="rounded-sm px-1.5 py-0.5 font-display text-[9px] font-black uppercase tracking-wider"
+                        <span className="rounded-sm px-1.5 py-0.5 font-display text-[10px] font-black uppercase tracking-wider"
                           style={{ background: color + "20", color, border: "1px solid " + color + "40" }}>{pct}</span>
-                        <span className="text-[10px] text-white/30">{range}</span>
+                        <span className="text-[11px] text-white/30">{range}</span>
                       </div>
                       <p className="mt-1 truncate font-display text-sm font-black text-white">{car.name}</p>
-                      <p className="truncate text-[10px] text-white/35">{car.brand} {"· " + Ie(car.value)}</p>
+                      <p className="truncate text-[11px] text-white/35">{car.brand} {"· " + Ie(car.value)}</p>
                     </div>
                   </div>
                 </div>
@@ -239,26 +239,26 @@ function SpinPanel({ state, dispatch }: { state: GameState; dispatch: any }) {
             <ts mode="wait">
               {spinning ? (
                 <Ge.p key="spinning" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                  className="font-display text-[10px] font-semibold uppercase tracking-[0.28em] text-white/40">Spinning{"… the wheel decides your fate"}</Ge.p>
+                  className="font-display text-[11px] font-semibold uppercase tracking-[0.28em] text-white/40">Spinning{"… the wheel decides your fate"}</Ge.p>
               ) : result ? (
                 wonCar ? (
                   <Ge.div key={"won-" + (result.kind === "car" ? result.carId : "cash")} initial={{ opacity: 0, scale: 0.8, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ type: "spring", stiffness: 260, damping: 18 }}>
-                    <p className="font-display text-[10px] font-semibold uppercase tracking-[0.28em] text-amber-300">
+                    <p className="font-display text-[11px] font-semibold uppercase tracking-[0.28em] text-amber-300">
                       {(result.kind === "car" && result.tier === 3 ? "ULTRA RARE" : result.kind === "car" && result.tier === 2 ? "MYTHIC" : "SUPERCAR")} WON!
                     </p>
                     <p className="mt-2 font-display text-2xl font-black text-white">{wonCar.name}</p>
                     <p className="mt-1 text-xs text-white/40">{wonCar.brand} {"· " + Ie(wonCar.value) + " · " + Qi(wonCar.hp) + " hp"}</p>
-                    <p className="mt-1 text-[10px] font-bold text-green-400">Added to your garage!</p>
+                    <p className="mt-1 text-[11px] font-bold text-green-400">Added to your garage!</p>
                   </Ge.div>
                 ) : (
                   <Ge.div key="won-cash" initial={{ opacity: 0, scale: 0.8, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ type: "spring", stiffness: 260, damping: 18 }}>
-                    <p className="font-display text-[10px] font-semibold uppercase tracking-[0.28em] text-white/40">You won</p>
+                    <p className="font-display text-[11px] font-semibold uppercase tracking-[0.28em] text-white/40">You won</p>
                     <p className="mt-2 font-display text-4xl font-black text-apex-red">{"+" + Ie(result.kind === "cash" ? (result.amount ?? 0) : 0)}</p>
                   </Ge.div>
                 )
               ) : (
                 <Ge.p key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                  className="font-display text-[10px] font-semibold uppercase tracking-[0.28em] text-white/40">Good luck — the wheel is rigged in your favour… barely.</Ge.p>
+                  className="font-display text-[11px] font-semibold uppercase tracking-[0.28em] text-white/40">Good luck — the wheel is rigged in your favour… barely.</Ge.p>
               )}
             </ts>
           </div>
@@ -285,22 +285,22 @@ function GaragePanel({ state, dispatch }: { state: GameState; dispatch: any }) {
                 <div className="relative h-36 overflow-hidden bg-[#0a0a0b]">
                   <Ha src={es(car)} alt={car.name} seed={car.id} className="h-full w-full object-cover opacity-90 transition-transform duration-500 group-hover:scale-105" />
                   <div className="absolute left-2 top-2"><RarityBadge rarity={car.rarity} /></div>
-                  {active && <span className="absolute right-2 top-2 rounded-sm bg-apex-red px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.14em] text-white">Active</span>}
+                  {active && <span className="absolute right-2 top-2 rounded-sm bg-apex-red px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-white">Active</span>}
                 </div>
                 <div className="p-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40">{car.brand} {"· " + car.year}</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/40">{car.brand} {"· " + car.year}</p>
                   <h4 className="mt-0.5 font-display text-lg font-black tracking-tight text-white">{car.name}</h4>
-                  <div className="mt-3 flex items-center justify-between text-[11px]">
+                  <div className="mt-3 flex items-center justify-between text-[12px]">
                     <span className="text-white/40"><span className="font-display font-black text-apex-red">{Ie(Ur(state, car.id))}</span> {" "}value</span>
                     <span className="text-white/40"><span className="font-display font-black text-white">{Qi(T1(state, car.id))}</span> {" "}hp</span>
                     <span className="text-white/40">{ups} upgrades</span>
                   </div>
                   <div className="mt-3 flex gap-2">
                     {!active && <button type="button" onClick={() => dispatch({ type: "SET_ACTIVE", id: car.id })}
-                      className="flex-1 rounded-md border border-apex-red/40 bg-apex-red/10 px-2 py-1.5 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-white transition-colors hover:bg-apex-red">Drive</button>}
+                      className="flex-1 rounded-md border border-apex-red/40 bg-apex-red/10 px-2 py-1.5 font-display text-[11px] font-bold uppercase tracking-[0.12em] text-white transition-colors hover:bg-apex-red">Drive</button>}
                     <button type="button" disabled={owned.length <= 1}
                       onClick={() => { if (window.confirm("Sell the " + car.name + " for " + Ie(Math.round(Ur(state, car.id) * 0.35)) + "?")) dispatch({ type: "SELL_CAR", id: car.id }); }}
-                      className="flex-1 rounded-md border border-white/15 px-2 py-1.5 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-white/60 transition-colors hover:border-apex-red hover:text-apex-red disabled:cursor-not-allowed disabled:opacity-30">Sell</button>
+                      className="flex-1 rounded-md border border-white/15 px-2 py-1.5 font-display text-[11px] font-bold uppercase tracking-[0.12em] text-white/60 transition-colors hover:border-apex-red hover:text-apex-red disabled:cursor-not-allowed disabled:opacity-30">Sell</button>
                   </div>
                 </div>
               </div>
@@ -327,12 +327,12 @@ function DealerPanel({ state, dispatch }: { state: GameState; dispatch: any }) {
               <div className="mb-3 flex items-start justify-between gap-2">
                 <div>
                   <h4 className="font-display text-lg font-black tracking-tight text-white">{dealer.name}</h4>
-                  <p className="text-[11px] text-white/40">{dealer.tagline}</p>
+                  <p className="text-[12px] text-white/40">{dealer.tagline}</p>
                 </div>
-                {locked ? <span className="rounded-sm border border-white/15 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-white/50">Level {dealer.unlockLevel}</span> : (
+                {locked ? <span className="rounded-sm border border-white/15 px-2 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-white/50">Level {dealer.unlockLevel}</span> : (
                   <button type="button" disabled={state.cash < dealer.refreshCost}
                     onClick={() => dispatch({ type: "REFRESH_DEALER", dealerId: dealer.id, stock: pp(dealer), refreshAt: Date.now(), cost: dealer.refreshCost })}
-                    className="inline-flex items-center gap-1.5 rounded-md border border-white/15 px-2 py-1.5 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-white/70 transition-colors hover:border-apex-red hover:text-white disabled:opacity-30">
+                    className="inline-flex items-center gap-1.5 rounded-md border border-white/15 px-2 py-1.5 font-display text-[11px] font-bold uppercase tracking-[0.12em] text-white/70 transition-colors hover:border-apex-red hover:text-white disabled:opacity-30">
                     <Wy className="size-3" />{Ie(dealer.refreshCost)}
                   </button>
                 )}
@@ -352,13 +352,13 @@ function DealerPanel({ state, dispatch }: { state: GameState; dispatch: any }) {
                           <div className="absolute left-1.5 top-1.5"><RarityBadge rarity={car.rarity} /></div>
                         </div>
                         <div className="p-2.5">
-                          <p className="truncate text-[9px] font-semibold uppercase tracking-[0.14em] text-white/40">{car.brand} {"· " + car.year}</p>
+                          <p className="truncate text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40">{car.brand} {"· " + car.year}</p>
                           <p className="truncate font-display text-sm font-black text-white">{car.name}</p>
                           <div className="mt-1.5 flex items-center justify-between">
                             <span className="font-display text-xs font-black text-apex-red">{Ie(price)}</span>
                             <button type="button" disabled={owned || !unlocked || state.cash < price}
                               onClick={() => dispatch({ type: "BUY_CAR", id: carId })}
-                              className="rounded-md bg-apex-red px-2 py-1 font-display text-[9px] font-bold uppercase tracking-[0.12em] text-white transition-colors hover:bg-apex-red/80 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/30">
+                              className="rounded-md bg-apex-red px-2 py-1 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-white transition-colors hover:bg-apex-red/80 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/30">
                               {owned ? "Owned" : unlocked ? "Buy" : "Lv " + car.unlockLevel}
                             </button>
                           </div>
@@ -396,11 +396,11 @@ function CratePanel({ state, dispatch }: { state: GameState; dispatch: any }) {
                 <Icon className="size-5" />
               </div>
               <h4 className="font-display text-base font-black text-white">{crate.name}</h4>
-              <p className="mt-1 text-[11px] text-white/40">{crate.desc}</p>
+              <p className="mt-1 text-[12px] text-white/40">{crate.desc}</p>
               <div className="mt-4 flex items-center justify-between">
                 <span className="font-display text-sm font-black text-apex-red">{Ie(calcCrateCost(crate.id))}</span>
                 <button type="button" disabled={state.cash < calcCrateCost(crate.id)} onClick={() => openCrate(crate.id)}
-                  className="rounded-md bg-apex-red px-3 py-1.5 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-white transition-colors hover:bg-apex-red/80 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/30">Open</button>
+                  className="rounded-md bg-apex-red px-3 py-1.5 font-display text-[11px] font-bold uppercase tracking-[0.12em] text-white transition-colors hover:bg-apex-red/80 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/30">Open</button>
               </div>
             </div>
           );
@@ -408,7 +408,7 @@ function CratePanel({ state, dispatch }: { state: GameState; dispatch: any }) {
       </div>
       {lastResult && (
         <div className="mt-6 rounded-xl border border-apex-line bg-apex-panel p-5 text-center">
-          <p className="font-display text-[10px] font-semibold uppercase tracking-[0.28em] text-apex-red">Last Drop</p>
+          <p className="font-display text-[11px] font-semibold uppercase tracking-[0.28em] text-apex-red">Last Drop</p>
           <p className="mt-2 font-display text-xl font-black text-white">
             {lastResult.kind === "car" ? (Te[lastResult.carId]?.name ?? "Car") : lastResult.kind === "part" ? "Part" : Ie(lastResult.cash ?? 0)}
           </p>
@@ -433,7 +433,7 @@ function UpgradePanel({ state, dispatch }: { state: GameState; dispatch: any }) 
         if (items.length === 0) return null;
         return (
           <div key={cat} className="mb-6">
-            <p className="mb-3 font-display text-[10px] font-semibold uppercase tracking-[0.22em] text-white/40">{label}</p>
+            <p className="mb-3 font-display text-[11px] font-semibold uppercase tracking-[0.22em] text-white/40">{label}</p>
             <div className="space-y-2">
               {items.map((upg: any) => {
                 const stage = ownedCar?.upgrades?.[upg.id] ?? 0;
@@ -445,14 +445,14 @@ function UpgradePanel({ state, dispatch }: { state: GameState; dispatch: any }) 
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
                         <p className="truncate font-display text-sm font-bold text-white">{upg.name}</p>
-                        <span className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40">{maxed ? "Maxed" : "Stage " + (stage + 1) + "/" + upg.stages.length}</span>
+                        <span className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/40">{maxed ? "Maxed" : "Stage " + (stage + 1) + "/" + upg.stages.length}</span>
                       </div>
-                      <p className="truncate text-[10px] text-white/35">{upg.desc}</p>
+                      <p className="truncate text-[11px] text-white/35">{upg.desc}</p>
                       <div className="mt-2 flex items-center gap-1">{upg.stages.map((_: any, idx: number) => <span key={idx} className={ce("h-1 flex-1 rounded-full", idx < stage ? "bg-apex-red" : "bg-white/10")} />)}</div>
                     </div>
                     <button type="button" disabled={maxed || state.cash < cost}
                       onClick={() => dispatch({ type: "BUY_UPGRADE", upgradeId: upg.id })}
-                      className="shrink-0 rounded-md bg-apex-red px-2.5 py-1.5 font-display text-[10px] font-bold uppercase tracking-[0.1em] text-white transition-colors hover:bg-apex-red/80 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/30">
+                      className="shrink-0 rounded-md bg-apex-red px-2.5 py-1.5 font-display text-[11px] font-bold uppercase tracking-[0.1em] text-white transition-colors hover:bg-apex-red/80 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/30">
                       {maxed ? "Maxed" : Ie(cost)}
                     </button>
                   </div>
@@ -481,12 +481,12 @@ function PartsBin({ state, dispatch }: { state: GameState; dispatch: any }) {
               <div key={part.id} className="rounded-xl border border-apex-line bg-apex-panel p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div><RarityBadge rarity={part.rarity} /><h4 className="mt-2 font-display text-base font-black text-white">{part.name}</h4></div>
-                  <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold text-white/70">{"×" + count}</span>
+                  <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-bold text-white/70">{"×" + count}</span>
                 </div>
-                <p className="mt-1 text-[11px] text-white/40">{part.desc}</p>
-                <p className="mt-1 text-[11px] font-semibold text-apex-red">{bonuses || "Cosmetic"}</p>
+                <p className="mt-1 text-[12px] text-white/40">{part.desc}</p>
+                <p className="mt-1 text-[12px] font-semibold text-apex-red">{bonuses || "Cosmetic"}</p>
                 <button type="button" onClick={() => dispatch({ type: "SELL_PART", partId: part.id })}
-                  className="mt-3 w-full rounded-md border border-white/15 py-1.5 font-display text-[10px] font-bold uppercase tracking-[0.14em] text-white/70 transition-colors hover:border-apex-red hover:text-apex-red">
+                  className="mt-3 w-full rounded-md border border-white/15 py-1.5 font-display text-[11px] font-bold uppercase tracking-[0.14em] text-white/70 transition-colors hover:border-apex-red hover:text-apex-red">
                   {"Sell for " + Ie(part.value)}
                 </button>
               </div>
@@ -511,9 +511,9 @@ function AchievementsPanel({ state }: { state: GameState }) {
               <span className={ce("flex size-8 shrink-0 items-center justify-center rounded-full border font-display text-xs font-black", unlocked ? "border-apex-red bg-apex-red text-white" : "border-white/15 text-white/30")}>{unlocked ? "✓" : "•"}</span>
               <div className="min-w-0">
                 <p className={ce("truncate font-display text-sm font-bold", unlocked ? "text-white" : "text-white/60")}>{ach.name}</p>
-                <p className="truncate text-[11px] text-white/40">{ach.desc}</p>
+                <p className="truncate text-[12px] text-white/40">{ach.desc}</p>
               </div>
-              {(ach.rewardCash ?? 0) > 0 && <span className="ml-auto shrink-0 text-[11px] font-bold text-apex-red">{Ie(ach.rewardCash ?? 0)}</span>}
+              {(ach.rewardCash ?? 0) > 0 && <span className="ml-auto shrink-0 text-[12px] font-bold text-apex-red">{Ie(ach.rewardCash ?? 0)}</span>}
             </div>
           );
         })}
@@ -534,19 +534,19 @@ function PrestigePanel({ state, dispatch }: { state: GameState; dispatch: any })
           <Award className="size-5 text-apex-red" />
           <div>
             <p className="font-display text-lg font-black text-white">Reputation {Qi(state.reputation)} / {Qi(required)}</p>
-            <p className="text-[11px] text-white/40">Prestige level {state.prestigeLevel} {"· next bonus +5% earnings"}</p>
+            <p className="text-[12px] text-white/40">Prestige level {state.prestigeLevel} {"· next bonus +5% earnings"}</p>
           </div>
         </div>
         <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
           <Ge.div className="h-full rounded-full bg-apex-red" animate={{ width: Math.min(100, state.reputation / required * 100) + "%" }} />
         </div>
-        <div className="mt-4 space-y-1 text-[11px] text-white/40">
+        <div className="mt-4 space-y-1 text-[12px] text-white/40">
           <p>Keeps: prestige level, achievements, lifetime earnings.</p>
           <p>Resets: cash, cars, parts, dealer stock, daily streak.</p>
         </div>
         <button type="button" disabled={!canPrestige}
           onClick={() => { if (window.confirm("Prestige now?")) { dispatch({ type: "PRESTIGE" }); ye.success("Prestige " + (state.prestigeLevel + 1) + " reached"); } }}
-          className="mt-4 w-full rounded-md bg-apex-red py-2.5 font-display text-[11px] font-bold uppercase tracking-[0.2em] text-white transition-colors hover:bg-apex-red/80 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/30">
+          className="mt-4 w-full rounded-md bg-apex-red py-2.5 font-display text-[12px] font-bold uppercase tracking-[0.2em] text-white transition-colors hover:bg-apex-red/80 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/30">
           {canPrestige ? "Prestige" : "Need " + Qi(required - state.reputation) + " more rep"}
         </button>
       </div>
@@ -555,7 +555,7 @@ function PrestigePanel({ state, dispatch }: { state: GameState; dispatch: any })
           <div key={idx} className="rounded-xl border border-apex-line bg-apex-panel p-4">
             <Icon className="size-5 text-apex-red" />
             <p className="mt-2 font-display text-sm font-bold text-white">{t}</p>
-            <p className="text-[10px] text-white/40">per prestige level</p>
+            <p className="text-[11px] text-white/40">per prestige level</p>
           </div>
         ))}
       </div>
@@ -576,12 +576,12 @@ function IndexPanel({ state }: { state: GameState }) {
     <div>
       <SectionHeader eyebrow="Catalog" title="CAR INDEX" hint={allCars.length + " cars · " + Object.keys(owned).length + " owned"} />
       <div className="mb-4 flex flex-wrap gap-1">
-        <button type="button" onClick={() => setFilter("all")} className={ce("rounded-md px-2 py-1 font-display text-[9px] font-bold uppercase tracking-[0.1em]", filter === "all" ? "bg-apex-red text-white" : "border border-white/15 text-white/50 hover:text-white")}>All</button>
+        <button type="button" onClick={() => setFilter("all")} className={ce("rounded-md px-2 py-1 font-display text-[10px] font-bold uppercase tracking-[0.1em]", filter === "all" ? "bg-apex-red text-white" : "border border-white/15 text-white/50 hover:text-white")}>All</button>
         {rarities.map((r) => {
           const m = dp[r as Rarity];
           if (!m) return null;
           return (
-            <button key={r} type="button" onClick={() => setFilter(r)} className={ce("rounded-md px-2 py-1 font-display text-[9px] font-bold uppercase tracking-[0.1em]", filter === r ? "text-white" : "text-white/50 hover:text-white")} style={{ background: filter === r ? m.color + "30" : "transparent", border: "1px solid " + (filter === r ? m.color + "60" : "rgba(255,255,255,0.15)") }}>{m.label}</button>
+            <button key={r} type="button" onClick={() => setFilter(r)} className={ce("rounded-md px-2 py-1 font-display text-[10px] font-bold uppercase tracking-[0.1em]", filter === r ? "text-white" : "text-white/50 hover:text-white")} style={{ background: filter === r ? m.color + "30" : "transparent", border: "1px solid " + (filter === r ? m.color + "60" : "rgba(255,255,255,0.15)") }}>{m.label}</button>
           );
         })}
       </div>
@@ -594,12 +594,12 @@ function IndexPanel({ state }: { state: GameState }) {
               <div className="relative h-20 bg-[#0a0a0b]">
                 <Ha src={es(car)} alt={car.name} seed={car.id} className="h-full w-full object-cover" />
                 <div className="absolute left-1.5 top-1.5"><RarityBadge rarity={car.rarity} /></div>
-                {isOwned && <span className="absolute right-1.5 top-1.5 rounded-sm bg-apex-red px-1 py-0.5 text-[8px] font-bold uppercase text-white">Owned</span>}
+                {isOwned && <span className="absolute right-1.5 top-1.5 rounded-sm bg-apex-red px-1 py-0.5 text-[9px] font-bold uppercase text-white">Owned</span>}
               </div>
               <div className="p-2.5">
-                <p className="truncate text-[9px] font-semibold uppercase tracking-[0.14em] text-white/40">{car.brand} · {car.year}</p>
+                <p className="truncate text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40">{car.brand} · {car.year}</p>
                 <p className="truncate font-display text-sm font-black text-white">{car.name}</p>
-                <div className="mt-1 flex items-center justify-between text-[10px]">
+                <div className="mt-1 flex items-center justify-between text-[11px]">
                   <span className="font-display font-black text-apex-red">{Ie(car.value)}</span>
                   <span className="text-white/40">{Qi(car.hp)} hp · Lv{car.unlockLevel}</span>
                 </div>
@@ -625,7 +625,7 @@ function WantedPanel({ state, dispatch }: { state: GameState; dispatch: any }) {
         <div className="rounded-xl border border-apex-line bg-apex-panel p-8 text-center">
           <p className="font-display text-sm text-white/40">No active bounties. Check back later!</p>
           <button type="button" onClick={() => dispatch({ type: "REFRESH_WANTED", now })}
-            className="mt-3 rounded-md border border-white/15 px-3 py-1.5 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-white/70 transition-colors hover:border-apex-red hover:text-white">
+            className="mt-3 rounded-md border border-white/15 px-3 py-1.5 font-display text-[11px] font-bold uppercase tracking-[0.12em] text-white/70 transition-colors hover:border-apex-red hover:text-white">
             Refresh Board
           </button>
         </div>
@@ -645,25 +645,25 @@ function WantedPanel({ state, dispatch }: { state: GameState; dispatch: any }) {
             <div key={bounty.id} className={ce("rounded-xl border bg-apex-panel p-4", canComplete ? "border-amber-400/40" : "border-apex-line")}>
               <div className="mb-2 flex items-start justify-between">
                 <div>
-                  <p className="font-display text-[9px] font-semibold uppercase tracking-[0.22em] text-amber-300">WANTED</p>
+                  <p className="font-display text-[10px] font-semibold uppercase tracking-[0.22em] text-amber-300">WANTED</p>
                   <div className="mt-1 flex flex-wrap gap-2">
                     {bounty.wants.map((w, i) => {
                       const car = Te[w.carId];
                       const hasCar = !!state.ownedCars[w.carId];
                       return (
-                        <span key={i} className={ce("inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[10px] font-bold", hasCar ? "border-green-400/40 bg-green-400/10 text-green-400" : "border-white/15 text-white/50")}>
+                        <span key={i} className={ce("inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-bold", hasCar ? "border-green-400/40 bg-green-400/10 text-green-400" : "border-white/15 text-white/50")}>
                         {w.count}x {car?.name ?? w.carId}
                       </span>
                       );
                     })}
                   </div>
                 </div>
-                <span className="font-display text-[9px] font-bold text-white/30">{h}h {m}m left</span>
+                <span className="font-display text-[10px] font-bold text-white/30">{h}h {m}m left</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="font-display text-sm font-black text-apex-red">Reward: {Ie(bounty.reward)}</span>
                 <button type="button" disabled={!canComplete} onClick={() => { if (window.confirm("Sell bounty cars for " + Ie(bounty.reward) + "?")) dispatch({ type: "SELL_FOR_BOUNTY", bountyId: bounty.id }); }}
-                  className={ce("rounded-md px-3 py-1.5 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-white transition-colors", canComplete ? "bg-amber-400 hover:bg-amber-300 text-black" : "bg-white/10 text-white/30 cursor-not-allowed")}>
+                  className={ce("rounded-md px-3 py-1.5 font-display text-[11px] font-bold uppercase tracking-[0.12em] text-white transition-colors", canComplete ? "bg-amber-400 hover:bg-amber-300 text-black" : "bg-white/10 text-white/30 cursor-not-allowed")}>
                   {canComplete ? "Claim Bounty" : "Need cars"}
                 </button>
               </div>
@@ -673,7 +673,7 @@ function WantedPanel({ state, dispatch }: { state: GameState; dispatch: any }) {
       </div>
       {bounties.length > 0 && (
         <button type="button" onClick={() => dispatch({ type: "REFRESH_WANTED", now })}
-          className="mt-4 w-full rounded-md border border-white/15 py-2 font-display text-[10px] font-bold uppercase tracking-[0.14em] text-white/50 transition-colors hover:border-apex-red hover:text-white">
+          className="mt-4 w-full rounded-md border border-white/15 py-2 font-display text-[11px] font-bold uppercase tracking-[0.14em] text-white/50 transition-colors hover:border-apex-red hover:text-white">
           Refresh Board
         </button>
       )}
