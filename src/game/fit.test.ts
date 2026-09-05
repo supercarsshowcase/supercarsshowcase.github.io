@@ -1,5 +1,5 @@
 import { describe, test as it, expect } from "bun:test";
-import { computeFitZoom, MAX_ZOOM, MIN_FIT_ZOOM } from "./fit";
+import { computeFitZoom, nonEarnTabZoom, MAX_ZOOM, MIN_FIT_ZOOM } from "./fit";
 
 function run(
   avail: number,
@@ -105,5 +105,25 @@ describe("computeFitZoom", () => {
     expect(800 * zoom).toBeGreaterThanOrEqual(1000 * 0.999);
     expect(zoom).toBeLessThanOrEqual(1.4);
     expect(800 * zoom).toBeLessThanOrEqual(1000 + 2);
+  });
+});
+
+describe("nonEarnTabZoom", () => {
+  it("grows to the width-based target on wide screens", () => {
+    expect(nonEarnTabZoom(1.25)).toBe(1.25);
+    expect(nonEarnTabZoom(2.2)).toBe(2.2);
+  });
+
+  it("never shrinks below natural size", () => {
+    expect(nonEarnTabZoom(0.8)).toBe(1);
+    expect(nonEarnTabZoom(1)).toBe(1);
+  });
+
+  it("keeps the same zoom when switching between tabs (no size jump)", () => {
+    // The same widthTarget must produce the identical zoom for every tab,
+    // so Garage ↔ Crates ↔ Index never visibly resize the sidebar.
+    const widthTarget = 1.18;
+    expect(nonEarnTabZoom(widthTarget)).toBe(widthTarget);
+    expect(nonEarnTabZoom(widthTarget)).toBe(nonEarnTabZoom(widthTarget));
   });
 });

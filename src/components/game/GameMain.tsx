@@ -48,7 +48,7 @@ import {
   passivePerSec,
   type Action,
 } from "@/game/engine";
-import { MAX_ZOOM, ZOOM_EPSILON, computeFitZoom } from "@/game/fit";
+import { MAX_ZOOM, ZOOM_EPSILON, computeFitZoom, nonEarnTabZoom } from "@/game/fit";
 import type { GameState } from "@/game/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -238,7 +238,7 @@ export function GameMain({
     // Non-Earn tabs: same width-based zoom as Earn, grow-only (never below
     // natural size) — the slot fills edge to edge and long content scrolls.
     if (tab !== "earn") {
-      const target = Math.max(1, widthTarget);
+      const target = nonEarnTabZoom(widthTarget);
       if (Math.abs(uiZoom - target) > ZOOM_EPSILON) setUiZoom(target);
       return;
     }

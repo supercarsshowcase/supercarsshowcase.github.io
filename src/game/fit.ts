@@ -34,6 +34,15 @@ export interface FitInput {
 /** A zoom change to apply, or null when the current zoom is already right. */
 export type FitResult = { next: number } | null;
 
+/**
+ * Zoom for non-Earn tabs (Index, Garage, Crates, …): the shared width-based
+ * zoom, grow-only — never below natural size (1). Long grids scroll instead
+ * of shrinking, and short panels still fill the slot edge to edge.
+ */
+export function nonEarnTabZoom(widthTarget: number): number {
+  return Math.max(1, widthTarget);
+}
+
 export function computeFitZoom({
   avail,
   natural,
