@@ -48,6 +48,7 @@ import {
   passivePerSec,
   type Action,
 } from "@/game/engine";
+import { MAX_ZOOM, computeFitZoom } from "@/game/fit";
 import type { GameState } from "@/game/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -134,16 +135,6 @@ const BURST_WINDOW_MS = 1000;
 
 /** The game runs fullscreen — the site header is hidden on /game. */
 const HEADER_PX = 0;
-/**
- * The game auto-fits ANY screen and ANY browser zoom percentage: the fit
- * loop below GROWS the whole game until it fills the viewport (capped by
- * the screen width so it never gets comically large), and SHRINKS it
- * whenever the content would overflow. Perfect fullscreen fill, zero page
- * scrolling, everywhere.
- */
-const MIN_FIT_ZOOM = 0.5;
-/** Never scale beyond this, no matter how tall the screen is. */
-const MAX_ZOOM = 2.2;
 /** Viewport width at which the game is at its natural size (scale 1). */
 const DESIGN_WIDTH = 1180;
 /** Gentle fixed boost on phones so text stays readable. */
@@ -249,19 +240,12 @@ export function GameMain({
     }
     const avail = window.innerHeight - HEADER_PX;
     const natural = el.offsetHeight; // layout height — unaffected by the scale
-    if (avail <= 0 || natural <= 0) return;
     const widthTarget = Math.min(MAX_ZOOM, Math.max(1, window.innerWidth / DESIGN_WIDTH));
-    const scaled = natural * uiZoom;
-    if (scaled > avail + 2) {
-      // Overflow: shrink exactly into the space (floor so we never clip).
-      const next = Math.max(MIN_FIT_ZOOM, Math.floor((avail / natural) * 100) / 100);
-      if (next < uiZoom - 0.005) setUiZoom(next);
-    } else if (scaled < avail * 0.97 && uiZoom < widthTarget - 0.005) {
-      // Lots of spare room: grow 5% per pass — every pass completes before
-      // the first paint — until the game fills ≥97% of the viewport height
-      // or hits the width-based cap.
-      setUiZoom(Math.min(widthTarget, uiZoom * 1.05));
-    }
+    // The fit decision itself is pure and lives in @/game/fit (unit tested):
+    // shrink on overflow, otherwise grow until the game fills 95% of the
+    // viewport height or hits the width cap — never overshooting the screen.
+    const result = computeFitZoom({ avail, natural, zoom: uiZoom, widthTarget });
+    if (result) setUiZoom(result.next);
   }, [uiZoom, fitTick, tab, activeEvent]);
 
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
