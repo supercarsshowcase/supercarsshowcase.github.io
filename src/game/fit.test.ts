@@ -1,11 +1,5 @@
 import { describe, test as it, expect } from "bun:test";
-import {
-  computeFitZoom,
-  FILL_TARGET,
-  GROW_FACTOR,
-  MAX_ZOOM,
-  MIN_FIT_ZOOM,
-} from "./fit";
+import { computeFitZoom, MAX_ZOOM, MIN_FIT_ZOOM } from "./fit";
 
 function run(
   avail: number,
@@ -46,10 +40,10 @@ describe("computeFitZoom", () => {
     expect(run(800, 1000, 0.81)).toEqual({ next: 0.8 });
   });
 
-  it("grows when there is lots of spare room", () => {
-    // 800px of content in 1000px of space, target ≥95% → grow one step.
+  it("grows to fill the slot exactly when there is spare room", () => {
+    // 800px of content in 1000px of space → exact fill zoom 1.25 (100%).
     const result = run(1000, 800, 1, 1.4);
-    expect(result).toEqual({ next: 1.05 });
+    expect(result).toEqual({ next: 1.25 });
   });
 
   it("caps growth at the width-based target", () => {
@@ -69,18 +63,23 @@ describe("computeFitZoom", () => {
     expect(run(1000, 800, 1.4, 1.4)).toEqual({ next: 1.25 });
   });
 
-  it("a single growth pass can never overshoot the viewport", () => {
-    // Guard the invariant the constant docs promise: 0.95 × 1.05 < 1.
-    expect(FILL_TARGET * GROW_FACTOR).toBeLessThan(1);
-
-    // Worst case: scaled sits just under the fill target, so one more pass
-    // is the largest jump the loop can ever take.
+  it("a single fit pass can never overshoot the viewport", () => {
+    // Worst case: scaled sits just under the dead zone; the exact-fill jump
+    // must land at (or below) the available height, never past it.
     const avail = 1000;
     const natural = 999.99;
-    const zoom = 0.95; // scaled ≈ 949.99, just under avail × FILL_TARGET
+    const zoom = 0.95; // scaled ≈ 949.99, just under avail − slack
     const result = run(avail, natural, zoom, MAX_ZOOM);
     expect(result).not.toBeNull();
     expect(natural * result!.next).toBeLessThanOrEqual(avail);
+  });
+
+  it("fills the whole slot with no black band left over", () => {
+    const avail = 956;
+    const natural = 650;
+    const result = run(avail, natural, 1, MAX_ZOOM);
+    expect(result).not.toBeNull();
+    expect(Math.abs(natural * result!.next - avail)).toBeLessThan(0.001);
   });
 
   it("converges without overshooting when shrinking", () => {
@@ -102,10 +101,9 @@ describe("computeFitZoom", () => {
       if (!result) break;
       zoom = result.next;
     }
-    // Grew until the game fills ≥95% of the viewport (or hit the cap)…
-    expect(800 * zoom).toBeGreaterThanOrEqual(1000 * FILL_TARGET - 0.0001);
+    // Fills the slot completely (exact 100% fit) without exceeding it.
+    expect(800 * zoom).toBeGreaterThanOrEqual(1000 * 0.999);
     expect(zoom).toBeLessThanOrEqual(1.4);
-    // …while never exceeding the viewport in any applied state.
     expect(800 * zoom).toBeLessThanOrEqual(1000 + 2);
   });
 });

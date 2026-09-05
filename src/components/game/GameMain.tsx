@@ -242,8 +242,8 @@ export function GameMain({
     const natural = el.offsetHeight; // layout height — unaffected by the scale
     const widthTarget = Math.min(MAX_ZOOM, Math.max(1, window.innerWidth / DESIGN_WIDTH));
     // The fit decision itself is pure and lives in @/game/fit (unit tested):
-    // shrink on overflow, otherwise grow until the game fills 95% of the
-    // viewport height or hits the width cap — never overshooting the screen.
+    // shrink on overflow, otherwise jump straight to the exact zoom that
+    // fills the whole slot — no black band left at the bottom.
     const result = computeFitZoom({ avail, natural, zoom: uiZoom, widthTarget });
     if (result) setUiZoom(result.next);
   }, [uiZoom, fitTick, tab, activeEvent]);
@@ -747,12 +747,12 @@ function EarnZone({
           </h2>
 
           {/* Car image */}
-          <motion.div whileTap={{ scale: clickBlocked ? 1 : 0.97 }} className="relative mt-2 w-full max-w-4xl">
+          <motion.div whileTap={{ scale: clickBlocked ? 1 : 0.97 }} className="relative mt-2 w-full max-w-5xl flex-1 flex flex-col justify-center min-h-0">
             <SmartImage
               src={gameCarImage(active)}
               alt={active.name}
               className={cn(
-                "mx-auto w-full max-h-[260px] sm:max-h-[300px] object-contain drop-shadow-[0_20px_60px_rgba(0,0,0,0.8)] transition-all duration-300",
+                "mx-auto w-full max-h-[300px] sm:max-h-[380px] lg:max-h-[460px] object-contain drop-shadow-[0_20px_60px_rgba(0,0,0,0.8)] transition-all duration-300",
                 clickBlocked ? "opacity-50 grayscale" : "",
               )}
             />
