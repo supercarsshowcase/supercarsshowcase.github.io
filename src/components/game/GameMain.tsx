@@ -48,7 +48,7 @@ import {
   passivePerSec,
   type Action,
 } from "@/game/engine";
-import { MAX_ZOOM, computeFitZoom } from "@/game/fit";
+import { MAX_ZOOM, ZOOM_EPSILON, computeFitZoom } from "@/game/fit";
 import type { GameState } from "@/game/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -219,11 +219,12 @@ export function GameMain({
     return () => timers.forEach((t) => window.clearTimeout(t));
   }, []);
 
-  // Fit loop: the Earn screen is the primary view — it sits at its natural
-  // size and grows/shrinks until it fills the viewport exactly, at any
-  // screen size or browser zoom level. All OTHER tabs render at natural size
-  // (zoom 1) and scroll internally instead of shrinking the whole game to
-  // fit — shrinking long panels like the Index/Garage grid made them tiny.
+  // Fit loop: every tab shares the same width-based zoom so the UI scale is
+  // identical everywhere (no jumping sidebar between tabs). The Earn screen
+  // then grows/shrinks further until it fills the viewport height exactly;
+  // all other tabs never shrink below natural size — long grids simply scroll
+  // instead of being crushed (shrinking Index/Garage made them unreadably
+  // tiny). This is what removes the dead black band under short panels.
   useLayoutEffect(() => {
     if (typeof window === "undefined") return;
     const el = gameRootRef.current;
@@ -233,14 +234,16 @@ export function GameMain({
       if (uiZoom !== MOBILE_ZOOM) setUiZoom(MOBILE_ZOOM);
       return;
     }
-    // Non-Earn tabs: natural size, page scrolls (no shrink-to-fit).
+    const widthTarget = Math.min(MAX_ZOOM, Math.max(1, window.innerWidth / DESIGN_WIDTH));
+    // Non-Earn tabs: same width-based zoom as Earn, grow-only (never below
+    // natural size) — the slot fills edge to edge and long content scrolls.
     if (tab !== "earn") {
-      if (uiZoom !== 1) setUiZoom(1);
+      const target = Math.max(1, widthTarget);
+      if (Math.abs(uiZoom - target) > ZOOM_EPSILON) setUiZoom(target);
       return;
     }
     const avail = window.innerHeight - HEADER_PX;
     const natural = el.offsetHeight; // layout height — unaffected by the scale
-    const widthTarget = Math.min(MAX_ZOOM, Math.max(1, window.innerWidth / DESIGN_WIDTH));
     // The fit decision itself is pure and lives in @/game/fit (unit tested):
     // shrink on overflow, otherwise jump straight to the exact zoom that
     // fills the whole slot — no black band left at the bottom.
@@ -332,7 +335,14 @@ export function GameMain({
       <div
         ref={gameRootRef}
         className="flex w-full flex-col overflow-visible px-2 py-2 sm:px-3 lg:px-4"
-        style={uiZoom === 1 ? { minHeight: "100dvh" } : undefined}
+        style={{
+          minHeight:
+            tab === "earn" && uiZoom !== 1
+              ? undefined
+              : uiZoom === 1
+                ? "100dvh"
+                : `calc(100dvh / ${uiZoom})`,
+        }}
       >
       {/* ── Active Event Banner ── */}
       {activeEvent && (
