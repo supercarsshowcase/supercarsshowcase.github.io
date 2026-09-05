@@ -16,6 +16,11 @@ const ROLE_BADGES: Record<string, { label: string; color: string }> = {
   moderator: { label: "Mod", color: "bg-blue-600 text-white" },
 };
 
+/**
+ * Desktop chat rail: stretches with the game row (matching the sidebar and
+ * main panel heights), but never taller than the viewport minus header, so
+ * it can never push the page or the game out of fit.
+ */
 export function ChatPanel({
   open,
   onToggle,
@@ -66,14 +71,17 @@ export function ChatPanel({
   if (!open) return null;
 
   return (
-    <div className="hidden h-80 w-56 shrink-0 self-end flex-col overflow-hidden rounded-xl border border-apex-line bg-apex-panel shadow-[0_10px_40px_rgba(0,0,0,0.5)] lg:flex">
+    <div
+      className="hidden w-60 shrink-0 flex-col self-stretch overflow-hidden rounded-xl border border-apex-line bg-apex-panel shadow-[0_10px_40px_rgba(0,0,0,0.5)] lg:flex"
+      style={{ maxHeight: "calc(100dvh - 5rem)" }}
+    >
       {/* Header */}
-      <div className="flex items-center gap-1.5 border-b border-apex-line px-2.5 py-1.5">
-        <MessageCircle className="size-3 text-apex-red" />
+      <div className="flex items-center gap-1.5 border-b border-apex-line px-2.5 py-2">
+        <MessageCircle className="size-3.5 text-apex-red" />
         <span className="font-display text-[12px] font-bold uppercase tracking-[0.16em] text-white">
           Chat
         </span>
-        <span className="rounded-full bg-green-500/20 px-1 py-px text-[8px] font-bold uppercase text-green-400">
+        <span className="rounded-full bg-green-500/20 px-1.5 py-px text-[8px] font-bold uppercase text-green-400">
           Live
         </span>
         <button
@@ -82,7 +90,7 @@ export function ChatPanel({
           className="ml-auto rounded p-0.5 text-white/30 transition-colors hover:text-white"
           aria-label="Close chat"
         >
-          <X className="size-3" />
+          <X className="size-3.5" />
         </button>
       </div>
 
@@ -90,7 +98,7 @@ export function ChatPanel({
       <div
         ref={listRef}
         onScroll={handleScroll}
-        className="min-h-0 flex-1 space-y-1.5 overflow-y-auto px-2 py-1.5"
+        className="chat-scroll min-h-0 flex-1 space-y-2 overflow-y-auto px-2.5 py-2"
       >
         {messages.length === 0 && (
           <p className="mt-8 text-center text-[12px] text-white/25">
@@ -103,19 +111,19 @@ export function ChatPanel({
           return (
             <div
               key={msg._id}
-              className={cn("flex items-start gap-1.5", mine && "flex-row-reverse")}
+              className={cn("flex items-start gap-2", mine && "flex-row-reverse")}
             >
               {msg.image ? (
                 <img
                   src={msg.image}
                   alt=""
                   referrerPolicy="no-referrer"
-                  className="mt-0.5 size-4 shrink-0 rounded-full object-cover"
+                  className="mt-0.5 size-5 shrink-0 rounded-full object-cover"
                 />
               ) : (
                 <div
                   className={cn(
-                    "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold",
+                    "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold",
                     mine ? "bg-apex-red/40 text-apex-red" : "bg-white/10 text-white/70",
                   )}
                 >
@@ -124,7 +132,7 @@ export function ChatPanel({
               )}
               <div
                 className={cn(
-                  "min-w-0 max-w-[85%] rounded-lg px-2 py-1",
+                  "min-w-0 max-w-[85%] rounded-lg px-2.5 py-1.5",
                   mine
                     ? "border border-apex-red/30 bg-apex-red/10"
                     : "bg-white/[0.04]",
@@ -163,13 +171,13 @@ export function ChatPanel({
       </div>
 
       {/* Input */}
-      <div className="border-t border-apex-line px-2 py-1.5">
+      <div className="border-t border-apex-line px-2.5 py-2">
         <form
           onSubmit={(e) => {
             e.preventDefault();
             handleSend();
           }}
-          className="flex items-center gap-1"
+          className="flex items-center gap-1.5"
         >
           <input
             type="text"
@@ -183,14 +191,14 @@ export function ChatPanel({
             }
             disabled={!isAuthenticated || sending}
             className={cn(
-              "min-w-0 flex-1 rounded-md border bg-white/5 px-2 py-1.5 text-[12px] text-white outline-none transition-colors placeholder:text-white/25 focus:border-apex-red/50",
+              "min-w-0 flex-1 rounded-md border bg-white/5 px-2.5 py-1.5 text-[12px] text-white outline-none transition-colors placeholder:text-white/25 focus:border-apex-red/50",
               error ? "border-red-500/40 placeholder:text-red-300/70" : "border-white/10",
             )}
           />
           <button
             type="submit"
             disabled={!isAuthenticated || !text.trim() || sending}
-            className="flex size-6 shrink-0 items-center justify-center rounded-md bg-apex-red text-white transition-colors hover:bg-apex-red/80 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/30"
+            className="flex size-7 shrink-0 items-center justify-center rounded-md bg-apex-red text-white transition-colors hover:bg-apex-red/80 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/30"
             aria-label="Send message"
           >
             <Send className="size-3" />

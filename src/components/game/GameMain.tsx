@@ -133,12 +133,19 @@ const BURST_WINDOW_MS = 1000;
 /** Site header height (h-16) reserved above the game viewport. */
 const HEADER_PX = 64;
 /**
- * The game renders at its natural size (matching the rest of the site and
- * whatever zoom the browser is set to). The fit loop below only ever SHRINKS
- * when the content is taller than the space available, so the game always
- * fits exactly — at any screen size and any browser zoom percentage.
+ * The game auto-fits ANY screen and ANY browser zoom percentage: the fit
+ * loop below GROWS the whole game until it fills the space between the site
+ * header and the bottom of the viewport (capped by the screen width so it
+ * never gets comically large), and SHRINKS it whenever the content would
+ * overflow. Perfect fill, zero page scrolling, everywhere.
  */
-const MIN_FIT_ZOOM = 0.6;
+const MIN_FIT_ZOOM = 0.5;
+/** Never scale beyond this, no matter how tall the screen is. */
+const MAX_ZOOM = 1.6;
+/** Viewport width at which the game is at its natural size (scale 1). */
+const DESIGN_WIDTH = 1180;
+/** Gentle fixed boost on phones so text stays readable. */
+const MOBILE_ZOOM = 1.15;
 
 export function GameMain({
   state,
@@ -228,21 +235,28 @@ export function GameMain({
   // tabs (garage, casino…) scroll internally as before.
   useLayoutEffect(() => {
     if (typeof window === "undefined") return;
-    if (window.innerWidth < 1024) return;
-    if (tab !== "earn") return;
     const el = gameRootRef.current;
     if (!el) return;
+    // Phones: a gentle fixed boost — the stacked layout scrolls by design.
+    if (window.innerWidth < 1024) {
+      if (uiZoom !== MOBILE_ZOOM) setUiZoom(MOBILE_ZOOM);
+      return;
+    }
+    if (tab !== "earn") return;
     const avail = window.innerHeight - HEADER_PX;
     const natural = el.offsetHeight; // layout height — unaffected by the scale
     if (avail <= 0 || natural <= 0) return;
-    if (natural > avail + 2) {
-      // Floor rounds down so the scaled height never exceeds the space.
+    const widthTarget = Math.min(MAX_ZOOM, Math.max(1, window.innerWidth / DESIGN_WIDTH));
+    const scaled = natural * uiZoom;
+    if (scaled > avail + 2) {
+      // Overflow: shrink exactly into the space (floor so we never clip).
       const next = Math.max(MIN_FIT_ZOOM, Math.floor((avail / natural) * 100) / 100);
       if (next < uiZoom - 0.005) setUiZoom(next);
-    } else if (uiZoom < 1 && natural < avail - 2) {
-      // Content got shorter (banner unmounted, chat closed…): return to
-      // natural size, still capped at 1.
-      setUiZoom(1);
+    } else if (scaled < avail * 0.92 && uiZoom < widthTarget - 0.005) {
+      // Lots of spare room: grow 5% per pass — every pass completes before
+      // the first paint — until the game fills ≥92% of the viewport height
+      // or hits the width-based cap.
+      setUiZoom(Math.min(widthTarget, uiZoom * 1.05));
     }
   }, [uiZoom, fitTick, tab, activeEvent]);
 
@@ -314,11 +328,11 @@ export function GameMain({
 
   return (
     <>
-      {/* ── UI fit wrapper: only scaled DOWN when the content overflows a
-          short viewport; width-compensated so it still spans the screen ── */}
+      {/* ── UI fit wrapper: scaled to fill the screen exactly (up or down);
+          width-compensated so it always spans the full width ── */}
       <div
         style={
-          uiZoom < 1
+          uiZoom !== 1
             ? {
                 width: `${100 / uiZoom}%`,
                 transform: `scale(${uiZoom})`,
@@ -418,7 +432,7 @@ export function GameMain({
         </button>
       </div>
 
-      <div className="flex min-h-0 flex-1 items-stretch gap-3 overflow-visible">
+      <div className="relative flex min-h-0 flex-1 items-stretch gap-3 overflow-visible">
         {/* ── Left sidebar (desktop) ── */}
         <aside className="hidden w-[18rem] shrink-0 flex-col gap-2 lg:flex">
           {/* Balance */}
