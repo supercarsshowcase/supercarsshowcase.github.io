@@ -9,6 +9,7 @@ import {
   Dice5,
   Flame,
   Gift,
+  Home,
   MessageCircle,
   MousePointerClick,
   Package,
@@ -26,6 +27,7 @@ import {
   Zap,
   type LucideIcon,
 } from "lucide-react";
+import { Link } from "react-router";
 import { SmartImage } from "@/components/SmartImage";
 import {
   GAME_CAR_MAP,
@@ -130,22 +132,22 @@ const BURST_PENALTY_MS = 2000;
 const BURST_THRESHOLD = 8;
 const BURST_WINDOW_MS = 1000;
 
-/** Site header height (h-16) reserved above the game viewport. */
-const HEADER_PX = 64;
+/** The game runs fullscreen — the site header is hidden on /game. */
+const HEADER_PX = 0;
 /**
  * The game auto-fits ANY screen and ANY browser zoom percentage: the fit
- * loop below GROWS the whole game until it fills the space between the site
- * header and the bottom of the viewport (capped by the screen width so it
- * never gets comically large), and SHRINKS it whenever the content would
- * overflow. Perfect fill, zero page scrolling, everywhere.
+ * loop below GROWS the whole game until it fills the viewport (capped by
+ * the screen width so it never gets comically large), and SHRINKS it
+ * whenever the content would overflow. Perfect fullscreen fill, zero page
+ * scrolling, everywhere.
  */
 const MIN_FIT_ZOOM = 0.5;
 /** Never scale beyond this, no matter how tall the screen is. */
-const MAX_ZOOM = 1.6;
+const MAX_ZOOM = 2.2;
 /** Viewport width at which the game is at its natural size (scale 1). */
 const DESIGN_WIDTH = 1180;
 /** Gentle fixed boost on phones so text stays readable. */
-const MOBILE_ZOOM = 1.15;
+const MOBILE_ZOOM = 1.3;
 
 export function GameMain({
   state,
@@ -227,22 +229,19 @@ export function GameMain({
   }, []);
 
   // Fit loop: the game sits at its natural size and only ever shrinks when
-  // the content is taller than the space between the site header and the
-  // bottom of the viewport — so it always fits exactly, at any screen size
-  // or browser zoom level. When the content shrinks again it returns to
-  // natural size (never larger). Runs in a layout effect so adjustments
-  // land before the browser paints. Only calibrated on the Earn tab; longer
-  // tabs (garage, casino…) scroll internally as before.
+  // the content is taller than the viewport — so it always fits exactly, at
+  // any screen size or browser zoom level, on every tab. When the content
+  // shrinks again it returns to natural size (never larger). Runs in a
+  // layout effect so adjustments land before the browser paints.
   useLayoutEffect(() => {
     if (typeof window === "undefined") return;
     const el = gameRootRef.current;
     if (!el) return;
     // Phones: a gentle fixed boost — the stacked layout scrolls by design.
-    if (window.innerWidth < 1024) {
+    if (window.innerWidth < 768) {
       if (uiZoom !== MOBILE_ZOOM) setUiZoom(MOBILE_ZOOM);
       return;
     }
-    if (tab !== "earn") return;
     const avail = window.innerHeight - HEADER_PX;
     const natural = el.offsetHeight; // layout height — unaffected by the scale
     if (avail <= 0 || natural <= 0) return;
@@ -252,9 +251,9 @@ export function GameMain({
       // Overflow: shrink exactly into the space (floor so we never clip).
       const next = Math.max(MIN_FIT_ZOOM, Math.floor((avail / natural) * 100) / 100);
       if (next < uiZoom - 0.005) setUiZoom(next);
-    } else if (scaled < avail * 0.92 && uiZoom < widthTarget - 0.005) {
+    } else if (scaled < avail * 0.97 && uiZoom < widthTarget - 0.005) {
       // Lots of spare room: grow 5% per pass — every pass completes before
-      // the first paint — until the game fills ≥92% of the viewport height
+      // the first paint — until the game fills ≥97% of the viewport height
       // or hits the width-based cap.
       setUiZoom(Math.min(widthTarget, uiZoom * 1.05));
     }
@@ -343,8 +342,8 @@ export function GameMain({
       >
       <div
         ref={gameRootRef}
-        className="mx-auto flex w-full max-w-[1280px] flex-col overflow-visible px-2 py-2 sm:px-4 lg:px-5"
-        style={uiZoom === 1 ? { minHeight: "calc(100dvh - 4rem)" } : undefined}
+        className="flex w-full flex-col overflow-visible px-2 py-2 sm:px-3 lg:px-4"
+        style={uiZoom === 1 ? { minHeight: "100dvh" } : undefined}
       >
       {/* ── Active Event Banner ── */}
       {activeEvent && (
@@ -384,6 +383,14 @@ export function GameMain({
           </h1>
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
+          <Link
+            to="/"
+            className="inline-flex size-7 items-center justify-center rounded-md border border-white/15 text-white/60 transition-colors hover:border-apex-red hover:text-white"
+            title="Back to site"
+            aria-label="Back to site"
+          >
+            <Home className="size-3.5" />
+          </Link>
           <StatPill icon={Coins} label="Cash" value={fmtMoney(cash)} accent />
           <StatPill icon={TrendingUp} label="Income/s" value={fmtMoney(income)} />
           <StatPill icon={Star} label="Level" value={String(level)} />
@@ -393,7 +400,7 @@ export function GameMain({
             <button
               type="button"
               onClick={() => setChatOpen(true)}
-              className="inline-flex items-center gap-1 rounded-md border border-white/15 bg-apex-panel px-1.5 py-0.5 text-[10px] font-bold text-white/50 transition-colors hover:border-apex-red hover:text-white lg:flex"
+              className="inline-flex items-center gap-1 rounded-md border border-white/15 bg-apex-panel px-1.5 py-0.5 text-[10px] font-bold text-white/50 transition-colors hover:border-apex-red hover:text-white md:flex"
             >
               <MessageCircle className="size-2.5" />
               Chat
@@ -403,7 +410,7 @@ export function GameMain({
       </div>
 
       {/* ── Mobile action row ── */}
-      <div className="mb-1 flex flex-wrap items-center gap-1.5 lg:hidden">
+      <div className="mb-1 flex flex-wrap items-center gap-1.5 md:hidden">
         <button
           type="button"
           onClick={claimDaily}
@@ -434,7 +441,7 @@ export function GameMain({
 
       <div className="relative flex min-h-0 flex-1 items-stretch gap-3 overflow-visible">
         {/* ── Left sidebar (desktop) ── */}
-        <aside className="hidden w-[18rem] shrink-0 flex-col gap-2 lg:flex">
+        <aside className="hidden w-[18rem] shrink-0 flex-col gap-2 md:flex">
           {/* Balance */}
           <div className="rounded-xl border border-apex-line bg-apex-panel px-2.5 py-1.5">
             <p className="text-[9px] font-semibold uppercase tracking-[0.22em] text-white/40">
@@ -576,7 +583,7 @@ export function GameMain({
           )}
 
           {/* Mobile nav */}
-          <div className="mt-4 flex gap-1 overflow-x-auto border-b border-apex-line pb-px lg:hidden">
+          <div className="mt-4 flex gap-1 overflow-x-auto border-b border-apex-line pb-px md:hidden">
             {NAV.map((item) => {
               const Icon = item.icon;
               const isActive = tab === item.id;
@@ -658,7 +665,7 @@ function EarnZone({
   const streak = state.daily.streak;
 
   return (
-    <div className="relative flex min-h-0 flex-col lg:h-full">
+    <div className="relative flex min-h-0 flex-col md:h-full">
       {/* ── Earn header with stats row ── */}
       <div className="mb-2">
         <div className="flex items-center justify-between">
@@ -708,7 +715,7 @@ function EarnZone({
       <div
         onClick={onCarClick}
         className={cn(
-          "group relative flex min-h-0 flex-col lg:min-h-[420px] cursor-pointer select-none overflow-hidden rounded-2xl border bg-[#0b0b0c] transition-all lg:flex-1",
+          "group relative flex min-h-0 flex-col md:min-h-[420px] cursor-pointer select-none overflow-hidden rounded-2xl border bg-[#0b0b0c] transition-all md:flex-1",
           clickBlocked
             ? "border-red-500/30"
             : "border-apex-line hover:border-apex-red/30",

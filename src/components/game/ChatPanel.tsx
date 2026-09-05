@@ -17,9 +17,9 @@ const ROLE_BADGES: Record<string, { label: string; color: string }> = {
 };
 
 /**
- * Desktop chat rail: stretches with the game row (matching the sidebar and
- * main panel heights), but never taller than the viewport minus header, so
- * it can never push the page or the game out of fit.
+ * Chat rail: stretches with the game row (matching the sidebar and main
+ * panel heights) on ≥md screens, but never taller than the viewport, so it
+ * can never push the page or the game out of fit.
  */
 export function ChatPanel({
   open,
@@ -72,8 +72,8 @@ export function ChatPanel({
 
   return (
     <div
-      className="hidden w-60 shrink-0 flex-col self-stretch overflow-hidden rounded-xl border border-apex-line bg-apex-panel shadow-[0_10px_40px_rgba(0,0,0,0.5)] lg:flex"
-      style={{ maxHeight: "calc(100dvh - 5rem)" }}
+      className="hidden w-56 shrink-0 flex-col self-stretch overflow-hidden rounded-xl border border-apex-line bg-apex-panel shadow-[0_10px_40px_rgba(0,0,0,0.5)] md:flex"
+      style={{ maxHeight: "calc(100dvh - 0.75rem)" }}
     >
       {/* Header */}
       <div className="flex items-center gap-1.5 border-b border-apex-line px-2.5 py-2">

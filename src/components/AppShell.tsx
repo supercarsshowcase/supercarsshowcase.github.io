@@ -133,6 +133,7 @@ export function AppShell() {
     >
       <Analytics />
       <AnnouncementOverlay />
+      {!isGame && (
       <header className="sticky top-0 z-50 border-b border-apex-line bg-black/85 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between gap-3 px-4 sm:px-6">
           <div className="flex items-center gap-6">
@@ -407,8 +408,9 @@ export function AppShell() {
           </nav>
         )}
       </header>
+      )}
 
-      <main className={isGame ? "min-h-0 flex-1 overflow-y-auto" : "flex-1"}>
+      <main className={isGame ? "min-h-0 flex-1 overflow-hidden" : "flex-1"}>
         <Outlet />
       </main>
 
