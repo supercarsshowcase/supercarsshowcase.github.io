@@ -228,11 +228,11 @@ export function GameMain({
     return () => timers.forEach((t) => window.clearTimeout(t));
   }, []);
 
-  // Fit loop: the game sits at its natural size and only ever shrinks when
-  // the content is taller than the viewport — so it always fits exactly, at
-  // any screen size or browser zoom level, on every tab. When the content
-  // shrinks again it returns to natural size (never larger). Runs in a
-  // layout effect so adjustments land before the browser paints.
+  // Fit loop: the Earn screen is the primary view — it sits at its natural
+  // size and grows/shrinks until it fills the viewport exactly, at any
+  // screen size or browser zoom level. All OTHER tabs render at natural size
+  // (zoom 1) and scroll internally instead of shrinking the whole game to
+  // fit — shrinking long panels like the Index/Garage grid made them tiny.
   useLayoutEffect(() => {
     if (typeof window === "undefined") return;
     const el = gameRootRef.current;
@@ -240,6 +240,11 @@ export function GameMain({
     // Phones: a gentle fixed boost — the stacked layout scrolls by design.
     if (window.innerWidth < 768) {
       if (uiZoom !== MOBILE_ZOOM) setUiZoom(MOBILE_ZOOM);
+      return;
+    }
+    // Non-Earn tabs: natural size, page scrolls (no shrink-to-fit).
+    if (tab !== "earn") {
+      if (uiZoom !== 1) setUiZoom(1);
       return;
     }
     const avail = window.innerHeight - HEADER_PX;
