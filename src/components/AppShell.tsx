@@ -123,13 +123,21 @@ export function AppShell() {
     }
   };
 
+  // Viewport-unit heights are divided by the site zoom (--site-zoom, set
+  // from SITE_ZOOM in src/game/fit.ts) so the shell always fills exactly one
+  // real viewport regardless of the site-wide zoom factor.
+  const shellStyle = isGame
+    ? { height: "calc(100dvh / var(--site-zoom, 1))" }
+    : { minHeight: "calc(100dvh / var(--site-zoom, 1))" };
+
   return (
     <div
       className={
         isGame
-          ? "flex h-screen flex-col overflow-hidden bg-apex-ink text-white"
-          : "flex min-h-screen flex-col bg-apex-ink text-white"
+          ? "flex flex-col overflow-hidden bg-apex-ink text-white"
+          : "flex flex-col bg-apex-ink text-white"
       }
+      style={shellStyle}
     >
       <Analytics />
       <AnnouncementOverlay />

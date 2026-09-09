@@ -144,7 +144,7 @@
   /* Prevent mobile browsers from auto-zooming on inputs and text size inflation */
   input, select, textarea {
     font-size: 16px !important;
-    max-height: 100vh;
+    max-height: calc(100vh / var(--site-zoom, 1));
   }
   html {
     overflow-x: hidden;
@@ -157,6 +157,15 @@
     background: var(--color-apex-red);
     color: white;
   }
+}
+
+/* Site-wide UI zoom — the entire website renders at the browser's own zoom
+   level. The value comes from SITE_ZOOM in src/game/fit.ts, written to the
+   --site-zoom variable at boot in src/main.tsx. Viewport-unit heights inside
+   the app (shell, game root, chat rail) divide by this variable so nothing
+   overflows the real viewport. 1 = natural size. */
+#root {
+  zoom: var(--site-zoom, 1);
 }
 
 /* Unlayered so it overrides the utility classes on the slider primitives. */

@@ -28,6 +28,11 @@ import Compare from "./pages/Compare.tsx";
 import AuthPage from "./pages/Auth.tsx";
 import Game from "./pages/Game.tsx";
 import NotFound from "./pages/NotFound.tsx";
+import { SITE_ZOOM } from "@/game/fit";
+
+// The whole site renders at browser-zoom scale: publish SITE_ZOOM as a CSS
+// variable (consumed by #root { zoom } in index.css) before anything mounts.
+document.documentElement.style.setProperty("--site-zoom", String(SITE_ZOOM));
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
 

@@ -48,7 +48,7 @@ import {
   passivePerSec,
   type Action,
 } from "@/game/engine";
-import { gameZoom } from "@/game/fit";
+import { gameZoom, SITE_ZOOM } from "@/game/fit";
 import type { GameState } from "@/game/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -226,7 +226,7 @@ export function GameMain({
     const id = ++popupId.current;
     // Popup coordinates live inside the CSS-zoomed tree — convert the
     // visual (post-zoom) pointer offset back into local layout pixels.
-    const s = uiZoom || 1;
+    const s = SITE_ZOOM * uiZoom || 1;
     const popup: Popup = {
       id,
       x: (e.clientX - rect.left) / s + (Math.random() * 40 - 20),
@@ -262,16 +262,15 @@ export function GameMain({
 
   return (
     <>
-      {/* ── Zoomed game root. CSS `zoom` scales layout itself, so width,
-          scrolling, fixed positioning and hit-testing all stay correct
-          (transform scale broke all of those). minHeight is in pre-zoom
-          pixels and lands at exactly one viewport after zooming, which is
-          what fills the slot with no dead band. ── */}
+      {/* ── Game root. The whole site renders at browser-zoom scale via the
+          site zoom on #root (SITE_ZOOM); the game adds no scale of its own
+          (uiZoom = SITE_ZOOM). minHeight is divided by the total effective
+          zoom so it lands at exactly one real viewport — no dead band. ── */}
       <div
         className="flex w-full flex-col overflow-visible px-2 py-2 sm:px-3 lg:px-4"
         style={{
           zoom: uiZoom,
-          minHeight: `calc(100dvh / ${uiZoom})`,
+          minHeight: `calc(100dvh / ${SITE_ZOOM * uiZoom})`,
         }}
       >
       {/* ── Active Event Banner ── */}
@@ -545,7 +544,7 @@ export function GameMain({
         <ChatPanel
           open={chatOpen}
           onToggle={() => setChatOpen((v) => !v)}
-          maxHeight={`calc(100dvh / ${uiZoom})`}
+          maxHeight={`calc(100dvh / ${SITE_ZOOM * uiZoom})`}
         />
       </div>
       </div>
