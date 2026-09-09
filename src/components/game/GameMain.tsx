@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Boxes,
@@ -48,7 +48,7 @@ import {
   passivePerSec,
   type Action,
 } from "@/game/engine";
-import { MAX_ZOOM, ZOOM_EPSILON, computeFitZoom, nonEarnTabZoom } from "@/game/fit";
+import { gameZoom } from "@/game/fit";
 import type { GameState } from "@/game/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -133,12 +133,8 @@ const BURST_PENALTY_MS = 2000;
 const BURST_THRESHOLD = 8;
 const BURST_WINDOW_MS = 1000;
 
-/** The game runs fullscreen — the site header is hidden on /game. */
-const HEADER_PX = 0;
-/** Viewport width at which the game is at its natural size (scale 1). */
-const DESIGN_WIDTH = 1180;
-/** Gentle fixed boost on phones so text stays readable. */
-const MOBILE_ZOOM = 1.3;
+/** The game runs fullscreen — the site header is hidden on /game.
+ *  Zoom constants (design width, caps, mobile boost) live in @/game/fit. */
 
 export function GameMain({
   state,
@@ -162,10 +158,12 @@ export function GameMain({
   const clickTimestamps = useRef<number[]>([]);
   const [clickBlocked, setClickBlocked] = useState(false);
 
-  // ── UI fit: natural size, shrink-only when the content overflows ──
-  const [uiZoom, setUiZoom] = useState(1);
-  const [fitTick, setFitTick] = useState(0);
-  const gameRootRef = useRef<HTMLDivElement>(null);
+  // ── UI zoom: a pure function of the window width, applied via CSS `zoom`
+  // (NOT transform scale — scale doesn't affect layout, which caused the
+  // clipped scrolling and jitter of the old fit loop). ──
+  const [uiZoom, setUiZoom] = useState(() =>
+    typeof window === "undefined" ? 1 : gameZoom(window.innerWidth),
+  );
 
   const active = GAME_CAR_MAP[state.activeCarId] ?? GAME_CAR_MAP[STARTER_ID];
   const level = levelFrom(state);
@@ -185,71 +183,16 @@ export function GameMain({
   const xpPct = Math.min(100, (xpIntoLevel / Math.max(1, xpForLevel)) * 100);
   const nextLevelEarned = Math.pow(levelBase, 2) * 500;
 
-  // Re-fit when the window is resized (debounced).
+  // Keep the zoom in sync with the window width. It's a pure function of
+  // width — no content measurement, no feedback loop, no oscillation. The
+  // shell's scroll container sees the real (zoomed) layout, so nothing can
+  // clip and every tab scrolls natively.
   useEffect(() => {
-    let t: number | undefined;
-    const onResize = () => {
-      window.clearTimeout(t);
-      t = window.setTimeout(() => setFitTick((n) => n + 1), 150);
-    };
+    const onResize = () => setUiZoom(gameZoom(window.innerWidth));
+    onResize();
     window.addEventListener("resize", onResize);
-    return () => {
-      window.clearTimeout(t);
-      window.removeEventListener("resize", onResize);
-    };
+    return () => window.removeEventListener("resize", onResize);
   }, []);
-
-  // Re-fit whenever the game's own content changes size — event banner
-  // mounting/unmounting, chat opening/closing, fonts and photos finishing
-  // load, etc. ResizeObserver catches all of them without listing deps.
-  useEffect(() => {
-    const el = gameRootRef.current;
-    if (!el || typeof ResizeObserver === "undefined") return;
-    const ro = new ResizeObserver(() => setFitTick((n) => n + 1));
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-
-  // …and a few times shortly after mount so late layout (fonts, photos)
-  // is accounted for before the zoom is locked in.
-  useEffect(() => {
-    const timers = [600, 1600, 3200].map((ms) =>
-      window.setTimeout(() => setFitTick((n) => n + 1), ms),
-    );
-    return () => timers.forEach((t) => window.clearTimeout(t));
-  }, []);
-
-  // Fit loop: every tab shares the same width-based zoom so the UI scale is
-  // identical everywhere (no jumping sidebar between tabs). The Earn screen
-  // then grows/shrinks further until it fills the viewport height exactly;
-  // all other tabs never shrink below natural size — long grids simply scroll
-  // instead of being crushed (shrinking Index/Garage made them unreadably
-  // tiny). This is what removes the dead black band under short panels.
-  useLayoutEffect(() => {
-    if (typeof window === "undefined") return;
-    const el = gameRootRef.current;
-    if (!el) return;
-    // Phones: a gentle fixed boost — the stacked layout scrolls by design.
-    if (window.innerWidth < 768) {
-      if (uiZoom !== MOBILE_ZOOM) setUiZoom(MOBILE_ZOOM);
-      return;
-    }
-    const widthTarget = Math.min(MAX_ZOOM, Math.max(1, window.innerWidth / DESIGN_WIDTH));
-    // Non-Earn tabs: same width-based zoom as Earn, grow-only (never below
-    // natural size) — the slot fills edge to edge and long content scrolls.
-    if (tab !== "earn") {
-      const target = nonEarnTabZoom(widthTarget);
-      if (Math.abs(uiZoom - target) > ZOOM_EPSILON) setUiZoom(target);
-      return;
-    }
-    const avail = window.innerHeight - HEADER_PX;
-    const natural = el.offsetHeight; // layout height — unaffected by the scale
-    // The fit decision itself is pure and lives in @/game/fit (unit tested):
-    // shrink on overflow, otherwise jump straight to the exact zoom that
-    // fills the whole slot — no black band left at the bottom.
-    const result = computeFitZoom({ avail, natural, zoom: uiZoom, widthTarget });
-    if (result) setUiZoom(result.next);
-  }, [uiZoom, fitTick, tab, activeEvent]);
 
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const now = Date.now();
@@ -281,8 +224,8 @@ export function GameMain({
     dispatch({ type: "CLICK", amount, globalMultiplier });
     const rect = e.currentTarget.getBoundingClientRect();
     const id = ++popupId.current;
-    // Popup coordinates live inside the zoom-scaled tree — convert the
-    // visual (post-scale) pointer offset back into local layout pixels.
+    // Popup coordinates live inside the CSS-zoomed tree — convert the
+    // visual (post-zoom) pointer offset back into local layout pixels.
     const s = uiZoom || 1;
     const popup: Popup = {
       id,
@@ -319,29 +262,16 @@ export function GameMain({
 
   return (
     <>
-      {/* ── UI fit wrapper: scaled to fill the screen exactly (up or down);
-          width-compensated so it always spans the full width ── */}
+      {/* ── Zoomed game root. CSS `zoom` scales layout itself, so width,
+          scrolling, fixed positioning and hit-testing all stay correct
+          (transform scale broke all of those). minHeight is in pre-zoom
+          pixels and lands at exactly one viewport after zooming, which is
+          what fills the slot with no dead band. ── */}
       <div
-        style={
-          uiZoom !== 1
-            ? {
-                width: `${100 / uiZoom}%`,
-                transform: `scale(${uiZoom})`,
-                transformOrigin: "top left",
-              }
-            : undefined
-        }
-      >
-      <div
-        ref={gameRootRef}
         className="flex w-full flex-col overflow-visible px-2 py-2 sm:px-3 lg:px-4"
         style={{
-          minHeight:
-            tab === "earn" && uiZoom !== 1
-              ? undefined
-              : uiZoom === 1
-                ? "100dvh"
-                : `calc(100dvh / ${uiZoom})`,
+          zoom: uiZoom,
+          minHeight: `calc(100dvh / ${uiZoom})`,
         }}
       >
       {/* ── Active Event Banner ── */}
@@ -612,8 +542,11 @@ export function GameMain({
         </main>
 
         {/* ── Chat panel (desktop) ── */}
-        <ChatPanel open={chatOpen} onToggle={() => setChatOpen((v) => !v)} />
-      </div>
+        <ChatPanel
+          open={chatOpen}
+          onToggle={() => setChatOpen((v) => !v)}
+          maxHeight={`calc(100dvh / ${uiZoom})`}
+        />
       </div>
       </div>
 

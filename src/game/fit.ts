@@ -1,74 +1,31 @@
 /**
- * Pure decision logic for the game UI auto-fit loop (GameMain).
+ * Deterministic UI zoom for the game shell (GameMain).
  *
- * GameMain measures the viewport and the game's natural layout height, then
- * asks this module whether the zoom should change. Keeping the decision
- * side-effect free lets it be unit tested with bun test — this loop is the
- * most regression-prone piece of the game shell (it must fill the slot
- * completely, never shrink long panels into unreadable sizes, and never
- * overshoot the viewport).
+ * The zoom is a pure function of the window width — no content measurement
+ * and no feedback loop. The previous implementation scaled with
+ * `transform: scale()` and re-measured itself in a loop; transform scale
+ * doesn't affect layout, so the shell's scroll container couldn't see the
+ * scaled height (content clipped, unreachable) and the measurement loop
+ * oscillated. CSS `zoom` scales layout itself, so one static decision is
+ * enough — and switching tabs can never resize the UI.
  */
 
-/** Never scale below this, no matter how tall the content is. */
-export const MIN_FIT_ZOOM = 0.5;
-/** Never scale beyond this, no matter how tall the screen is. */
+/** Viewport width at which the game renders at its natural size (zoom 1). */
+export const DESIGN_WIDTH = 1180;
+/** Never zoom beyond this, no matter how wide the screen is. */
 export const MAX_ZOOM = 2.2;
-/** Shrink only when content exceeds the available space by this margin (px). */
-export const OVERFLOW_SLACK_PX = 2;
-/** Spare room smaller than this counts as "already full" (px). */
-export const FILL_SLACK_PX = 2;
-/** Zoom deltas smaller than this are ignored to prevent oscillation. */
-export const ZOOM_EPSILON = 0.005;
-
-export interface FitInput {
-  /** Available height in px (viewport height minus reserved chrome). */
-  avail: number;
-  /** Natural (unscaled) layout height of the game in px. */
-  natural: number;
-  /** Current zoom level. */
-  zoom: number;
-  /** Maximum allowed zoom — the width-based cap. */
-  widthTarget: number;
-}
-
-/** A zoom change to apply, or null when the current zoom is already right. */
-export type FitResult = { next: number } | null;
+/** Below this width the layout stacks (single column, chat hidden). */
+export const MOBILE_BREAKPOINT = 768;
+/** Fixed zoom on phones so text stays readable (stacked layout scrolls). */
+export const MOBILE_ZOOM = 1.3;
 
 /**
- * Zoom for non-Earn tabs (Index, Garage, Crates, …): the shared width-based
- * zoom, grow-only — never below natural size (1). Long grids scroll instead
- * of shrinking, and short panels still fill the slot edge to edge.
+ * The UI zoom for a given window width. Always ≥ 1 above the mobile
+ * breakpoint (never shrinks the UI below natural size) and capped at
+ * MAX_ZOOM; phones get the fixed MOBILE_ZOOM boost.
  */
-export function nonEarnTabZoom(widthTarget: number): number {
-  return Math.max(1, widthTarget);
-}
-
-export function computeFitZoom({
-  avail,
-  natural,
-  zoom,
-  widthTarget,
-}: FitInput): FitResult {
-  if (!(avail > 0) || !(natural > 0)) return null;
-
-  const scaled = natural * zoom;
-  const exactFit = avail / natural;
-
-  // Overflow: shrink exactly into the available space, but never below
-  // MIN_FIT_ZOOM (documented floor — extreme overflow clips by design).
-  if (scaled > avail + OVERFLOW_SLACK_PX) {
-    const next = Math.max(MIN_FIT_ZOOM, exactFit);
-    return next < zoom - ZOOM_EPSILON ? { next } : null;
-  }
-
-  // Spare room: jump straight to the exact fill zoom so the game fills the
-  // whole slot — no black band left at the bottom. The width cap still
-  // applies (it only binds on extreme aspect ratios). Both branches land
-  // inside the ±FILL_SLACK_PX dead zone, so the loop converges immediately.
-  if (scaled < avail - FILL_SLACK_PX && zoom < widthTarget - ZOOM_EPSILON) {
-    const next = Math.min(widthTarget, exactFit);
-    return next > zoom + ZOOM_EPSILON ? { next } : null;
-  }
-
-  return null;
+export function gameZoom(width: number): number {
+  if (!Number.isFinite(width) || width <= 0) return 1;
+  if (width < MOBILE_BREAKPOINT) return MOBILE_ZOOM;
+  return Math.min(MAX_ZOOM, Math.max(1, width / DESIGN_WIDTH));
 }
