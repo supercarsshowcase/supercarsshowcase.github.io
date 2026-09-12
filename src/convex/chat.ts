@@ -1,5 +1,6 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { getAuthUserId } from "@convex-dev/auth/server";
 
 /** Return the latest 100 chat messages (ascending by time). */
 export const getMessages = query({
@@ -71,5 +72,22 @@ export const sendMessage = mutation({
     for (const msg of oldMessages.slice(200)) {
       await ctx.db.delete(msg._id);
     }
+  },
+});
+
+/** Staff delete — owner/admin/moderator can remove any message (moderation). */
+export const deleteMessage = mutation({
+  args: { messageId: v.id("chatMessages") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Not authenticated");
+    const staff = await ctx.db.get(userId);
+    if (
+      !staff ||
+      (staff.role !== "owner" && staff.role !== "admin" && staff.role !== "moderator")
+    ) {
+      throw new Error("Only staff can delete messages.");
+    }
+    await ctx.db.delete(args.messageId);
   },
 });
