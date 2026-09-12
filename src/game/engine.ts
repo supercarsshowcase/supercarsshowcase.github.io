@@ -45,8 +45,12 @@ const WANTED_BOUNTY_COUNT = 3;
 const BOUNTY_DURATION_MS = 24 * 3_600_000;
 /** Auto-refresh bounties when the board is older than this. */
 const WANTED_AUTO_REFRESH_MS = 20 * 60_000;
-/** Bounty reward multiplier over the (sell) value of the wanted cars. */
-const BOUNTY_REWARD_MULT = 3;
+/** Bounty reward multiplier over the (buy) value of the wanted cars. */
+const BOUNTY_REWARD_MULT = 4;
+/** Manual bounty-board refresh cost ≈ a slice of the player's cash. */
+const WANTED_REFRESH_CASH_PCT = 0.05;
+/** …but never less than this floor, scaled by level. */
+const WANTED_REFRESH_FLOOR_PER_LEVEL = 250;
 
 // ── Initial state ─────────────────────────────────────────────────────────────
 
@@ -434,7 +438,7 @@ export type Action =
   | { type: "CLAIM_WEEKLY"; challengeId: string }
   | { type: "BUY_FUEL"; carId: string }
   | { type: "SELL_FOR_BOUNTY"; bountyId: string }
-  | { type: "REFRESH_WANTED"; now: number }
+  | { type: "REFRESH_WANTED"; now: number; cost: number }
   | { type: "LOAD"; state: GameState };
 
 /** Ensure the weekly state matches the current week AND current level. */
@@ -486,6 +490,16 @@ function getMondayStr(now: number): string {
  */
 function bountyPool(): GameCarDef[] {
   return Object.values(GAME_CAR_MAP).filter((c) => !c.secret && c.dealer !== "vault");
+}
+
+/**
+ * Cost to manually refresh the bounty board: the greater of a 5% cash slice
+ * and a level-scaled floor — cheap early, meaningful for rich players.
+ */
+export function wantedRefreshCost(state: GameState): number {
+  const level = levelFrom(state);
+  const floor = WANTED_REFRESH_FLOOR_PER_LEVEL * Math.max(1, level - 1);
+  return Math.max(floor, Math.round(state.cash * WANTED_REFRESH_CASH_PCT));
 }
 
 /** Generate a set of wanted bounties appropriate for the player's level. */
@@ -959,8 +973,11 @@ export function gameReducer(prevState: GameState, action: Action): GameState {
       });
     }
     case "REFRESH_WANTED": {
+      if (action.cost !== wantedRefreshCost(state)) return state; // stale/staged click
+      if (state.cash < action.cost) return state;
       return {
         ...state,
+        cash: state.cash - action.cost,
         wantedBounties: generateBounties(action.now, levelFrom(state)),
         wantedRefreshAt: action.now,
       };

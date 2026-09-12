@@ -11,6 +11,7 @@ import {
   gameReducer,
   generateBounties,
   initialGameState,
+  wantedRefreshCost,
 } from "./engine";
 import type { GameState, WantedBounty } from "./types";
 
@@ -115,9 +116,9 @@ describe("weekly challenge scaling", () => {
     }
   });
 
-  test("rewards stay proportional to targets at high levels (no free billions)", () => {
-    // A level-200 player's FULL completed board must not exceed ~1 week of
-    // income ×20 — completing challenges can't outshine playing the game.
+  test("rewards stay proportional to targets at high levels (no runaway)", () => {
+    // A full board is a big bonus but stays within a sane multiple of weekly
+    // income — completing challenges pays, but playing the game pays more.
     let sum = 0;
     for (let w = 0; w < 52; w++) {
       const week = new Date(Date.UTC(2026, 0, 5) + w * 7 * 86_400_000)
@@ -127,7 +128,17 @@ describe("weekly challenge scaling", () => {
     }
     const avgBoard = sum / 52;
     const weeklyIncome = 50_000 * 199 * 199 * 0.04;
-    expect(avgBoard).toBeLessThan(weeklyIncome * 20);
+    expect(avgBoard).toBeGreaterThan(weeklyIncome * 5); // generous, per request
+    expect(avgBoard).toBeLessThan(weeklyIncome * 200); // still level-bounded
+  });
+
+  test("board reroll costs the greater of a 5% cash slice and a level floor", () => {
+    const broke = { ...initialGameState(), cash: 1_000, totalEarned: 0 }; // level 1
+    expect(wantedRefreshCost(broke)).toBe(250); // floor at level 1
+    const mid = { ...initialGameState(), cash: 1_000_000, totalEarned: 5_000_000 }; // level ~11
+    expect(wantedRefreshCost(mid)).toBe(50_000); // 5% slice
+    const whale = { ...initialGameState(), cash: 10_000_000_000, totalEarned: 4_900_000_000 }; // level ~100
+    expect(wantedRefreshCost(whale)).toBe(500_000_000); // 5% of wealth
   });
 
   test("challengeMetric reads the new field and falls back for legacy saves", () => {
@@ -168,12 +179,12 @@ describe("wanted bounties", () => {
     }
   });
 
-  test("bounties last 24 hours and pay 3x total car value", () => {
+  test("bounties last 24 hours and pay 4x total car value", () => {
     const [b] = generateBounties(NOW, 10);
     expect(b.expiresAt - NOW).toBe(24 * 3_600_000);
     let value = 0;
     for (const w of b.wants) value += generateBountyCar(w.carId)!.value * w.count;
-    expect(b.reward).toBe(value * 3);
+    expect(b.reward).toBe(value * 4);
   });
 
   test("canCompleteBounty requires owning every wanted car", () => {

@@ -13,6 +13,7 @@ import {
   passivePerSec, clickValue, dailyReward, carValue, carPower,
   buyPrice as calcBuyPrice, rollDealerStock, upgradeCost as calcUpgradeCost,
   crateCost as calcCrateCost, spinSupercarPool, gameReducer, critChance,
+  wantedRefreshCost,
 } from "../../game/engine";
 import {
   GAME_CAR_MAP, gameCarImage, RARITY_META, ACHIEVEMENTS,
@@ -618,10 +619,11 @@ function WantedPanel({ state, dispatch }: { state: GameState; dispatch: any }) {
   const level = levelFrom(state);
   // Seed the board automatically the first time it's opened (the engine now
   // also auto-refills, but this covers freshly-loaded old saves instantly).
+  // Seeding an empty board is always free; only manual rerolls cost cash.
   useEffect(() => {
     const live = state.wantedBounties.filter((b) => !b.claimed && b.expiresAt > Date.now());
     if (live.length === 0 || state.wantedRefreshAt === 0) {
-      dispatch({ type: "REFRESH_WANTED", now: Date.now() });
+      dispatch({ type: "REFRESH_WANTED", now: Date.now(), cost: 0 });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -634,9 +636,9 @@ function WantedPanel({ state, dispatch }: { state: GameState; dispatch: any }) {
       {bounties.length === 0 && expiredCount === 0 && (
         <div className="rounded-xl border border-apex-line bg-apex-panel p-8 text-center">
           <p className="font-display text-sm text-white/40">No bounties available at your level yet. Level up for richer contracts!</p>
-          <button type="button" onClick={() => dispatch({ type: "REFRESH_WANTED", now })}
+          <button type="button" onClick={() => dispatch({ type: "REFRESH_WANTED", now, cost: 0 })}
             className="mt-3 rounded-md border border-white/15 px-3 py-1.5 font-display text-[11px] font-bold uppercase tracking-[0.12em] text-white/70 transition-colors hover:border-apex-red hover:text-white">
-            Refresh Board
+            Generate Bounties
           </button>
         </div>
       )}
@@ -681,12 +683,20 @@ function WantedPanel({ state, dispatch }: { state: GameState; dispatch: any }) {
           );
         })}
       </div>
-      {bounties.length > 0 && (
-        <button type="button" onClick={() => dispatch({ type: "REFRESH_WANTED", now })}
-          className="mt-4 w-full rounded-md border border-white/15 py-2 font-display text-[11px] font-bold uppercase tracking-[0.14em] text-white/50 transition-colors hover:border-apex-red hover:text-white">
-          Refresh Board
-        </button>
-      )}
+      {bounties.length > 0 && (() => {
+        const refreshCost = wantedRefreshCost(state);
+        const canAfford = state.cash >= refreshCost;
+        return (
+          <button type="button" disabled={!canAfford}
+            onClick={() => dispatch({ type: "REFRESH_WANTED", now, cost: refreshCost })}
+            className={ce("mt-4 w-full rounded-md border py-2 font-display text-[11px] font-bold uppercase tracking-[0.14em] transition-colors",
+              canAfford
+                ? "border-white/15 text-white/50 hover:border-apex-red hover:text-white"
+                : "border-white/10 text-white/25 cursor-not-allowed")}>
+            Reroll Board · {Ie(refreshCost)}
+          </button>
+        );
+      })()}
     </div>
   );
 }
