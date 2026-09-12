@@ -30,7 +30,7 @@ export const HOME_COPY: Record<string, string> = {
   ctaBtn1: "Open the Machines",
   ctaBtn2: "See Rankings",
   featuredSlugs:
-    "bugatti-tourbillon,koenigsegg-jesko-absolut,ferrari-daytona-sp3,rimac-nevera-r,lamborghini-revuelto,mclaren-p1",
+    "bugatti-tourbillon,koenigsegg-jesko,ferrari-daytona-sp3,rimac-nevera,lamborghini-revuelto,mclaren-p1",
 };
 
 export const NAV_COPY: Record<string, string> = {

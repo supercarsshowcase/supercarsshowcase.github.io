@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router";
 import { motion } from "framer-motion";
 import { ArrowRight, ChevronUp, Newspaper } from "lucide-react";
@@ -9,13 +9,23 @@ import { BRANDS } from "@/data/brands";
 import { getBrandImage } from "@/data/images";
 import { CarCard } from "@/components/CarCard";
 import { HOME_COPY, SITE_UPDATES_COPY } from "@/data/page-copy";
+import { formatNumber } from "@/lib/format";
 
-const STATS = [
-  { value: "200+", label: "Machines" },
-  { value: "18", label: "Marques" },
-  { value: "531 KM/H", label: "Top Speed" },
-  { value: "2,107", label: "Peak HP" },
-];
+// Stats are DERIVED from the real archive — hardcoded values used to drift
+// (claimed "200+ machines" and "2,107 HP" while the data holds 88 and 2,011).
+function useStats() {
+  return useMemo(() => {
+    const cars = carsList();
+    const topSpeed = Math.max(...cars.map((c) => c.topSpeedKmh));
+    const peakHp = Math.max(...cars.map((c) => c.horsepower));
+    return [
+      { value: `${cars.length}`, label: "Machines" },
+      { value: `${BRANDS.length}`, label: "Marques" },
+      { value: `${formatNumber(topSpeed)} KM/H`, label: "Top Speed" },
+      { value: formatNumber(peakHp), label: "Peak HP" },
+    ];
+  }, []);
+}
 
 function HeroBackground() {
   const [errored, setErrored] = useState(false);
@@ -46,6 +56,7 @@ function HeroBackground() {
 export default function Landing() {
   const home = useQuery(api.pages.getPageContent, { page: "home" });
   const siteUpdates = useQuery(api.pages.getPageContent, { page: "siteUpdates" });
+  const stats = useStats();
   const copy = { ...HOME_COPY, ...(home ?? {}) };
   const FEATURED_SLUGS = (copy.featuredSlugs || HOME_COPY.featuredSlugs)
     .split(",")
@@ -102,7 +113,7 @@ export default function Landing() {
       {/* STATS BAR */}
       <section className="border-y border-apex-line bg-black">
         <div className="mx-auto grid max-w-[1400px] grid-cols-2 divide-x divide-apex-line lg:grid-cols-4">
-          {STATS.map((stat, i) => (
+          {stats.map((stat, i) => (
             <motion.div
               key={stat.label}
               initial={{ opacity: 0, y: 12 }}
