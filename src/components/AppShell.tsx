@@ -141,7 +141,9 @@ export function AppShell() {
     >
       <Analytics />
       <AnnouncementOverlay />
-      {!isGame && (
+      {/* Site header stays visible on /game so the site nav (Feedback,
+          Machines, Rankings…) is always reachable; the game fills the
+          space below it. */}
       <header className="sticky top-0 z-50 border-b border-apex-line bg-black/85 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between gap-3 px-4 sm:px-6">
           <div className="flex items-center gap-6">
@@ -416,7 +418,6 @@ export function AppShell() {
           </nav>
         )}
       </header>
-      )}
 
       {/* On the game page the main area is the scroll container.
           scrollbar-gutter: stable keeps the vertical gutter reserved even

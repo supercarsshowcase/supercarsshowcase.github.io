@@ -1,5 +1,6 @@
 import { describe, test as it, expect } from "bun:test";
 import {
+  SITE_HEADER_REM,
   SITE_ZOOM,
   gameZoom,
   vpFill,
@@ -35,29 +36,38 @@ describe("site zoom policy", () => {
 });
 
 describe("viewport fill helpers", () => {
-  it("vpFill lands at exactly one viewport after scaling (no dead band)", () => {
+  it("vpFill fills the game slot: viewport minus the site header (no dead band)", () => {
+    expect(SITE_HEADER_REM).toBe(4); // the header is h-16
     for (const zoom of [1, 1.1, 1.25, 2]) {
-      const m = vpFill(zoom).match(/calc\(100dvh \/ ([\d.]+)\)/);
+      const m = vpFill(zoom).match(
+        new RegExp(`calc\\(\\(100dvh - ${SITE_HEADER_REM}rem\\) / ([\\d.]+)\\)`),
+      );
       expect(m).not.toBeNull();
       const divisor = Number(m![1]);
-      // divisor must equal the zoom exactly, so divisor × zoom = 100dvh
-      expect(divisor * zoom).toBeCloseTo(zoom * zoom, 10);
+      // divisor must equal the zoom exactly: (100dvh − header) / divisor ×
+      // divisor = exactly the slot — no overflow, no gap.
       expect(divisor).toBeCloseTo(zoom, 10);
     }
   });
 
-  it("vpRail is a FIXED height (not a stretch cap) minus the padding", () => {
+  it("vpRail is a FIXED height (not a stretch cap): slot minus the padding", () => {
     for (const zoom of [1, 1.1, 1.25, 2]) {
       // Subtraction must be INSIDE the calc() — `calc(A) - B` is invalid CSS.
-      expect(vpRail(zoom)).toBe(`calc(100dvh / ${zoom} - ${ROOT_PAD_REM}rem)`);
-      expect(vpRail(zoom, 4.375)).toBe(`calc(100dvh / ${zoom} - 4.375rem)`);
+      expect(vpRail(zoom)).toBe(
+        `calc((100dvh - ${SITE_HEADER_REM}rem) / ${zoom} - ${ROOT_PAD_REM}rem)`,
+      );
+      expect(vpRail(zoom, 4.375)).toBe(
+        `calc((100dvh - ${SITE_HEADER_REM}rem) / ${zoom} - 4.375rem)`,
+      );
     }
   });
 
   it("falls back to a safe divisor when the zoom factor is invalid", () => {
     for (const bad of [0, -1, NaN, Infinity]) {
-      expect(vpFill(bad)).toBe("calc(100dvh / 1)");
-      expect(vpRail(bad)).toBe("calc(100dvh / 1 - 1rem)");
+      expect(vpFill(bad)).toBe(`calc((100dvh - ${SITE_HEADER_REM}rem) / 1)`);
+      expect(vpRail(bad)).toBe(
+        `calc((100dvh - ${SITE_HEADER_REM}rem) / 1 - 1rem)`,
+      );
       expect(gameEventBannerRem(bad)).toBeGreaterThan(0);
       expect(Number.isFinite(gameEventBannerRem(bad))).toBe(true);
     }

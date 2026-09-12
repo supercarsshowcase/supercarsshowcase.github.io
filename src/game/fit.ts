@@ -17,6 +17,9 @@
 /** The single site-wide zoom factor. 1 = natural size = browser zoom 100%. */
 export const SITE_ZOOM = 1;
 
+/** Height of the site header (h-16 = 4rem) that sits above the game. */
+export const SITE_HEADER_REM = 4;
+
 /**
  * The game shell's zoom for a given window width. The game inherits the
  * site zoom and adds nothing of its own; kept as a function so GameMain and
@@ -37,22 +40,24 @@ function safeZoom(zoom: number): number {
 }
 
 /**
- * Pre-zoom min-height that lands at EXACTLY one real viewport once scaled
- * by `zoom` (× zoom = 100dvh — no dead band, no overflow).
+ * Pre-zoom min-height that fills the game's slot: exactly one real viewport
+ * minus the site header (h-16 = 4rem) once scaled by `zoom`.
  */
 export function vpFill(zoom: number): string {
-  return `calc(100dvh / ${safeZoom(zoom)})`;
+  return `calc((100dvh - ${SITE_HEADER_REM}rem) / ${safeZoom(zoom)})`;
 }
 
 /**
- * FIXED pre-zoom height for the side rails (sidebar, chat): exactly one
- * real viewport minus `extraRem` (the game root's 0.5rem×2 padding). Fixed —
- * not a max-height stretch — so the rails are IDENTICAL on every tab; a
- * stretch cap lets short tabs (Earn) size the rails differently than long
- * ones (Garage), which visibly reshuffled the nav on every tab switch.
+ * FIXED pre-zoom height for the side rails (sidebar, chat). The rails live
+ * INSIDE the game root, whose own min-height already excludes the site
+ * header (vpFill) — so a rail is the game slot minus `extraRem` (the root's
+ * 0.5rem×2 padding, plus the banner's share while an event is active).
+ * Fixed — not a max-height stretch — so the rails are IDENTICAL on every
+ * tab; a stretch cap lets short tabs (Earn) size the rails differently than
+ * long ones (Garage), which visibly reshuffled the nav on every tab switch.
  */
 export function vpRail(zoom: number, extraRem = 1): string {
-  return `calc(100dvh / ${safeZoom(zoom)} - ${extraRem}rem)`;
+  return `calc((100dvh - ${SITE_HEADER_REM}rem) / ${safeZoom(zoom)} - ${extraRem}rem)`;
 }
 
 /**

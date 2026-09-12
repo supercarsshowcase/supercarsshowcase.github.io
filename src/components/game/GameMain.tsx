@@ -51,6 +51,7 @@ import {
 import {
   gameEventBannerRem,
   gameZoom,
+  SITE_HEADER_REM,
   SITE_ZOOM,
   vpFill,
   vpRail,
@@ -275,9 +276,10 @@ export function GameMain({
     }
   };
 
-  // Layout constant for the rails' fixed height: the event banner's rendered
-  // height. Exported via gameEventBannerRem so vpRail callers stay in sync.
-  const railExtraRem = activeEvent ? gameEventBannerRem(uiZoom) : 1;
+  // Layout constant for the rails' fixed height: the game root's 0.5rem×2
+  // padding, plus the event banner's share of the slot while one is active.
+  // (The site header is already excluded from the slot by vpFill/vpRail.)
+  const railExtraRem = 1 + (activeEvent ? gameEventBannerRem(uiZoom) : 0);
 
   return (
     <>
@@ -331,11 +333,14 @@ export function GameMain({
           </h1>
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
+          {/* Back-to-site is now redundant — the site header (with Home,
+              Feedback, etc.) is always visible above the game — but keep a
+              small home shortcut in the row. */}
           <Link
             to="/"
             className="inline-flex size-7 items-center justify-center rounded-md border border-white/15 text-white/60 transition-colors hover:border-apex-red hover:text-white"
-            title="Back to site"
-            aria-label="Back to site"
+            title="Home"
+            aria-label="Home"
           >
             <Home className="size-3.5" />
           </Link>
@@ -394,7 +399,8 @@ export function GameMain({
           style={{
             // FIXED height — identical on every tab — so switching Earn ↔
             // Garage ↔ Leaderboard can never stretch/squeeze the rails or
-            // reshuffle the nav. Sticky keeps the nav and the save/reset
+            // reshuffle the nav. Fills the game slot (viewport minus the
+            // site header) exactly. Sticky keeps the nav and the save/reset
             // block pinned on screen while long panels scroll beside them.
             height: vpRail(SITE_ZOOM * uiZoom, railExtraRem),
             top: "0.5rem",
