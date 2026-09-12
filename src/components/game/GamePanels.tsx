@@ -615,6 +615,16 @@ function IndexPanel({ state }: { state: GameState }) {
 /* ─── WantedPanel (bounties) ─── */
 function WantedPanel({ state, dispatch }: { state: GameState; dispatch: any }) {
   const now = Date.now();
+  const level = levelFrom(state);
+  // Seed the board automatically the first time it's opened (the engine now
+  // also auto-refills, but this covers freshly-loaded old saves instantly).
+  useEffect(() => {
+    const live = state.wantedBounties.filter((b) => !b.claimed && b.expiresAt > Date.now());
+    if (live.length === 0 || state.wantedRefreshAt === 0) {
+      dispatch({ type: "REFRESH_WANTED", now: Date.now() });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const bounties = state.wantedBounties.filter((b) => !b.claimed && b.expiresAt > now);
   const expiredCount = state.wantedBounties.filter((b) => !b.claimed && b.expiresAt <= now).length;
 
@@ -623,7 +633,7 @@ function WantedPanel({ state, dispatch }: { state: GameState; dispatch: any }) {
       <SectionHeader eyebrow="Bounties" title="WANTED BOARD" hint="Sell the right cars for bonus rewards" />
       {bounties.length === 0 && expiredCount === 0 && (
         <div className="rounded-xl border border-apex-line bg-apex-panel p-8 text-center">
-          <p className="font-display text-sm text-white/40">No active bounties. Check back later!</p>
+          <p className="font-display text-sm text-white/40">No bounties available at your level yet. Level up for richer contracts!</p>
           <button type="button" onClick={() => dispatch({ type: "REFRESH_WANTED", now })}
             className="mt-3 rounded-md border border-white/15 px-3 py-1.5 font-display text-[11px] font-bold uppercase tracking-[0.12em] text-white/70 transition-colors hover:border-apex-red hover:text-white">
             Refresh Board

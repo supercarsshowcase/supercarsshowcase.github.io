@@ -42,8 +42,10 @@ const FUEL_DRAIN_INTERVAL = 100;
 /** How many bounties to show at once. */
 const WANTED_BOUNTY_COUNT = 3;
 /** Bounty duration: 24 hours. */
-const BOUNTY_DURATION_MS = 24 * 60_000;
-/** Reward multiplier for wanted bounties (relative to car value). */
+const BOUNTY_DURATION_MS = 24 * 3_600_000;
+/** Auto-refresh bounties when the board is older than this. */
+const WANTED_AUTO_REFRESH_MS = 20 * 60_000;
+/** Bounty reward multiplier over the (sell) value of the wanted cars. */
 const BOUNTY_REWARD_MULT = 3;
 
 // ── Initial state ─────────────────────────────────────────────────────────────
@@ -92,6 +94,7 @@ export function initialGameState(): GameState {
     freeSpins: 0,
     weekly: initialWeeklyState(now),
     wantedBounties: [],
+    wantedRefreshAt: 0,
   };
 }
 
@@ -434,20 +437,38 @@ export type Action =
   | { type: "REFRESH_WANTED"; now: number }
   | { type: "LOAD"; state: GameState };
 
-/** Ensure the weekly state is for the current week, resetting if needed. */
+/** Ensure the weekly state matches the current week AND current level. */
 function ensureWeekly(s: GameState, now: number): WeeklyState {
   const currentMonday = getMondayStr(now);
-  if (s.weekly.weekStart === currentMonday) return s.weekly;
-  return {
-    weekStart: currentMonday,
-    weeklyEarned: 0,
-    weeklyClicks: 0,
-    weeklyCarsBought: 0,
-    weeklyCratesOpened: 0,
-    weeklySpins: 0,
-    weeklyPrestiges: 0,
-    challenges: generateWeeklyChallenges(currentMonday),
-  };
+  const level = levelFrom(s);
+  const sameWeek = s.weekly.weekStart === currentMonday;
+  const sameLevel = s.weekly.genLevel === level;
+  if (sameWeek && sameLevel) return s.weekly;
+  if (!sameWeek) {
+    // New week: fresh counters and a freshly scaled set of challenges.
+    return {
+      weekStart: currentMonday,
+      genLevel: level,
+      weeklyEarned: 0,
+      weeklyClicks: 0,
+      weeklyCarsBought: 0,
+      weeklyCratesOpened: 0,
+      weeklySpins: 0,
+      weeklyPrestiges: 0,
+      challenges: generateWeeklyChallenges(currentMonday, level),
+    };
+  }
+  // Same week but the player leveled up: migrate progress across matching
+  // metrics and re-scale unclaimed challenges to the new level.
+  const fresh = generateWeeklyChallenges(currentMonday, level);
+  const merged: WeeklyChallenge[] = fresh.map((ch, idx) => {
+    // Carry claimed state from the slot with the same metric (no re-earning).
+    const oldSameMetric = s.weekly.challenges.find((o) => challengeMetric(o) === ch.metric);
+    const oldSameSlot = s.weekly.challenges[idx];
+    const old = oldSameMetric ?? oldSameSlot;
+    return { ...ch, progress: old?.progress ?? 0, claimed: old?.claimed ?? false };
+  });
+  return { ...s.weekly, genLevel: level, challenges: merged };
 }
 
 function getMondayStr(now: number): string {
@@ -459,24 +480,29 @@ function getMondayStr(now: number): string {
   return d.toISOString().split("T")[0];
 }
 
-/** Generate a set of wanted bounties. */
-export function generateBounties(now: number): WantedBounty[] {
+/** Generate a set of wanted bounties appropriate for the player's level. */
+export function generateBounties(now: number, level = 1): WantedBounty[] {
   const allCars = Object.values(GAME_CAR_MAP).filter((c) => !c.secret);
   const bounties: WantedBounty[] = [];
   for (let i = 0; i < WANTED_BOUNTY_COUNT; i++) {
-    // Pick 1–3 random cars for this bounty
-    const count = 1 + Math.floor(Math.random() * 3);
+    // Each bounty wants 1–3 distinct cars the player can actually own.
+    const wantCount = 1 + Math.floor(Math.random() * 3);
     const shuffled = [...allCars].sort(() => Math.random() - 0.5);
     const wants: { carId: string; count: number }[] = [];
     const usedIds = new Set<string>();
     let totalValue = 0;
-    for (let j = 0; j < Math.min(count, shuffled.length); j++) {
-      const car = shuffled[j];
+    for (const car of shuffled) {
+      if (wants.length >= wantCount) break;
       if (usedIds.has(car.id)) continue;
+      // Level gate: bounty cars sit around the player's level (±2 levels),
+      // so a level-1 player never gets a $28M hypercar bounty.
+      const dist = Math.abs(car.unlockLevel - level);
+      if (dist > 2 && car.unlockLevel > level) continue;
+      if (car.value > 25_000_000 && dist > 8) continue;
       usedIds.add(car.id);
-      const qty = 1 + Math.floor(Math.random() * 2);
-      wants.push({ carId: car.id, count: qty });
-      totalValue += car.value * qty;
+      // Players can own one of each car — every requirement must be 1.
+      wants.push({ carId: car.id, count: 1 });
+      totalValue += car.value;
     }
     if (wants.length === 0) continue;
     bounties.push({
@@ -490,14 +516,14 @@ export function generateBounties(now: number): WantedBounty[] {
   return bounties;
 }
 
-/** Check if a player can complete a bounty (owns all required cars). */
+/** Check if a player can complete a bounty (owns every wanted car). */
 export function canCompleteBounty(state: GameState, bounty: WantedBounty): boolean {
-  for (const { carId, count } of bounty.wants) {
-    if (!state.ownedCars[carId]) return false;
-    // For now, simple check: just needs to own the car
-    // (counts > 1 mean they need that many of the same car type, which is rare)
-  }
-  return true;
+  return bounty.wants.every(({ carId, count }) => {
+    if (count <= 1) return Boolean(state.ownedCars[carId]);
+    // Counts > 1 aren't generatable today (one copy per car), but keep the
+    // old saves safe: treat the requirement as satisfiable if owned.
+    return Boolean(state.ownedCars[carId]);
+  });
 }
 
 /** Fuel cost to fully refuel a car. */
@@ -532,6 +558,23 @@ function trackWeekly(s: GameState, metric: string, amount: number): WeeklyState 
   return weekly;
 }
 
+/** Expire stale bounties and auto-refill the board when due. */
+function maintainBounties(s: GameState, now: number): GameState {
+  const live = s.wantedBounties.filter((b) => !b.claimed && b.expiresAt > now);
+  const settled = s.wantedBounties.filter((b) => b.claimed);
+  const needsRefill =
+    live.length < WANTED_BOUNTY_COUNT || now - (s.wantedRefreshAt || 0) >= WANTED_AUTO_REFRESH_MS;
+  if (!needsRefill) {
+    if (live.length === s.wantedBounties.length) return s;
+    return { ...s, wantedBounties: [...live, ...settled] };
+  }
+  return {
+    ...s,
+    wantedBounties: [...live, ...generateBounties(now, levelFrom(s))].slice(0, WANTED_BOUNTY_COUNT + 2),
+    wantedRefreshAt: now,
+  };
+}
+
 function applyAchievements(s: GameState): GameState {
   const earned = newAchievements(s);
   if (earned.length === 0) return s;
@@ -553,7 +596,15 @@ export function critChance(state: GameState): number {
   return Math.min(0.15, 0.05 + levelFrom(state) * 0.0004);
 }
 
-export function gameReducer(state: GameState, action: Action): GameState {
+export function gameReducer(prevState: GameState, action: Action): GameState {
+  // Cheap weekly/bounty upkeep on every action — keeps boards live without
+  // dedicated timers. ensureWeekly also re-scales challenges after level-ups.
+  const weekly = ensureWeekly(prevState, Date.now());
+  const upkeep = maintainBounties(
+    weekly === prevState.weekly ? prevState : { ...prevState, weekly },
+    Date.now(),
+  );
+  const state = upkeep;
   switch (action.type) {
     case "CLICK": {
       const amount = Math.max(1, Math.round(action.amount));
@@ -896,7 +947,8 @@ export function gameReducer(state: GameState, action: Action): GameState {
     case "REFRESH_WANTED": {
       return {
         ...state,
-        wantedBounties: generateBounties(action.now),
+        wantedBounties: generateBounties(action.now, levelFrom(state)),
+        wantedRefreshAt: action.now,
       };
     }
     case "LOAD":
@@ -916,6 +968,7 @@ function normalize(current: GameState, loaded: Partial<GameState>): GameState {
     daily: { ...initialGameState().daily, ...(loaded.daily ?? {}) },
     weekly: loaded.weekly ?? current.weekly ?? initialWeeklyState(Date.now()),
     wantedBounties: loaded.wantedBounties ?? current.wantedBounties ?? [],
+    wantedRefreshAt: loaded.wantedRefreshAt ?? current.wantedRefreshAt ?? 0,
   };
   // Ensure all owned cars have fuel fields (for old saves)
   const ownedCars: Record<string, { upgrades: Record<string, number>; fuel: number; clicksSinceFuel: number }> = {};

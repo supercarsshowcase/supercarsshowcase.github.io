@@ -12,6 +12,7 @@ import type {
   StatKey,
   UpgradeDef,
   WeeklyChallenge,
+  WeeklyMetric,
   WeeklyState,
 } from "./types";
 
@@ -722,105 +723,184 @@ export function getMonday(date: Date): string {
   return d.toISOString().split("T")[0];
 }
 
-/** Challenge templates — rotated each week. */
-const CHALLENGE_TEMPLATES: { name: string; desc: string; target: number; rewardCash: number; rewardRep: number }[] = [
-  { name: "Earn $1M this week", desc: "Earn $1,000,000 in total this week.", target: 1_000_000, rewardCash: 500_000, rewardRep: 100 },
-  { name: "Earn $10M this week", desc: "Earn $10,000,000 in total this week.", target: 10_000_000, rewardCash: 3_000_000, rewardRep: 300 },
-  { name: "Earn $50M this week", desc: "Earn $50,000,000 in total this week.", target: 50_000_000, rewardCash: 15_000_000, rewardRep: 1_000 },
-  { name: "Earn $250M this week", desc: "Earn $250,000,000 in total this week.", target: 250_000_000, rewardCash: 80_000_000, rewardRep: 5_000 },
-  { name: "Earn $1B this week", desc: "Earn $1,000,000,000 in total this week.", target: 1_000_000_000, rewardCash: 400_000_000, rewardRep: 20_000 },
-  { name: "Click 500 times this week", desc: "Click your car 500 times this week.", target: 500, rewardCash: 250_000, rewardRep: 50 },
-  { name: "Click 2,000 times this week", desc: "Click your car 2,000 times this week.", target: 2_000, rewardCash: 1_500_000, rewardRep: 200 },
-  { name: "Buy 2 cars this week", desc: "Purchase 2 new cars this week.", target: 2, rewardCash: 1_000_000, rewardRep: 150 },
-  { name: "Buy 5 cars this week", desc: "Purchase 5 new cars this week.", target: 5, rewardCash: 5_000_000, rewardRep: 500 },
-  { name: "Open 3 crates this week", desc: "Open 3 car crates this week.", target: 3, rewardCash: 2_000_000, rewardRep: 200 },
-  { name: "Open 10 crates this week", desc: "Open 10 car crates this week.", target: 10, rewardCash: 10_000_000, rewardRep: 800 },
-  { name: "Spin 5 times this week", desc: "Spin the wheel 5 times this week.", target: 5, rewardCash: 3_000_000, rewardRep: 300 },
-  { name: "Earn $500M this week", desc: "Earn $500,000,000 in total this week.", target: 500_000_000, rewardCash: 200_000_000, rewardRep: 10_000 },
-  { name: "Earn $5B this week", desc: "Earn $5,000,000,000 in total this week.", target: 5_000_000_000, rewardCash: 2_000_000_000, rewardRep: 50_000 },
-  { name: "Prestige this week", desc: "Prestige at least once this week.", target: 1, rewardCash: 10_000_000, rewardRep: 1_000 },
-];
+/** Re-export the weekly types so engine/components can import them from here. */
+export type { WeeklyMetric, WeeklyChallenge, WeeklyState } from "./types";
 
-/** A weekly metric tracked on the state. */
-export type WeeklyMetric = "earned" | "clicks" | "carsBought" | "cratesOpened" | "spins" | "prestiges";
-
-/** Which state field each metric maps to for progress counting. */
-export const WEEKLY_METRIC_FIELDS: Record<WeeklyMetric, string> = {
-  earned: "weeklyEarned",
-  clicks: "weeklyClicks",
-  carsBought: "weeklyCarsBought",
-  cratesOpened: "weeklyCratesOpened",
-  spins: "weeklySpins",
-  prestiges: "weeklyPrestiges",
-};
-
-/** Map from a challenge template name to the metric it tracks. */
-const CHALLENGE_METRIC: Record<string, WeeklyMetric> = {
-  "Earn $1M this week": "earned",
-  "Earn $10M this week": "earned",
-  "Earn $50M this week": "earned",
-  "Earn $250M this week": "earned",
-  "Earn $1B this week": "earned",
-  "Earn $500M this week": "earned",
-  "Earn $5B this week": "earned",
-  "Click 500 times this week": "clicks",
-  "Click 2,000 times this week": "clicks",
-  "Buy 2 cars this week": "carsBought",
-  "Buy 5 cars this week": "carsBought",
-  "Open 3 crates this week": "cratesOpened",
-  "Open 10 crates this week": "cratesOpened",
-  "Spin 5 times this week": "spins",
-  "Prestige this week": "prestiges",
-};
-
-/** Return the metric a challenge tracks. */
-export function challengeMetric(challenge: { name: string }): WeeklyMetric {
-  return CHALLENGE_METRIC[challenge.name] ?? "earned";
+/**
+ * Challenge template. Targets and rewards SCALE WITH PLAYER LEVEL so a
+ * level-1 player never draws "Earn $5B" and a late-game player never gets
+ * a $1M chore. Lifetime earnings grow ~quadratically with level
+ * (level = √(totalEarned/50K)), so targets follow the same curve.
+ */
+interface ChallengeTemplate {
+  nameFmt: (target: number) => string;
+  descFmt: (target: number) => string;
+  metric: WeeklyMetric;
+  /** Target for the given player level (before rounding/jitter). */
+  target: (level: number) => number;
+  /** Cash reward for the given level + rounded target. */
+  reward: (level: number, target: number) => number;
+  /** Minimum player level before this template can be offered. */
+  minLevel?: number;
 }
 
-/** Generate 4 weekly challenges seeded by the week start date. */
-export function generateWeeklyChallenges(weekStart: string): WeeklyChallenge[] {
-  // Simple hash from weekStart string for deterministic but varied selection
+const CHALLENGE_TEMPLATES: ChallengeTemplate[] = [
+  {
+    nameFmt: (t) => `Earn ${fmtMoney(t)} this week`,
+    descFmt: (t) => `Earn ${fmtMoney(t)} in total this week.`,
+    metric: "earned",
+    // Mirrors the quadratic earning curve; ~a few levels of progress per week.
+    target: (lvl) => 200_000 * lvl * lvl,
+    // 50% of what you had to earn — consistent ROI at every level.
+    reward: (_lvl, t) => Math.round(t * 0.5),
+  },
+  {
+    nameFmt: (t) => `Click your car ${fmtNum(t)} times`,
+    descFmt: (t) => `Click your car ${fmtNum(t)} times this week.`,
+    metric: "clicks",
+    target: (lvl) => 300 * lvl,
+    // ~$250 per click of target at level 1, scaling linearly with level.
+    reward: (lvl, t) => 250_000 * lvl * (t / (300 * Math.max(lvl, 1))) * lvl,
+  },
+  {
+    nameFmt: (t) => `Buy ${t} new car${t === 1 ? "" : "s"}`,
+    descFmt: (t) => `Purchase ${t} new car${t === 1 ? "" : "s"} this week.`,
+    metric: "carsBought",
+    target: (lvl) => 2 + Math.floor((lvl - 1) / 7),
+    // Covers a meaningful slice of a level-appropriate purchase.
+    reward: (lvl, t) => Math.round(t * 500_000 * Math.sqrt(lvl)),
+    minLevel: 8,
+  },
+  {
+    nameFmt: (t) => `Open ${t} crate${t === 1 ? "" : "s"}`,
+    descFmt: (t) => `Open ${t} car crates this week.`,
+    metric: "cratesOpened",
+    target: (lvl) => 2 + Math.floor((lvl - 1) / 5),
+    // Slightly above crate cost so completing the challenge is profitable.
+    reward: (lvl, t) => Math.round(t * 2_000_000 * Math.sqrt(lvl)),
+  },
+  {
+    nameFmt: (t) => `Spin the wheel ${t} time${t === 1 ? "" : "s"}`,
+    descFmt: (t) => `Spin the Lucky Spin wheel ${t} time${t === 1 ? "" : "s"} this week.`,
+    metric: "spins",
+    target: (lvl) => 3 + Math.floor((lvl - 1) / 10),
+    reward: (lvl, t) => Math.round(t * 1_000_000 * Math.sqrt(lvl)),
+  },
+  {
+    nameFmt: () => "Prestige once",
+    descFmt: () => "Prestige at least once this week.",
+    metric: "prestiges",
+    target: () => 1,
+    reward: (lvl) => Math.round(25_000_000 * Math.sqrt(lvl)),
+    minLevel: 60,
+  },
+];
+
+/** Round targets to pleasing steps so names read cleanly. */
+function roundTarget(target: number, metric: WeeklyMetric): number {
+  if (metric === "earned") {
+    // Round earnings targets to 1-2 significant figures.
+    if (target >= 1e9) return Math.round(target / 1e8) * 1e8;
+    if (target >= 1e6) return Math.round(target / 1e5) * 1e5;
+    if (target >= 1e3) return Math.round(target / 1e3) * 1e3;
+    return Math.max(1, Math.round(target));
+  }
+  return Math.max(1, Math.round(target));
+}
+
+/** Cash reward for a challenge (delegates to the template curve). */
+function challengeReward(t: ChallengeTemplate, level: number, target: number): number {
+  return Math.max(1, Math.round(t.reward(level, target)));
+}
+
+/** Rep reward grows with the log of the target so it stays meaningful late. */
+function challengeRep(target: number, metric: WeeklyMetric): number {
+  if (metric === "prestiges") return 2_000;
+  return Math.max(10, Math.round(50 * Math.pow(Math.max(target, 1) / (metric === "earned" ? 200_000 : 300), 0.35)));
+}
+
+/** Deterministic seed from the week-start string. */
+function weekSeed(weekStart: string): number {
   let seed = 0;
   for (let i = 0; i < weekStart.length; i++) {
     seed = ((seed << 5) - seed + weekStart.charCodeAt(i)) | 0;
   }
-  const rng = () => {
-    seed = (seed * 16807 + 0) % 2147483647;
-    return (seed & 0x7fffffff) / 0x7fffffff;
-  };
-
-  // Pick 4 unique challenges
-  const shuffled = [...CHALLENGE_TEMPLATES];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-
-  return shuffled.slice(0, 4).map((t, idx) => ({
-    id: `weekly-${weekStart}-${idx}`,
-    name: t.name,
-    desc: t.desc,
-    target: t.target,
-    progress: 0,
-    rewardCash: t.rewardCash,
-    rewardRep: t.rewardRep,
-    claimed: false,
-  }));
+  return seed | 0;
 }
 
-/** Create a fresh WeeklyState for the current date. */
-export function initialWeeklyState(now: number): WeeklyState {
+/** Return the metric a challenge tracks (with legacy-name fallback). */
+export function challengeMetric(challenge: Pick<WeeklyChallenge, "name" | "metric">): WeeklyMetric {
+  if (challenge.metric) return challenge.metric;
+  // Old saves store challenges without `metric` — infer it from the name.
+  if (challenge.name.includes("Click")) return "clicks";
+  if (challenge.name.includes("Buy")) return "carsBought";
+  if (challenge.name.includes("crate")) return "cratesOpened";
+  if (challenge.name.includes("Spin")) return "spins";
+  if (challenge.name.includes("Prestige")) return "prestiges";
+  return "earned";
+}
+
+/** Deterministic Lehmer RNG from a seed. */
+function mulberry(seed: number): () => number {
+  let s = seed | 0;
+  return () => {
+    s = (s * 16807 + 0) % 2147483647;
+    return (s & 0x7fffffff) / 0x7fffffff;
+  };
+}
+
+/**
+ * Generate 4 weekly challenges scaled to the player's level.
+ * Deterministic per (weekStart, level) — reloading can't reroll rewards.
+ */
+export function generateWeeklyChallenges(weekStart: string, level = 1): WeeklyChallenge[] {
+  const rng = mulberry(weekSeed(weekStart) ^ Math.imul(level, 2654435761));
+
+  // Eligible templates for this level; fall back to always-available ones.
+  const eligible = CHALLENGE_TEMPLATES.filter((t) => (t.minLevel ?? 0) <= level);
+  const always = CHALLENGE_TEMPLATES.filter((t) => !t.minLevel);
+  const pool = eligible.length >= 4 ? eligible : always;
+
+  // Pick 4 unique templates via partial Fisher–Yates with the seeded RNG.
+  const shuffled = [...pool];
+  const picks: ChallengeTemplate[] = [];
+  for (let i = 0; i < Math.min(4, shuffled.length); i++) {
+    const j = i + Math.floor(rng() * (shuffled.length - i));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    picks.push(shuffled[i]);
+  }
+
+  return picks.map((t, idx) => {
+    // ±20% jitter on the raw target so consecutive weeks feel varied.
+    const jitter = 0.8 + rng() * 0.4;
+    const target = roundTarget(t.target(level) * jitter, t.metric);
+    return {
+      id: `weekly-${weekStart}-${idx}`,
+      name: t.nameFmt(target),
+      desc: t.descFmt(target),
+      metric: t.metric,
+      target,
+      progress: 0,
+      rewardCash: challengeReward(t, level, target),
+      rewardRep: challengeRep(target, t.metric),
+      claimed: false,
+    };
+  });
+}
+
+/** Create a fresh WeeklyState for the current date and player level. */
+export function initialWeeklyState(now: number, level = 1): WeeklyState {
   const weekStart = getMonday(new Date(now));
   return {
     weekStart,
+    genLevel: level,
     weeklyEarned: 0,
     weeklyClicks: 0,
     weeklyCarsBought: 0,
     weeklyCratesOpened: 0,
     weeklySpins: 0,
     weeklyPrestiges: 0,
-    challenges: generateWeeklyChallenges(weekStart),
+    challenges: generateWeeklyChallenges(weekStart, level),
   };
 }
 
@@ -831,7 +911,6 @@ export function levelFrom(s: { totalEarned: number; prestigeLevel: number }): nu
   const base = 1 + Math.floor(Math.sqrt(Math.max(s.totalEarned, 0) / 50000));
   return base + s.prestigeLevel * 1;
 }
-
 /** Index of the rarity (0 = common … 8 = ultimate). */
 export const rarityIndex = (r: Rarity): number => RARITIES.indexOf(r);
 
@@ -849,9 +928,13 @@ export function fmtNum(n: number): string {
   return Math.round(n).toLocaleString();
 }
 
+
+
+// ── Game car imagery ──────────────────────────────────────────────────────────
+
 /**
  * Direct Wikimedia photos for game cars the archive doesn't cover at all
- * (daily drivers & JDM icons). All URLs verified to serve HTTP 200.
+ * (daily drivers, JDM icons, beaters, secrets & casino one-offs).
  */
 const GAME_CAR_IMAGES: Record<string, string> = {
   "civic-lx-95": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/96-98_Honda_Civic_LX_sedan.jpg/960px-96-98_Honda_Civic_LX_sedan.jpg",
@@ -871,16 +954,12 @@ const GAME_CAR_IMAGES: Record<string, string> = {
   "mustang-gt-15": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/2019_Ford_Mustang_GT_5.0_facelift.jpg/960px-2019_Ford_Mustang_GT_5.0_facelift.jpg",
   "camaro-ss-16": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/2019_Chevrolet_Camaro_2SS_6.2L_front_3.16.19.jpg/960px-2019_Chevrolet_Camaro_2SS_6.2L_front_3.16.19.jpg",
   "corvette-c6-08": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4f/Chevrolet_Corvette_Z06_-_Flickr_-_Alexandre_Pr%C3%A9vot_%287%29_%28cropped%29.jpg/960px-Chevrolet_Corvette_Z06_-_Flickr_-_Alexandre_Pr%C3%A9vot_%287%29_%28cropped%29.jpg",
-  // Rust City beaters — real rusty cars for the early game.
   "rusty-hatch-91": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/35/Moscow%2C_Mitsubishi_Lancer_CY0_hatchback_rusty%2C_Aug_2025_01.jpg/960px-Moscow%2C_Mitsubishi_Lancer_CY0_hatchback_rusty%2C_Aug_2025_01.jpg",
   "beater-sedan-87": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ed/Rusty_FSO_125p_1.5_L_krk.JPG/960px-Rusty_FSO_125p_1.5_L_krk.JPG",
   "farm-pickup-80": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/Rusty_Ford_Truck%2C_Old_Metal%2C_NB_7-25-13_%2810784237423%29.jpg/960px-Rusty_Ford_Truck%2C_Old_Metal%2C_NB_7-25-13_%2810784237423%29.jpg",
-  // Secret car — the mysterious black one-off.
   "ghost-prototype": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Bugatti_La_Voiture_Noire_%2850263623691%29.jpg/960px-Bugatti_La_Voiture_Noire_%2850263623691%29.jpg",
-  // Endgame one-offs — real exotic photos for the fictional ultimates.
   "crystal-one-24": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/2017_Pagani_Zonda_HP_Barchetta_USG26.jpg/960px-2017_Pagani_Zonda_HP_Barchetta_USG26.jpg",
   "infinity-one-27": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/Mercedes-AMG_One_IAA_2023_1X7A0454.jpg/960px-Mercedes-AMG_One_IAA_2023_1X7A0454.jpg",
-  // Casino custom one-offs — real photos for the fictional casino editions.
   "casino-infinity": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/Mercedes-AMG_One_IAA_2023_1X7A0454.jpg/960px-Mercedes-AMG_One_IAA_2023_1X7A0454.jpg",
   "casino-crystal": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/2017_Pagani_Zonda_HP_Barchetta_USG26.jpg/960px-2017_Pagani_Zonda_HP_Barchetta_USG26.jpg",
   "casino-imola": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6a/Pagani_Imola_%2850418650123%29.jpg/960px-Pagani_Imola_%2850418650123%29.jpg",
@@ -891,8 +970,8 @@ const GAME_CAR_IMAGES: Record<string, string> = {
   "casino-720s": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f4/McLaren_720S_%2834579748431%29.jpg/960px-McLaren_720S_%2834579748431%29.jpg",
 };
 
-/** Manual image overrides for game cars whose archive twin uses a different slug. */
-const GAME_IMAGE_ALIASES: Record<string, string> = {
+/** Game-only cars mapped onto archive twins by slug. */
+const GAME_CAR_ALIASES: Record<string, string> = {
   "ferrari-458-12": "ferrari-488-gtb",
   "mclaren-540c-15": "mclaren-765lt",
   "mclaren-720s-17": "mclaren-765lt",
@@ -903,39 +982,39 @@ const GAME_IMAGE_ALIASES: Record<string, string> = {
   "ferrari-f8-19": "ferrari-488-gtb",
   "m4-18": "bmw-m2",
 };
-
-const normTokens = (s: string): string[] =>
-  s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim().split(/\s+/).filter(Boolean);
-
 /**
- * Real Wikimedia photo for a game car, or "" to use the generated scene.
- * Resolves exact slug → manual alias → best brand+model fuzzy match.
+ * Resolve the best image for a game car:
+ * 1. direct photo for cars the archive doesn't cover,
+ * 2. archive twin (gallerySlug or alias → verified archive photo),
+ * 3. brand/year/model fuzzy match in the archive,
+ * 4. "" so SmartImage renders its generated scene.
  */
-export function gameCarImage(def: GameCarDef): string {
-  const direct = GAME_CAR_IMAGES[def.id];
+export function gameCarImage(car: GameCarDef): string {
+  const direct = GAME_CAR_IMAGES[car.id];
   if (direct) return direct;
+
   const archive = carsList();
-  const targetSlug = def.gallerySlug || GAME_IMAGE_ALIASES[def.id];
-  if (targetSlug) {
-    const exact = archive.find((c) => c.slug === targetSlug);
-    if (exact) {
-      const img = getCarImage(exact);
-      if (img) return img;
-    }
+  const slug = car.gallerySlug || GAME_CAR_ALIASES[car.id];
+  if (slug) {
+    const twin = archive.find((c) => c.slug === slug);
+    const img = twin ? getCarImage(twin) : "";
+    if (img) return img;
   }
-  const brand = normTokens(def.brand).join(" ");
-  const defTokens = normTokens(def.name).filter((t) => t.length >= 2);
+
+  const words = (s: string) =>
+    s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim().split(/\s+/).filter(Boolean);
+  const brand = words(car.brand).join(" ");
+  const tokens = words(car.name).filter((w) => w.length >= 2);
+
   let best: { car: Car; score: number } | null = null;
-  for (const c of archive) {
-    const cBrand = normTokens(c.brand).join(" ");
-    if (!(cBrand.includes(brand) || brand.includes(cBrand))) continue;
-    const cTokens = normTokens(c.model);
+  for (const candidate of archive) {
+    const candBrand = words(candidate.brand).join(" ");
+    if (!(candBrand.includes(brand) || brand.includes(candBrand))) continue;
+    const model = words(candidate.model);
     let score = 0;
-    for (const t of defTokens) {
-      if (cTokens.includes(t)) score += 10;
-    }
-    if (Math.abs(c.year - def.year) <= 3) score += 5;
-    if (score >= 10 && (!best || score > best.score)) best = { car: c, score };
+    for (const t of tokens) if (model.includes(t)) score += 10;
+    if (Math.abs(candidate.year - car.year) <= 3) score += 5;
+    if (score >= 10 && (!best || score > best.score)) best = { car: candidate, score };
   }
   return best ? getCarImage(best.car) : "";
 }

@@ -34,6 +34,7 @@ import {
   RARITY_META,
   STARTER_ID,
   fmtMoney,
+  fmtNum,
   gameCarImage,
   levelFrom,
 } from "@/game/data";
@@ -924,10 +925,10 @@ function WeeklyChallenges({
   currentMonday.setHours(0, 0, 0, 0);
   const currentMondayStr = currentMonday.toISOString().split("T")[0];
   useEffect(() => {
-    if (weekly.weekStart !== currentMondayStr) {
+    if (weekly.weekStart !== currentMondayStr || weekly.genLevel !== levelFrom(state)) {
       dispatch({ type: "WEEKLY_CHECK", now });
     }
-  }, [weekly.weekStart, currentMondayStr, now, dispatch]);
+  }, [weekly.weekStart, weekly.genLevel, currentMondayStr, now, dispatch]);
 
   return (
     <div>
@@ -954,6 +955,9 @@ function WeeklyChallenges({
         {weekly.challenges.map((ch) => {
           const pct = Math.min(100, (ch.progress / ch.target) * 100);
           const complete = ch.progress >= ch.target;
+          // Progress reads as dollars for earn-challenges, a plain count otherwise.
+          const isCash = (ch.metric ?? "earned") === "earned";
+          const fmt = (n: number) => (isCash ? fmtMoney(n) : fmtNum(n));
           return (
             <div
               key={ch.id}
@@ -986,7 +990,7 @@ function WeeklyChallenges({
               <div className="mb-1.5">
                 <div className="mb-1 flex items-center justify-between text-[10px]">
                   <span className="text-white/40">
-                    {fmtMoney(ch.progress)} / {fmtMoney(ch.target)}
+                    {fmt(ch.progress)} / {fmt(ch.target)}
                   </span>
                   <span className="font-bold text-white/60">
                     {Math.round(pct)}%

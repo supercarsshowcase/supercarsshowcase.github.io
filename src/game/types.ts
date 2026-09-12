@@ -147,6 +147,8 @@ export interface GameState {
   weekly: WeeklyState;
   /** Active wanted bounties. */
   wantedBounties: WantedBounty[];
+  /** Timestamp of the last bounty-board refresh (manual or auto). */
+  wantedRefreshAt: number;
 }
 
 export interface SpinResult {
@@ -159,10 +161,21 @@ export interface SpinResult {
   tier?: 1 | 2 | 3;
 }
 
+/** Weekly counters a challenge can track. */
+export type WeeklyMetric =
+  | "earned"
+  | "clicks"
+  | "carsBought"
+  | "cratesOpened"
+  | "spins"
+  | "prestiges";
+
 export interface WeeklyChallenge {
   id: string;
   name: string;
   desc: string;
+  /** Which weekly counter this challenge tracks. */
+  metric: WeeklyMetric;
   target: number;
   progress: number;
   rewardCash: number;
@@ -173,6 +186,8 @@ export interface WeeklyChallenge {
 export interface WeeklyState {
   /** ISO date string (YYYY-MM-DD) for the start of the current week (Monday). */
   weekStart: string;
+  /** Player level the active challenges were generated for. */
+  genLevel?: number;
   /** Total cash earned during this week. */
   weeklyEarned: number;
   /** Clicks made during this week. */
