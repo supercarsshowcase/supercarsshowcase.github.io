@@ -13,6 +13,20 @@ export const heartbeat = mutation({
     if (userId === null) return;
 
     const now = Date.now();
+
+    // Piggyback garbage collection: cleanupStale() had no caller, so stale
+    // presence rows accumulated forever. Every ~20th heartbeat (once per
+    // ~10 min of active play) prunes rows older than 5 minutes.
+    if (Math.random() < 0.05) {
+      const cutoff = now - 5 * 60_000;
+      const stale = await ctx.db
+        .query("presence")
+        .withIndex("by_lastSeen", (q) => q.lt("lastSeen", cutoff))
+        .collect();
+      for (const doc of stale) {
+        await ctx.db.delete(doc._id);
+      }
+    }
     const existing = await ctx.db
       .query("presence")
       .withIndex("by_user", (q) => q.eq("userId", userId))

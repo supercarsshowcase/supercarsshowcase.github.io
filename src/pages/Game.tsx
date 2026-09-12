@@ -80,7 +80,11 @@ export default function Game() {
   saveCloudRef.current = () => {
     if (!isAuthenticated || !stateRef.current) return;
     try {
-      void saveCloudSave({ state: JSON.stringify(stateRef.current) });
+      // .catch so a failed cloud write (offline, auth expiry) can't surface
+      // as an unhandled promise rejection — local saves already cover us.
+      saveCloudSave({ state: JSON.stringify(stateRef.current) }).catch(
+        () => {},
+      );
     } catch { /* ignore */ }
   };
 
@@ -119,8 +123,9 @@ export default function Game() {
           style: { background: "#1a0404", border: "1px solid rgba(255,0,0,0.4)", color: "#fff" },
         });
       }
-      // Mark as claimed in the backend (fire-and-forget).
-      void claimGift({ giftId: gift._id });
+      // Mark as claimed in the backend (fire-and-forget; .catch prevents
+      // unhandled rejections from a flaky network).
+      claimGift({ giftId: gift._id }).catch(() => {});
     }
   }, [gifts, claimGift]);
 
@@ -171,31 +176,24 @@ export default function Game() {
 
   // Update leaderboard score every 30 seconds.
   useEffect(() => {
-    const id = window.setInterval(() => {
+    // Fire-and-forget with .catch: an offline leaderboard write must not
+    // surface as an unhandled promise rejection every 30s.
+    const report = () => {
       const s = stateRef.current;
       if (!s) return;
-      void upsertScore({
+      upsertScore({
         cash: s.cash,
         totalEarned: s.totalEarned,
         level: levelFrom(s),
         prestigeLevel: s.prestigeLevel,
         carCount: Object.keys(s.ownedCars).length,
-      });
-    }, 30_000);
+      }).catch(() => {});
+    };
+    const id = window.setInterval(report, 30_000);
     // Also update on first mount after a short delay.
-    const initial = setTimeout(() => {
-      const s = stateRef.current;
-      if (!s) return;
-      void upsertScore({
-        cash: s.cash,
-        totalEarned: s.totalEarned,
-        level: levelFrom(s),
-        prestigeLevel: s.prestigeLevel,
-        carCount: Object.keys(s.ownedCars).length,
-      });
-    }, 3000);
+    const initial = setTimeout(report, 3000);
     return () => { window.clearInterval(id); clearTimeout(initial); };
-  }, []);
+  }, [upsertScore]);
 
   return (
     <GameMain

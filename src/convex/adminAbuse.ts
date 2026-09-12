@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { GAME_CAR_MAP } from "../game/data";
 
 async function requireAdmin(ctx: MutationCtx | QueryCtx) {
   const userId = await getAuthUserId(ctx);
@@ -59,16 +60,23 @@ export const giveCar = mutation({
     await requireAdmin(ctx);
     const target = await ctx.db.get(args.userId);
     if (!target) throw new Error("User not found.");
-    if (!args.carId.trim()) throw new Error("Car ID required.");
+    const carId = args.carId.trim();
+    if (!carId) throw new Error("Car ID required.");
+    // The gift is only delivered via the client reducer's ADD_CAR, which
+    // silently drops unknown IDs — an admin typo would gift nothing with a
+    // success toast. Validate here so the admin sees the mistake.
+    if (!GAME_CAR_MAP[carId]) {
+      throw new Error(`Unknown car ID "${carId}".`);
+    }
 
     await ctx.db.insert("adminGifts", {
       userId: args.userId,
       kind: "car",
-      carId: args.carId.trim(),
+      carId,
       claimed: false,
       createdAt: Date.now(),
     });
-    return { success: true, carId: args.carId, userName: target.name ?? "Unknown" };
+    return { success: true, carId, userName: target.name ?? "Unknown" };
   },
 });
 

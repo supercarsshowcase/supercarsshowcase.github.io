@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
 import { useMutation, useQuery } from "convex/react";
+import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
 import { CarCard } from "@/components/CarCard";
 import { mergedCarBySlug } from "@/data/cars";
@@ -93,6 +94,10 @@ export default function MyGarage() {
     setRemoving(slug);
     try {
       await removeCar({ slug });
+    } catch (e) {
+      // Previously fire-and-forget: a failed removal surfaced as an unhandled
+      // rejection with the UI stuck showing the car.
+      toast.error(e instanceof Error ? e.message : "Could not remove the car.");
     } finally {
       setRemoving(null);
     }

@@ -1,6 +1,8 @@
-import { carsList } from "@/data/cars";
-import { getCarImage } from "@/data/images";
-import type { Car } from "@/lib/types";
+// Relative imports: this module is also typechecked by the Convex
+// toolchain (adminAbuse imports GAME_CAR_MAP), which has no "@/" alias.
+import { carsList } from "../data/cars";
+import { getCarImage } from "../data/images";
+import type { Car } from "../lib/types";
 import type {
   AchievementDef,
   CrateDef,

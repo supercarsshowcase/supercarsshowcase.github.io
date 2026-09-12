@@ -100,11 +100,13 @@ export function AppShell() {
   const removePresence = useMutation(api.presence.removePresence);
   useEffect(() => {
     if (!isAuthenticated) return;
-    void heartbeat();
-    const id = setInterval(() => void heartbeat(), 30_000);
+    // .catch: an offline heartbeat must not throw an unhandled rejection
+    // every 30 seconds — presence is cosmetic.
+    void heartbeat().catch(() => {});
+    const id = setInterval(() => void heartbeat().catch(() => {}), 30_000);
     return () => {
       clearInterval(id);
-      void removePresence();
+      void removePresence().catch(() => {});
     };
   }, [isAuthenticated, heartbeat, removePresence]);
 

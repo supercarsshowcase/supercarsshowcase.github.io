@@ -1,4 +1,5 @@
-import type { Car } from "@/lib/types";
+// Relative import: also typechecked by the Convex toolchain (no "@/" alias).
+import type { Car } from "../lib/types";
 
 // Owner-editable overrides merged on top of the stock data (see convex/cars.ts).
 // Populated at runtime by the app so admin edits show across the whole site.

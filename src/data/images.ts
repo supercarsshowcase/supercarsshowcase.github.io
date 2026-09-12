@@ -1,4 +1,5 @@
-import type { Car } from "@/lib/types";
+// Relative import: also typechecked by the Convex toolchain (no "@/" alias).
+import type { Car } from "../lib/types";
 
 /**
  * Static, hand-verified Wikimedia lead images resolved by article title (not

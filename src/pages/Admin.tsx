@@ -109,6 +109,21 @@ const CAR_EDIT_FIELDS = [
   { key: "description", label: "Description", multiline: true },
 ];
 
+// ── Two-click destructive confirm ──────────────────────────────────────────
+// Sandboxed preview iframes BLOCK window.confirm (returns false, dialog never
+// shows), which made Admin's delete/reset buttons silently do nothing. This
+// pattern guards destructive actions without any native dialog: first click
+// arms, second click executes, and it auto-disarms after 4s or on blur.
+function useArmConfirm(timeoutMs = 4_000) {
+  const [armed, setArmed] = useState<string | null>(null);
+  useEffect(() => {
+    if (!armed) return;
+    const t = setTimeout(() => setArmed(null), timeoutMs);
+    return () => clearTimeout(t);
+  }, [armed, timeoutMs]);
+  return [armed, setArmed] as const;
+}
+
 // ── Extracted: Users & Roles + Quick UI Settings (avoids Babel nesting) ─────
 function OwnerSettingsGrid() {
   const users = useQuery(api.site.listUsers);
@@ -116,6 +131,7 @@ function OwnerSettingsGrid() {
   const setUserRole = useMutation(api.site.setUserRole);
   const deleteUser = useMutation(api.site.deleteUser);
   const updateSettings = useMutation(api.site.updateSiteSettings);
+  const [armedDelete, setArmedDelete] = useArmConfirm();
 
   const [accent, setAccent] = useState("#ff2e00");
   const [siteName, setSiteName] = useState("Supercars Showcase");
@@ -134,6 +150,8 @@ function OwnerSettingsGrid() {
     (accent !== (settings?.accent ?? "#ff2e00") ||
       siteName !== (settings?.siteName ?? "Supercars Showcase"));
 
+  // Persisting site settings used to swallow errors silently — an admin
+  // could edit the site name/accent and never know saves were failing.
   const persist = useCallback(
     async (a: string, n: string) => {
       try {
@@ -143,8 +161,10 @@ function OwnerSettingsGrid() {
           bannerText: settings?.bannerText ?? "",
           bannerEnabled: settings?.bannerEnabled ?? false,
         });
-      } catch {
-        /* silent */
+      } catch (e: unknown) {
+        toast.error(
+          e instanceof Error ? e.message : "Could not save site settings",
+        );
       }
     },
     [updateSettings, settings?.bannerText, settings?.bannerEnabled],
@@ -257,13 +277,15 @@ function OwnerSettingsGrid() {
                   <button
                     type="button"
                     onClick={() => {
-                      if (
-                        !window.confirm(
-                          `Permanently delete ${u.name}'s account? This cannot be undone.`,
-                        )
-                      )
+                      // Two-click confirm (window.confirm is blocked in the
+                      // sandboxed preview iframe — it never shows).
+                      if (armedDelete !== u._id) {
+                        setArmedDelete(u._id);
                         return;
-                      void deleteUser({ userId: u._id }).catch(
+                      }
+                      setArmedDelete(null);
+                      void deleteUser({ userId: u._id }).then(
+                        () => toast.success(`Deleted ${u.name}'s account`),
                         (e: unknown) => {
                           toast.error(
                             e instanceof Error
@@ -274,7 +296,17 @@ function OwnerSettingsGrid() {
                       );
                     }}
                     aria-label={`Delete ${u.name}'s account`}
-                    className="inline-flex size-7 items-center justify-center rounded-md border border-white/15 text-white/40 transition-colors hover:border-apex-red hover:text-apex-red"
+                    title={
+                      armedDelete === u._id
+                        ? "Click again to confirm deletion"
+                        : "Click twice to delete"
+                    }
+                    className={cn(
+                      "inline-flex size-7 items-center justify-center rounded-md border transition-colors",
+                      armedDelete === u._id
+                        ? "animate-pulse border-apex-red bg-apex-red/20 text-apex-red"
+                        : "border-white/15 text-white/40 hover:border-apex-red hover:text-apex-red",
+                    )}
                   >
                     <Trash2 className="size-3.5" />
                   </button>
@@ -374,6 +406,8 @@ export default function Admin() {
   const isOwner = user?.role === "owner";
   const isModOrAdmin =
     user?.role === "moderator" || user?.role === "admin";
+  const [armedGift, setArmedGift] = useArmConfirm();
+  const [armedResetAll, setArmedResetAll] = useArmConfirm();
 
   // ── Announcements ──
   const [announce, setAnnounce] = useState("");
@@ -805,9 +839,15 @@ export default function Admin() {
                         toast.error("Invalid count");
                         return;
                       }
-                      if (!window.confirm(`Send ${count.toLocaleString()} random cars to this player?`)) {
+                      // Two-click confirm (window.confirm is blocked in the
+                      // sandboxed preview iframe — it never shows).
+                      const armKey = `gift-${abuseTarget}-${count}`;
+                      if (armedGift !== armKey) {
+                        setArmedGift(armKey);
+                        toast.info(`Click "Send Cars" again to send ${count.toLocaleString()} cars`);
                         return;
                       }
+                      setArmedGift(null);
                       try {
                         await giftRandomCars({
                           userId: abuseTarget as Id<"users">,
@@ -1266,12 +1306,13 @@ export default function Admin() {
                 <button
                   type="button"
                   onClick={async () => {
-                    if (
-                      !window.confirm(
-                        "Reset ALL car edits? This reverts every override.",
-                      )
-                    )
+                    // Two-click confirm (window.confirm is blocked in the
+                    // sandboxed preview iframe — it never shows).
+                    if (armedResetAll !== "all") {
+                      setArmedResetAll("all");
                       return;
+                    }
+                    setArmedResetAll(null);
                     try {
                       await resetAllCarEdits();
                       toast.success("All car edits reset");
@@ -1281,9 +1322,14 @@ export default function Admin() {
                       );
                     }
                   }}
-                  className="rounded border border-white/15 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-white/60 hover:border-apex-red hover:text-apex-red"
+                  className={cn(
+                    "rounded border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] transition-colors",
+                    armedResetAll === "all"
+                      ? "animate-pulse border-apex-red bg-apex-red/20 text-apex-red"
+                      : "border-white/15 text-white/60 hover:border-apex-red hover:text-apex-red",
+                  )}
                 >
-                  Reset All
+                  {armedResetAll === "all" ? "Confirm reset?" : "Reset All"}
                 </button>
               </div>
 
