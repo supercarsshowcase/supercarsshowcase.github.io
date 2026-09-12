@@ -841,13 +841,18 @@ export function gameReducer(prevState: GameState, action: Action): GameState {
         weekly: weeklySpin,
       });
     }
-    case "REFRESH_DEALER":
+    case "REFRESH_DEALER": {
+      // The UI computes the cost and sends it — but cash changes every tick
+      // (passive income), so a stale/staged click could dip below the price
+      // between render and dispatch. Re-validate here: never go negative.
+      if (state.cash < action.cost) return state;
       return {
         ...state,
         cash: state.cash - action.cost,
         dealerStock: { ...state.dealerStock, [action.dealerId]: action.stock },
         dealerRefreshAt: action.refreshAt,
       };
+    }
     case "PRESTIGE": {
       const requirement = 5000 * (state.prestigeLevel + 1);
       if (state.reputation < requirement) return state;

@@ -166,7 +166,19 @@ export const getMyGifts = query({
       .filter((q) => q.eq(q.field("userId"), userId))
       .filter((q) => q.eq(q.field("claimed"), false))
       .collect();
-    return gifts;
+    // Resolve player-to-player gift senders so the toast can say who sent it.
+    const senderIds = new Set(
+      gifts.map((g) => g.fromUserId).filter((id): id is NonNullable<typeof id> => Boolean(id)),
+    );
+    const names = new Map<string, string>();
+    for (const sid of senderIds) {
+      const u = sid ? await ctx.db.get(sid) : null;
+      if (u) names.set(sid, u.name ?? u.username ?? u.email ?? "Another player");
+    }
+    return gifts.map((g) => ({
+      ...g,
+      fromName: g.fromUserId ? (names.get(g.fromUserId) ?? "Another player") : undefined,
+    }));
   },
 });
 

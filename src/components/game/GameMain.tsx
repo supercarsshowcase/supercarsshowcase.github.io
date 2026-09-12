@@ -164,6 +164,15 @@ export function GameMain({
   const lastClickAt = useRef(0);
   const clickTimestamps = useRef<number[]>([]);
   const [clickBlocked, setClickBlocked] = useState(false);
+  // The burst-penalty unlock timer must be cancelled on unmount — a bare
+  // setTimeout fires after the game page is gone (React no-ops the setState,
+  // but the timer keeps the component closure alive for its full duration).
+  const burstTimerRef = useRef<number | null>(null);
+  useEffect(() => {
+    return () => {
+      if (burstTimerRef.current !== null) window.clearTimeout(burstTimerRef.current);
+    };
+  }, []);
 
   // ── UI zoom: a pure function of the window width, applied via CSS `zoom`
   // (NOT transform scale — scale doesn't affect layout, which caused the
@@ -227,9 +236,11 @@ export function GameMain({
         duration: BURST_PENALTY_MS,
         style: { background: "#1a0404", border: "1px solid rgba(255,0,0,0.4)", color: "#fff" },
       });
-      setTimeout(() => {
+      if (burstTimerRef.current !== null) window.clearTimeout(burstTimerRef.current);
+      burstTimerRef.current = window.setTimeout(() => {
         setClickBlocked(false);
         clickTimestamps.current = [];
+        burstTimerRef.current = null;
       }, BURST_PENALTY_MS);
       return;
     }
@@ -596,6 +607,7 @@ export function GameMain({
         open={showGiftModal}
         onClose={() => setShowGiftModal(false)}
         currentCash={cash}
+        onSent={(amount) => dispatch({ type: "ADD_CASH", amount: -amount })}
       />
     </>
   );
@@ -924,11 +936,15 @@ function WeeklyChallenges({
   currentMonday.setDate(currentMonday.getDate() - d + (d === 0 ? -6 : 1));
   currentMonday.setHours(0, 0, 0, 0);
   const currentMondayStr = currentMonday.toISOString().split("T")[0];
+  // The WEEKLY_CHECK itself is guarded in the reducer; the effect only needs
+  // to fire when the stored week/level actually disagrees with reality —
+  // including a raw `now` (changes every ms) re-ran it every single render.
+  const playerLevel = levelFrom(state);
   useEffect(() => {
-    if (weekly.weekStart !== currentMondayStr || weekly.genLevel !== levelFrom(state)) {
-      dispatch({ type: "WEEKLY_CHECK", now });
+    if (weekly.weekStart !== currentMondayStr || weekly.genLevel !== playerLevel) {
+      dispatch({ type: "WEEKLY_CHECK", now: Date.now() });
     }
-  }, [weekly.weekStart, weekly.genLevel, currentMondayStr, now, dispatch]);
+  }, [weekly.weekStart, weekly.genLevel, currentMondayStr, playerLevel, dispatch]);
 
   return (
     <div>

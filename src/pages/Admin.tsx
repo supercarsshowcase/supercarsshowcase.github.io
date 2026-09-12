@@ -99,8 +99,11 @@ const ACCENT_PRESETS = [
 ];
 
 // ── Car edit fields ──────────────────────────────────────────────────────────
+// Keys MUST match the convex cars.ts editFields validator (and the Car type).
+// "displayName" used to be sent here — the validator rejects unknown fields,
+// so EVERY save failed and the whole editor was dead.
 const CAR_EDIT_FIELDS = [
-  { key: "displayName", label: "Display name" },
+  { key: "model", label: "Model name (display)" },
   { key: "priceUSD", label: "Price (USD)", hint: "Raw number, e.g. 3900000" },
   { key: "horsepower", label: "Horsepower", hint: "Raw number" },
   { key: "topSpeedKmh", label: "Top speed (km/h)", hint: "Raw number" },
@@ -408,6 +411,7 @@ export default function Admin() {
     user?.role === "moderator" || user?.role === "admin";
   const [armedGift, setArmedGift] = useArmConfirm();
   const [armedResetAll, setArmedResetAll] = useArmConfirm();
+  const [armedFeedback, setArmedFeedback] = useArmConfirm();
 
   // ── Announcements ──
   const [announce, setAnnounce] = useState("");
@@ -481,7 +485,7 @@ export default function Admin() {
       carOverrides as Record<string, Record<string, unknown>> | undefined
     )?.[slug] ?? {};
     setEditDraft({
-      displayName: String(ov.displayName ?? ""),
+      model: String(ov.model ?? ""),
       priceUSD:
         ov.priceUSD != null ? String(ov.priceUSD) : "",
       horsepower:
@@ -497,21 +501,24 @@ export default function Admin() {
 
   const saveCarEdits = async () => {
     if (!editCarSlug) return;
-    const patch: Record<string, string | number | undefined> = {};
+    // Only include non-empty fields — omitted keys keep their current value,
+    // and sending undefined for every untouched field is pointless traffic.
+    const patch: Record<string, string | number> = {};
     for (const f of CAR_EDIT_FIELDS) {
       const raw = String(editDraft[f.key] ?? "").trim();
-      if (!raw) {
-        patch[f.key] = undefined;
-        continue;
-      }
+      if (!raw) continue;
       if (
         f.key === "priceUSD" ||
         f.key === "horsepower" ||
-        f.key === "topSpeedKmh"
+        f.key === "topSpeedKmh" ||
+        f.key === "zeroToHundredKmh"
       ) {
-        patch[f.key] = Number(raw) || undefined;
-      } else if (f.key === "zeroToHundredKmh") {
-        patch[f.key] = Number(raw) || undefined;
+        const num = Number(raw);
+        if (!Number.isFinite(num) || num < 0) {
+          toast.error(`${f.label}: "${raw}" is not a valid number`);
+          return;
+        }
+        patch[f.key] = num;
       } else {
         patch[f.key] = raw;
       }
@@ -1217,12 +1224,18 @@ export default function Admin() {
                           <select
                             value={f.status}
                             onChange={(e) =>
-                              void setFeedbackStatus({
+                              setFeedbackStatus({
                                 feedbackId: f._id,
                                 status: e.target.value as
                                   | "new"
                                   | "read",
                               })
+                                .then(() => toast.success("Marked " + e.target.value))
+                                .catch((e: unknown) =>
+                                  toast.error(
+                                    e instanceof Error ? e.message : "Failed to update status",
+                                  ),
+                                )
                             }
                             className="cursor-pointer rounded border border-white/[0.08] bg-[#0b0b0c] px-1.5 py-1 text-[10px] text-white outline-none"
                           >
@@ -1231,11 +1244,21 @@ export default function Admin() {
                           </select>
                           <button
                             type="button"
-                            onClick={() =>
-                              void deleteFeedback({
-                                feedbackId: f._id,
-                              })
-                            }
+                            onClick={() => {
+                              if (armedFeedback !== f._id) {
+                                setArmedFeedback(f._id);
+                                return;
+                              }
+                              setArmedFeedback(null);
+                              deleteFeedback({ feedbackId: f._id })
+                                .then(() => toast.success("Feedback deleted"))
+                                .catch((e: unknown) =>
+                                  toast.error(
+                                    e instanceof Error ? e.message : "Failed to delete feedback",
+                                  ),
+                                );
+                            }}
+                            title={armedFeedback === f._id ? "Click again to confirm" : "Click twice to delete"}
                             className="inline-flex size-6 items-center justify-center rounded border border-white/15 text-white/40 hover:border-apex-red hover:text-apex-red"
                           >
                             <Trash2 className="size-3" />

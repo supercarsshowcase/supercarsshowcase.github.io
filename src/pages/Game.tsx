@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
 import { GameMain } from "@/components/game/GameMain";
 import { gameReducer, loadGame, saveGame } from "@/game/engine";
-import { levelFrom } from "@/game/data";
+import { GAME_CARS, levelFrom } from "@/game/data";
 
 const SAVE_INTERVAL_MS = 5000;
 
@@ -101,13 +101,46 @@ export default function Game() {
           duration: 8000,
           style: { background: "#1a0a04", border: "1px solid rgba(255,46,0,0.4)", color: "#fff" },
         });
+      } else if (gift.kind === "player_gift" && gift.amount) {
+        // Player-to-player gifts were silently dropped here: the money was
+        // marked claimed but never delivered. Deliver it now.
+        dispatch({ type: "ADD_CASH", amount: gift.amount });
+        toast.success(
+          `🎁 ${gift.fromName ?? "A player"} sent you $${gift.amount.toLocaleString()}!`,
+          {
+            duration: 8000,
+            style: { background: "#0a1a10", border: "1px solid rgba(0,220,130,0.4)", color: "#fff" },
+          },
+        );
       } else if (gift.kind === "car" && gift.carId) {
         dispatch({ type: "ADD_CAR", carId: gift.carId });
         toast.success(`🏎️ Admin Gift: A new car was added to your garage!`, {
           duration: 8000,
           style: { background: "#1a0a04", border: "1px solid rgba(255,46,0,0.4)", color: "#fff" },
         });
-      } else if (gift.kind === "spins" && gift.amount) {
+      } else if (gift.kind === "random_cars" && gift.amount) {
+        // Admin "Send Cars" inserted kind "random_cars" but nothing consumed
+        // it — the gift was marked claimed and the player got NOTHING.
+        // Deliver up to `amount` random cars the player doesn't own yet
+        // (secret achievement cars are never granted this way).
+        const owned = stateRef.current?.ownedCars ?? {};
+        const pool = GAME_CARS.filter((c) => !c.secret && !owned[c.id]);
+        const shuffled = [...pool].sort(() => Math.random() - 0.5);
+        const picks = shuffled.slice(0, Math.min(gift.amount, 500));
+        for (const car of picks) {
+          dispatch({ type: "ADD_CAR", carId: car.id });
+        }
+        if (picks.length > 0) {
+          toast.success(
+            `🏎️ Admin Gift: ${picks.length.toLocaleString()} random car${picks.length === 1 ? "" : "s"} added to your garage!`,
+            {
+              duration: 8000,
+              style: { background: "#1a0a04", border: "1px solid rgba(255,46,0,0.4)", color: "#fff" },
+            },
+          );
+        } else {
+          toast.info("Garage already owns every available car — nothing to add.");
+        }
         dispatch({ type: "GIVE_SPINS", amount: gift.amount });
         toast.success(`🎰 Admin Gift: +${gift.amount.toLocaleString()} free spins!`, {
           duration: 8000,

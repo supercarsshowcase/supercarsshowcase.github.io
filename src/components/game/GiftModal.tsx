@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
@@ -13,9 +13,11 @@ interface GiftModalProps {
   open: boolean;
   onClose: () => void;
   currentCash: number;
+  /** Called after the server accepts the gift: deducts the sender's cash. */
+  onSent: (amount: number) => void;
 }
 
-export function GiftModal({ open, onClose, currentCash }: GiftModalProps) {
+export function GiftModal({ open, onClose, currentCash, onSent }: GiftModalProps) {
   const [search, setSearch] = useState("");
   const [selectedUser, setSelectedUser] = useState<{
     id: string;
@@ -24,6 +26,10 @@ export function GiftModal({ open, onClose, currentCash }: GiftModalProps) {
   } | null>(null);
   const [amount, setAmount] = useState("");
   const [sending, setSending] = useState(false);
+  // Guards against double-sends: React state can lag behind rapid clicks,
+  // and two in-flight giftCash calls would otherwise both "succeed" while
+  // only one deduction happens. One send per modal session, period.
+  const sendingRef = useRef(false);
 
   const searchUsers = useQuery(
     api.gifting.searchUsers,
@@ -40,6 +46,7 @@ export function GiftModal({ open, onClose, currentCash }: GiftModalProps) {
   ].filter((v) => v <= Math.min(currentCash, MAX_GIFT));
 
   const handleSend = useCallback(async () => {
+    if (sendingRef.current) return; // one in-flight send, ever
     if (!selectedUser || !amount) {
       toast.error("Select a recipient and enter an amount");
       return;
@@ -59,12 +66,17 @@ export function GiftModal({ open, onClose, currentCash }: GiftModalProps) {
       return;
     }
 
+    sendingRef.current = true;
     setSending(true);
     try {
       await giftCash({
         recipientId: selectedUser.id as Id<"users">,
         amount: numAmount,
       });
+      // The sender's cash lives client-side, so the server can't deduct it —
+      // deduct here only after the gift is accepted (previously the sender
+      // paid nothing: free money printer).
+      onSent(numAmount);
       toast.success(`Sent ${fmtMoney(numAmount)} to ${selectedUser.name}!`);
       setSelectedUser(null);
       setAmount("");
@@ -73,9 +85,10 @@ export function GiftModal({ open, onClose, currentCash }: GiftModalProps) {
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Failed to send gift");
     } finally {
+      sendingRef.current = false;
       setSending(false);
     }
-  }, [selectedUser, amount, currentCash, giftCash, onClose]);
+  }, [selectedUser, amount, currentCash, giftCash, onClose, onSent]);
 
   if (!open) return null;
 
