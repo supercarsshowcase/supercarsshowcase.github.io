@@ -48,7 +48,13 @@ import {
   passivePerSec,
   type Action,
 } from "@/game/engine";
-import { gameZoom, SITE_ZOOM, vpCap, vpFill } from "@/game/fit";
+import {
+  gameEventBannerRem,
+  gameZoom,
+  SITE_ZOOM,
+  vpFill,
+  vpRail,
+} from "@/game/fit";
 import type { GameState } from "@/game/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -152,6 +158,7 @@ export function GameMain({
   const [chatOpen, setChatOpen] = useState(true);
   const [popups, setPopups] = useState<Popup[]>([]);
   const popupId = useRef(0);
+  const rootRef = useRef<HTMLDivElement>(null);
 
   // ── Anti-autoclicker state ──
   const lastClickAt = useRef(0);
@@ -193,6 +200,14 @@ export function GameMain({
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
+
+  // Reset the shell's scroll position when the tab changes. Without this,
+  // switching from a long tab (Garage) back to a short one (Earn,
+  // Leaderboard) left the viewport mid-scrolled, so the UI appeared to
+  // "jump"/keep moving after every tab switch.
+  useEffect(() => {
+    rootRef.current?.parentElement?.scrollTo?.({ top: 0 });
+  }, [tab]);
 
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const now = Date.now();
@@ -260,6 +275,10 @@ export function GameMain({
     }
   };
 
+  // Layout constant for the rails' fixed height: the event banner's rendered
+  // height. Exported via gameEventBannerRem so vpRail callers stay in sync.
+  const railExtraRem = activeEvent ? gameEventBannerRem(uiZoom) : 1;
+
   return (
     <>
       {/* ── Game root. The whole site renders at browser-zoom scale via the
@@ -267,6 +286,7 @@ export function GameMain({
           (uiZoom = SITE_ZOOM). minHeight is divided by the total effective
           zoom so it lands at exactly one real viewport — no dead band. ── */}
       <div
+        ref={rootRef}
         className="flex w-full flex-col overflow-visible px-2 py-2 sm:px-3 lg:px-4"
         style={{
           zoom: uiZoom,
@@ -372,13 +392,11 @@ export function GameMain({
         <aside
           className="z-10 hidden w-[18rem] shrink-0 flex-col gap-2 md:sticky md:flex"
           style={{
-            // Stretch to the row's full height, capped at one viewport (minus
-            // the root's 0.5rem×2 padding). Divides by the TOTAL effective
-            // zoom (site zoom × game zoom — same as the chat rail) so the
-            // cap stays correct if either zoom factor ever changes. Sticky
-            // keeps the nav and the save/reset block pinned on screen on
-            // long tabs — no black gap above or below, on any tab.
-            maxHeight: vpCap(SITE_ZOOM * uiZoom),
+            // FIXED height — identical on every tab — so switching Earn ↔
+            // Garage ↔ Leaderboard can never stretch/squeeze the rails or
+            // reshuffle the nav. Sticky keeps the nav and the save/reset
+            // block pinned on screen while long panels scroll beside them.
+            height: vpRail(SITE_ZOOM * uiZoom, railExtraRem),
             top: "0.5rem",
           }}
         >
@@ -417,8 +435,11 @@ export function GameMain({
               </span>
             </div>
             <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-white/10">
+              {/* initial={false} — animate only on real value changes, not
+                  when the tab remounts this component (no re-sweep). */}
               <motion.div
                 className="h-full rounded-full bg-apex-red"
+                initial={false}
                 animate={{ width: `${xpPct}%` }}
                 transition={{ duration: 0.4 }}
               />
@@ -558,7 +579,7 @@ export function GameMain({
         <ChatPanel
           open={chatOpen}
           onToggle={() => setChatOpen((v) => !v)}
-          maxHeight={vpCap(SITE_ZOOM * uiZoom)}
+          height={vpRail(SITE_ZOOM * uiZoom, railExtraRem)}
         />
       </div>
       </div>
@@ -728,6 +749,7 @@ function EarnZone({
               <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
                 <motion.div
                   className="h-full rounded-full bg-apex-red"
+                  initial={false}
                   animate={{ width: `${condition * 100}%` }}
                   transition={{ duration: 0.4 }}
                 />
@@ -748,6 +770,7 @@ function EarnZone({
                   <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
                     <motion.div
                       className={cn("h-full rounded-full", outOfFuel ? "bg-red-500" : fuelPct < 25 ? "bg-amber-400" : "bg-emerald-400")}
+                      initial={false}
                       animate={{ width: `${fuelPct}%` }}
                       transition={{ duration: 0.4 }}
                     />

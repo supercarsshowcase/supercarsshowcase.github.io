@@ -418,7 +418,16 @@ export function AppShell() {
       </header>
       )}
 
-      <main className={isGame ? "min-h-0 flex-1 overflow-y-auto" : "flex-1"}>
+      {/* On the game page the main area is the scroll container.
+          scrollbar-gutter: stable keeps the vertical gutter reserved even
+          when the current tab is short — without it, long tabs (Garage,
+          Index) show a scrollbar and short ones (Earn, Leaderboard) don't,
+          and every tab switch resized the content area by ~15px (a visible
+          "the UI keeps changing" width jiggle). */}
+      <main
+        className={isGame ? "min-h-0 flex-1 overflow-y-auto" : "flex-1"}
+        style={isGame ? { scrollbarGutter: "stable" } : undefined}
+      >
         <Outlet />
       </main>
 

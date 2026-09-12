@@ -24,12 +24,13 @@ const ROLE_BADGES: Record<string, { label: string; color: string }> = {
 export function ChatPanel({
   open,
   onToggle,
-  maxHeight,
+  height,
 }: {
   open: boolean;
   onToggle: () => void;
-  /** CSS max-height for the rail, in the game's pre-zoom pixels. */
-  maxHeight?: string;
+  /** FIXED CSS height for the rail, in the game's pre-zoom pixels —
+   *  identical on every tab so switching tabs can never resize the rail. */
+  height?: string;
 }) {
   const { user, isAuthenticated } = useAuth();
   const messages = useQuery(api.chat.getMessages) ?? [];
@@ -76,7 +77,7 @@ export function ChatPanel({
   return (
     <div
       className="hidden w-56 shrink-0 flex-col self-stretch overflow-hidden rounded-xl border border-apex-line bg-apex-panel shadow-[0_10px_40px_rgba(0,0,0,0.5)] md:flex"
-      style={{ maxHeight: maxHeight ?? "calc(100dvh - 0.75rem)" }}
+      style={{ height: height ?? "calc(100dvh - 0.75rem)" }}
     >
       {/* Header */}
       <div className="flex items-center gap-1.5 border-b border-apex-line px-2.5 py-2">

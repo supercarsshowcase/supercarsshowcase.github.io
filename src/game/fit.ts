@@ -45,9 +45,27 @@ export function vpFill(zoom: number): string {
 }
 
 /**
- * Pre-zoom max-height for rails (sidebar, chat) that must fit inside one
- * real viewport: vpFill minus the game root's 0.5rem×2 padding.
+ * FIXED pre-zoom height for the side rails (sidebar, chat): exactly one
+ * real viewport minus `extraRem` (the game root's 0.5rem×2 padding). Fixed —
+ * not a max-height stretch — so the rails are IDENTICAL on every tab; a
+ * stretch cap lets short tabs (Earn) size the rails differently than long
+ * ones (Garage), which visibly reshuffled the nav on every tab switch.
  */
-export function vpCap(zoom: number): string {
-  return `calc(100dvh / ${safeZoom(zoom)} - 1rem)`;
+export function vpRail(zoom: number, extraRem = 1): string {
+  return `calc(100dvh / ${safeZoom(zoom)} - ${extraRem}rem)`;
+}
+
+/**
+ * Extra rem the rails must shrink by while the event banner is showing, so
+ * the game still fits exactly one viewport. The banner is one 1.25rem text
+ * line in a py-4 (1rem×2) wrapper with an mb-4 margin and 1px×2 borders —
+ * divided by the effective zoom (rem is not scaled by CSS zoom).
+ */
+export function gameEventBannerRem(uiZoom: number): number {
+  const z = safeZoom(uiZoom);
+  const line = 1.25;
+  const pad = 2;
+  const mb = 1;
+  const border = 0.125;
+  return (line + pad + mb + border) / z;
 }
