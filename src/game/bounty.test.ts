@@ -153,6 +153,36 @@ describe("weekly challenge scaling", () => {
     expect(ws.weekStart).toBe(getMonday(new Date(NOW)));
     expect(ws.challenges.length).toBe(4);
   });
+
+  test("mega-level saves get capped, completable targets (the 447B-level bug)", () => {
+    // Regression: an absurd save level used to draw "spin 5,113,616,471 times".
+    for (let w = 0; w < 52; w++) {
+      const week = new Date(Date.UTC(2026, 0, 5) + w * 7 * 86_400_000)
+        .toISOString()
+        .split("T")[0];
+      for (const ch of generateWeeklyChallenges(week, 447_213_595)) {
+        if (ch.metric === "spins") expect(ch.target).toBeLessThanOrEqual(15);
+        if (ch.metric === "cratesOpened") expect(ch.target).toBeLessThanOrEqual(10);
+        if (ch.metric === "carsBought") expect(ch.target).toBeLessThanOrEqual(5);
+        if (ch.metric === "clicks") expect(ch.target).toBeLessThanOrEqual(800);
+        if (ch.metric === "earned") expect(ch.target).toBeLessThanOrEqual(1.5e9);
+      }
+    }
+  });
+
+  test("spins target is bounded even with jitter (wheel is free every 15 min)", () => {
+    // The 15-spin cap must hold AFTER the ±20% jitter, not just before.
+    for (let lvl = 1; lvl <= 2000; lvl += 7) {
+      for (let w = 0; w < 8; w++) {
+        const week = new Date(Date.UTC(2026, 0, 5) + w * 7 * 86_400_000)
+          .toISOString()
+          .split("T")[0];
+        for (const ch of generateWeeklyChallenges(week, lvl)) {
+          if (ch.metric === "spins") expect(ch.target).toBeLessThanOrEqual(15);
+        }
+      }
+    }
+  });
 });
 
 describe("wanted bounties", () => {

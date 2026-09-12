@@ -738,10 +738,24 @@ interface ChallengeTemplate {
   metric: WeeklyMetric;
   /** Target for the given player level (before rounding/jitter). */
   target: (level: number) => number;
+  /** Absolute ceiling after jitter — count quests must stay humanly doable. */
+  maxTarget?: number;
   /** Cash reward for the given level + rounded target. */
   reward: (level: number, target: number) => number;
   /** Minimum player level before this template can be offered. */
   minLevel?: number;
+}
+
+/**
+ * Challenges scale with level UP TO THIS CAP. Beyond it, quests stay fixed —
+ * otherwise mega-level saves (admin cash, deep prestige) draw targets like
+ * "spin 5 billion times" that no human can ever complete.
+ */
+const CHALLENGE_LEVEL_CAP = 500;
+
+/** Effective level for quest scaling: 1 … CHALLENGE_LEVEL_CAP. */
+function cappedLevel(level: number): number {
+  return Math.max(1, Math.min(Math.floor(level) || 1, CHALLENGE_LEVEL_CAP));
 }
 
 const CHALLENGE_TEMPLATES: ChallengeTemplate[] = [
@@ -749,8 +763,8 @@ const CHALLENGE_TEMPLATES: ChallengeTemplate[] = [
     nameFmt: (t) => `Earn ${fmtMoney(t)} this week`,
     descFmt: (t) => `Earn ${fmtMoney(t)} in total this week.`,
     metric: "earned",
-    // Weekly income ≈ totalEarned × 4% ≈ 2K × (level−1)²; ~2.5× weekly income
-    // is a real but reachable week of play at every level.
+    // Weekly income ≈ totalEarned × 4%; ~2.5× that is a solid week's goal.
+    // Caps at $1.25B so mega-level saves get a human target, not quintillions.
     target: (lvl) => 5_000 * lvl * lvl,
     // 60% of what you had to earn — a fat payout for the main grind.
     reward: (_lvl, t) => Math.round(t * 0.6),
@@ -759,37 +773,43 @@ const CHALLENGE_TEMPLATES: ChallengeTemplate[] = [
     nameFmt: (t) => `Click your car ${fmtNum(t)} times`,
     descFmt: (t) => `Click your car ${fmtNum(t)} times this week.`,
     metric: "clicks",
-    target: (lvl) => 300 * lvl,
-    reward: (lvl, t) => Math.round(t * 7 * lvl * lvl),
+    // Grows to a hard cap of 800 clicks — always a few casual sessions.
+    target: (lvl) => Math.min(300 + 12 * (lvl - 1), 800),
+    maxTarget: 800,
+    reward: (lvl, t) => Math.round(t * 5 * lvl * lvl),
   },
   {
     nameFmt: (t) => `Buy ${t} new car${t === 1 ? "" : "s"}`,
     descFmt: (t) => `Purchase ${t} new car${t === 1 ? "" : "s"} this week.`,
     metric: "carsBought",
-    target: (lvl) => 2 + Math.floor((lvl - 1) / 7),
-    reward: (lvl, t) => Math.round(t * 800 * lvl * lvl),
+    target: (lvl) => Math.min(2 + Math.floor((lvl - 1) / 7), 5),
+    maxTarget: 5,
+    reward: (lvl, t) => Math.round(t * 150 * lvl * lvl),
     minLevel: 8,
   },
   {
     nameFmt: (t) => `Open ${t} crate${t === 1 ? "" : "s"}`,
     descFmt: (t) => `Open ${t} car crates this week.`,
     metric: "cratesOpened",
-    target: (lvl) => 2 + Math.floor((lvl - 1) / 5),
-    reward: (lvl, t) => Math.round(t * 1_200 * lvl * lvl),
+    target: (lvl) => Math.min(2 + Math.floor((lvl - 1) / 5), 10),
+    maxTarget: 10,
+    reward: (lvl, t) => Math.round(t * 200 * lvl * lvl),
   },
   {
     nameFmt: (t) => `Spin the wheel ${t} time${t === 1 ? "" : "s"}`,
     descFmt: (t) => `Spin the Lucky Spin wheel ${t} time${t === 1 ? "" : "s"} this week.`,
     metric: "spins",
-    target: (lvl) => 3 + Math.floor((lvl - 1) / 10),
-    reward: (lvl, t) => Math.round(t * 600 * lvl * lvl),
+    // The wheel is free every 15 min → ≤15 spins/week is always completable.
+    target: (lvl) => Math.min(3 + Math.floor((lvl - 1) / 10), 15),
+    maxTarget: 15,
+    reward: (lvl, t) => Math.round(t * 100 * lvl * lvl),
   },
   {
     nameFmt: () => "Prestige once",
     descFmt: () => "Prestige at least once this week.",
     metric: "prestiges",
     target: () => 1,
-    reward: (lvl) => Math.round(25_000 * lvl * lvl),
+    reward: (lvl) => Math.round(10_000 * lvl * lvl),
     minLevel: 60,
   },
 ];
@@ -868,10 +888,14 @@ export function generateWeeklyChallenges(weekStart: string, level = 1): WeeklyCh
     picks.push(shuffled[i]);
   }
 
+  // Mega-level saves scale quests only up to the cap (see cappedLevel).
+  const effLevel = cappedLevel(level);
   return picks.map((t, idx) => {
-    // ±20% jitter on the raw target so consecutive weeks feel varied.
+    // ±20% jitter on the raw target so consecutive weeks feel varied, then
+    // clamped to the template's absolute ceiling so caps hold after jitter.
     const jitter = 0.8 + rng() * 0.4;
-    const target = roundTarget(t.target(level) * jitter, t.metric);
+    const clamped = Math.min(t.target(effLevel) * jitter, t.maxTarget ?? Infinity);
+    const target = roundTarget(clamped, t.metric);
     return {
       id: `weekly-${weekStart}-${idx}`,
       name: t.nameFmt(target),
@@ -879,7 +903,7 @@ export function generateWeeklyChallenges(weekStart: string, level = 1): WeeklyCh
       metric: t.metric,
       target,
       progress: 0,
-      rewardCash: challengeReward(t, level, target),
+      rewardCash: challengeReward(t, effLevel, target),
       rewardRep: challengeRep(target, t.metric),
       claimed: false,
     };
