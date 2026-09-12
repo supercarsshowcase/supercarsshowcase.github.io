@@ -14,7 +14,7 @@ import {
   generateWeeklyChallenges,
   initialWeeklyState,
 } from "./data";
-import type { CrateResult, DealerDef, GameState, SpinResult, WeeklyState, WeeklyChallenge, WantedBounty } from "./types";
+import type { CrateResult, DealerDef, GameCarDef, GameState, SpinResult, WeeklyState, WeeklyChallenge, WantedBounty } from "./types";
 
 const SAVE_KEY = "supercars.game.v1";
 const STORAGE_VERSION = 1;
@@ -458,15 +458,14 @@ function ensureWeekly(s: GameState, now: number): WeeklyState {
       challenges: generateWeeklyChallenges(currentMonday, level),
     };
   }
-  // Same week but the player leveled up: migrate progress across matching
-  // metrics and re-scale unclaimed challenges to the new level.
+  // Same week but the player leveled up: migrate progress ONLY from the old
+  // challenge with the SAME metric — never from a different slot's metric,
+  // which would let a claim from one category free-claim another.
   const fresh = generateWeeklyChallenges(currentMonday, level);
-  const merged: WeeklyChallenge[] = fresh.map((ch, idx) => {
-    // Carry claimed state from the slot with the same metric (no re-earning).
-    const oldSameMetric = s.weekly.challenges.find((o) => challengeMetric(o) === ch.metric);
-    const oldSameSlot = s.weekly.challenges[idx];
-    const old = oldSameMetric ?? oldSameSlot;
-    return { ...ch, progress: old?.progress ?? 0, claimed: old?.claimed ?? false };
+  const merged: WeeklyChallenge[] = fresh.map((ch) => {
+    const old = s.weekly.challenges.find((o) => challengeMetric(o) === ch.metric);
+    if (!old) return ch;
+    return { ...ch, progress: old.progress, claimed: old.claimed };
   });
   return { ...s.weekly, genLevel: level, challenges: merged };
 }
@@ -480,9 +479,18 @@ function getMondayStr(now: number): string {
   return d.toISOString().split("T")[0];
 }
 
+/**
+ * Cars that can appear as bounty targets. Excludes secret cars AND casino
+ * one-offs (dealer "vault") — they're wheel-only prizes at every level, so a
+ * bounty asking for a $3B casino special would be an uncompletable slot.
+ */
+function bountyPool(): GameCarDef[] {
+  return Object.values(GAME_CAR_MAP).filter((c) => !c.secret && c.dealer !== "vault");
+}
+
 /** Generate a set of wanted bounties appropriate for the player's level. */
 export function generateBounties(now: number, level = 1): WantedBounty[] {
-  const allCars = Object.values(GAME_CAR_MAP).filter((c) => !c.secret);
+  const allCars = bountyPool();
   const bounties: WantedBounty[] = [];
   for (let i = 0; i < WANTED_BOUNTY_COUNT; i++) {
     // Each bounty wants 1–3 distinct cars the player can actually own.
@@ -558,19 +566,21 @@ function trackWeekly(s: GameState, metric: string, amount: number): WeeklyState 
   return weekly;
 }
 
-/** Expire stale bounties and auto-refill the board when due. */
+/**
+ * Expire stale bounties and top the board up ONLY when a slot is actually
+ * missing — a full board is left untouched so the 24h expiry stays honest.
+ */
 function maintainBounties(s: GameState, now: number): GameState {
   const live = s.wantedBounties.filter((b) => !b.claimed && b.expiresAt > now);
   const settled = s.wantedBounties.filter((b) => b.claimed);
-  const needsRefill =
-    live.length < WANTED_BOUNTY_COUNT || now - (s.wantedRefreshAt || 0) >= WANTED_AUTO_REFRESH_MS;
-  if (!needsRefill) {
-    if (live.length === s.wantedBounties.length) return s;
+  if (live.length >= WANTED_BOUNTY_COUNT) {
+    if (live.length + settled.length === s.wantedBounties.length) return s;
     return { ...s, wantedBounties: [...live, ...settled] };
   }
+  const refill = generateBounties(now, levelFrom(s));
   return {
     ...s,
-    wantedBounties: [...live, ...generateBounties(now, levelFrom(s))].slice(0, WANTED_BOUNTY_COUNT + 2),
+    wantedBounties: [...live, ...refill].slice(0, WANTED_BOUNTY_COUNT),
     wantedRefreshAt: now,
   };
 }
@@ -926,6 +936,10 @@ export function gameReducer(prevState: GameState, action: Action): GameState {
       if (!bounty || bounty.claimed) return state;
       if (bounty.expiresAt < Date.now()) return state;
       if (!canCompleteBounty(state, bounty)) return state;
+      // Selling every wanted car must not leave the player with nothing
+      // (same guard as SELL_CAR) — bounties always ask for owned cars, so a
+      // 1-car garage can't complete one anyway, but old saves could.
+      if (Object.keys(state.ownedCars).length <= 1) return state;
       // Remove owned cars that were part of the bounty
       const ownedCars = { ...state.ownedCars };
       for (const { carId } of bounty.wants) {

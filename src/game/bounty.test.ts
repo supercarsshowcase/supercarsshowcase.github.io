@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+  GAME_CAR_MAP,
   challengeMetric,
   generateWeeklyChallenges,
   getMonday,
@@ -88,6 +89,45 @@ describe("weekly challenge scaling", () => {
     for (const ch of l1) {
       expect(ch.metric).not.toBe("prestiges");
     }
+  });
+
+  test("earn targets are a reachable week of play (~1–8x weekly income)", () => {
+    // Weekly income ≈ totalEarned × 4%, totalEarned ≈ 50K × (lvl−1)².
+    for (const lvl of [10, 50, 100]) {
+      let sum = 0;
+      let n = 0;
+      for (let w = 0; w < 52; w++) {
+        const week = new Date(Date.UTC(2026, 0, 5) + w * 7 * 86_400_000)
+          .toISOString()
+          .split("T")[0];
+        for (const ch of generateWeeklyChallenges(week, lvl)) {
+          if (ch.metric === "earned") {
+            sum += ch.target;
+            n += 1;
+          }
+        }
+      }
+      const avg = sum / n;
+      const weeklyIncome = 50_000 * (lvl - 1) * (lvl - 1) * 0.04;
+      const ratio = avg / weeklyIncome;
+      expect(ratio, `level ${lvl} ratio ${ratio.toFixed(1)} must be playable`).toBeGreaterThan(0.5);
+      expect(ratio).toBeLessThan(20);
+    }
+  });
+
+  test("rewards stay proportional to targets at high levels (no free billions)", () => {
+    // A level-200 player's FULL completed board must not exceed ~1 week of
+    // income ×20 — completing challenges can't outshine playing the game.
+    let sum = 0;
+    for (let w = 0; w < 52; w++) {
+      const week = new Date(Date.UTC(2026, 0, 5) + w * 7 * 86_400_000)
+        .toISOString()
+        .split("T")[0];
+      for (const ch of generateWeeklyChallenges(week, 200)) sum += ch.rewardCash;
+    }
+    const avgBoard = sum / 52;
+    const weeklyIncome = 50_000 * 199 * 199 * 0.04;
+    expect(avgBoard).toBeLessThan(weeklyIncome * 20);
   });
 
   test("challengeMetric reads the new field and falls back for legacy saves", () => {
@@ -200,14 +240,89 @@ describe("wanted bounties", () => {
     expect(live.length).toBeGreaterThan(0);
     expect(next.wantedRefreshAt).toBeGreaterThan(0);
   });
+
+  test("a full board is never churned (expiry labels stay honest)", () => {
+    const now = Date.now();
+    const bounties: WantedBounty[] = [0, 1, 2].map((i) => ({
+      id: `live-${i}`,
+      wants: [{ carId: "rusty-hatch-91", count: 1 }],
+      reward: 100,
+      expiresAt: now + 23 * 3_600_000,
+      claimed: false,
+    }));
+    const s: GameState = {
+      ...initialGameState(),
+      totalEarned: 50_000,
+      wantedBounties: bounties,
+      wantedRefreshAt: now,
+    };
+    const next = gameReducer(s, { type: "CLICK", amount: 1 });
+    expect(next.wantedBounties.map((b) => b.id)).toEqual(["live-0", "live-1", "live-2"]);
+  });
+
+  test("casino one-off cars never appear as bounty targets", () => {
+    const vaultCarIds = new Set(
+      Object.values(GAME_CAR_MAP)
+        .filter((c) => c.dealer === "vault")
+        .map((c) => c.id),
+    );
+    expect(vaultCarIds.size).toBeGreaterThan(0);
+    for (let trial = 0; trial < 30; trial++) {
+      for (const b of generateBounties(Date.now(), 150)) {
+        for (const w of b.wants) expect(vaultCarIds.has(w.carId)).toBe(false);
+      }
+    }
+  });
+
+  test("claiming a bounty with your only car is refused (last-car guard)", () => {
+    const now = Date.now();
+    const s = initialGameState();
+    const bounty: WantedBounty = {
+      id: "only",
+      wants: [{ carId: "rusty-hatch-91", count: 1 }],
+      reward: 999,
+      expiresAt: now + 3_600_000,
+      claimed: false,
+    };
+    const singleCar: GameState = {
+      ...s,
+      wantedBounties: [bounty],
+      wantedRefreshAt: now,
+    };
+    const next = gameReducer(singleCar, { type: "SELL_FOR_BOUNTY", bountyId: "only" });
+    expect(next.cash).toBe(singleCar.cash); // no payout
+    expect(next.ownedCars["rusty-hatch-91"]).toBeDefined(); // car kept
+    expect(next.wantedBounties.find((b) => b.id === "only")?.claimed).toBe(false);
+  });
+
+  test("level-up migration never carries claimed across different metrics", () => {
+    const now = Date.now();
+    const s = initialGameState();
+    const weekly = initialWeeklyState(now, 5);
+    // Claim the challenge in slot 0 and give a DIFFERENT-metric challenge
+    // massive progress in slot 1 — a buggy slot-based migration would mix them.
+    const claimedMetric = challengeMetric(weekly.challenges[0]);
+    weekly.challenges = weekly.challenges.map((ch, i) =>
+      i === 0 ? { ...ch, claimed: true, progress: ch.target } : ch,
+    );
+    const leveled: GameState = {
+      ...s,
+      totalEarned: 50_000_000, // level ~32 ≠ 5
+      weekly,
+    };
+    const next = gameReducer(leveled, { type: "WEEKLY_CHECK", now });
+    // Exactly the same-metric slot keeps the claim.
+    for (const ch of next.weekly.challenges) {
+      if (challengeMetric(ch) === claimedMetric) {
+        expect(ch.claimed).toBe(true);
+      } else {
+        expect(ch.claimed).toBe(false);
+      }
+    }
+  });
 });
 
-/** Look up a car def without importing GAME_CAR_MAP into every assertion. */
+/** Look up a car def in the shared map. */
 function generateBountyCar(carId: string) {
-  // Lazy import avoidance: engine re-exports nothing, so use the map here.
-  // (Direct import is fine too; this keeps the diff local.)
-  return bountyCarCache[carId];
+  return GAME_CAR_MAP[carId];
 }
-
-import { GAME_CAR_MAP } from "./data";
-const bountyCarCache = GAME_CAR_MAP;

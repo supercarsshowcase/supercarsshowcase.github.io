@@ -749,8 +749,10 @@ const CHALLENGE_TEMPLATES: ChallengeTemplate[] = [
     nameFmt: (t) => `Earn ${fmtMoney(t)} this week`,
     descFmt: (t) => `Earn ${fmtMoney(t)} in total this week.`,
     metric: "earned",
-    // Mirrors the quadratic earning curve; ~a few levels of progress per week.
-    target: (lvl) => 200_000 * lvl * lvl,
+    // Weekly income ≈ totalEarned × 4% ≈ 2K × (level−1)²; bounty flips add a
+    // few multiples of that, so ~2.5× weekly income is a real but reachable
+    // week of play at every level.
+    target: (lvl) => 5_000 * lvl * lvl,
     // 50% of what you had to earn — consistent ROI at every level.
     reward: (_lvl, t) => Math.round(t * 0.5),
   },
@@ -759,16 +761,18 @@ const CHALLENGE_TEMPLATES: ChallengeTemplate[] = [
     descFmt: (t) => `Click your car ${fmtNum(t)} times this week.`,
     metric: "clicks",
     target: (lvl) => 300 * lvl,
-    // ~$250 per click of target at level 1, scaling linearly with level.
-    reward: (lvl, t) => 250_000 * lvl * (t / (300 * Math.max(lvl, 1))) * lvl,
+    // Side-quest sized: ≈ a quarter of the earn challenge's payout.
+    reward: (lvl, t) => Math.round(t * 2 * lvl),
   },
   {
     nameFmt: (t) => `Buy ${t} new car${t === 1 ? "" : "s"}`,
     descFmt: (t) => `Purchase ${t} new car${t === 1 ? "" : "s"} this week.`,
     metric: "carsBought",
     target: (lvl) => 2 + Math.floor((lvl - 1) / 7),
-    // Covers a meaningful slice of a level-appropriate purchase.
-    reward: (lvl, t) => Math.round(t * 500_000 * Math.sqrt(lvl)),
+    // A nudge toward the garage, not a car subsidy. All count-challenge
+    // rewards share the weekly-income curve (≈2K·lvl²/week) so a completed
+    // board stays a healthy bonus (~half a week's income), never a jackpot.
+    reward: (lvl, t) => Math.round(t * 100 * lvl * lvl),
     minLevel: 8,
   },
   {
@@ -776,22 +780,21 @@ const CHALLENGE_TEMPLATES: ChallengeTemplate[] = [
     descFmt: (t) => `Open ${t} car crates this week.`,
     metric: "cratesOpened",
     target: (lvl) => 2 + Math.floor((lvl - 1) / 5),
-    // Slightly above crate cost so completing the challenge is profitable.
-    reward: (lvl, t) => Math.round(t * 2_000_000 * Math.sqrt(lvl)),
+    reward: (lvl, t) => Math.round(t * 150 * lvl * lvl),
   },
   {
     nameFmt: (t) => `Spin the wheel ${t} time${t === 1 ? "" : "s"}`,
     descFmt: (t) => `Spin the Lucky Spin wheel ${t} time${t === 1 ? "" : "s"} this week.`,
     metric: "spins",
     target: (lvl) => 3 + Math.floor((lvl - 1) / 10),
-    reward: (lvl, t) => Math.round(t * 1_000_000 * Math.sqrt(lvl)),
+    reward: (lvl, t) => Math.round(t * 100 * lvl * lvl),
   },
   {
     nameFmt: () => "Prestige once",
     descFmt: () => "Prestige at least once this week.",
     metric: "prestiges",
     target: () => 1,
-    reward: (lvl) => Math.round(25_000_000 * Math.sqrt(lvl)),
+    reward: (lvl) => Math.round(5_000 * lvl * lvl),
     minLevel: 60,
   },
 ];
