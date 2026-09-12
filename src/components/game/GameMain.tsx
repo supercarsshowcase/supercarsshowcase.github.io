@@ -369,7 +369,17 @@ export function GameMain({
 
       <div className="relative flex min-h-0 flex-1 items-stretch gap-3 overflow-visible">
         {/* ── Left sidebar (desktop) ── */}
-        <aside className="hidden w-[18rem] shrink-0 flex-col gap-2 md:flex">
+        <aside
+          className="z-10 hidden w-[18rem] shrink-0 flex-col gap-2 md:sticky md:flex"
+          style={{
+            // Stretch to the row's full height, capped at one viewport (minus
+            // the root's 0.5rem×2 padding). Sticky keeps the nav and the
+            // save/reset block pinned on screen on long tabs — no black gap
+            // above or below, on any tab.
+            maxHeight: "calc(100dvh / var(--site-zoom, 1) - 1rem)",
+            top: "0.5rem",
+          }}
+        >
           {/* Balance */}
           <div className="rounded-xl border border-apex-line bg-apex-panel px-2.5 py-1.5">
             <p className="text-[9px] font-semibold uppercase tracking-[0.22em] text-white/40">
@@ -417,7 +427,7 @@ export function GameMain({
           </div>
 
           {/* Nav */}
-          <nav className="flex flex-col gap-px rounded-xl border border-apex-line bg-apex-panel p-0.5">
+          <nav className="flex min-h-0 flex-1 flex-col gap-px overflow-y-auto rounded-xl border border-apex-line bg-apex-panel p-0.5">
             {NAV.map((item) => {
               const Icon = item.icon;
               const isActive = tab === item.id;
@@ -433,13 +443,13 @@ export function GameMain({
                     }
                   }}
                   className={cn(
-                    "flex items-center gap-1 rounded-md px-1.5 py-[2px] font-display text-[10px] font-semibold uppercase tracking-[0.10em] transition-colors",
+                    "flex min-h-[30px] flex-1 items-center gap-2 rounded-md px-2.5 font-display text-[11px] font-semibold uppercase tracking-[0.10em] transition-colors",
                     isActive
                       ? "border-l-2 border-apex-red bg-apex-red/10 text-white"
                       : "border-l-2 border-transparent text-white/45 hover:bg-white/5 hover:text-white",
                   )}
                 >
-                  <Icon className={cn("size-2.5 shrink-0", isActive ? "text-apex-red" : "text-white/40")} />
+                  <Icon className={cn("size-3.5 shrink-0", isActive ? "text-apex-red" : "text-white/40")} />
                   {item.label}
                 </button>
               );
@@ -488,7 +498,7 @@ export function GameMain({
         </aside>
 
         {/* ── Main area ── */}
-        <main className="min-h-0 min-w-0 flex-1 overflow-visible">
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-visible">
           {tab === "earn" ? (
             <EarnZone
               state={state}
@@ -510,8 +520,10 @@ export function GameMain({
             </div>
           )}
 
-          {/* Mobile nav */}
-          <div className="mt-4 flex gap-1 overflow-x-auto border-b border-apex-line pb-px md:hidden">
+          {/* Mobile nav — pinned to the bottom of the area on short pages
+              (mt-auto), so it can never float mid-screen with dead space
+              below it. */}
+          <div className="mt-auto flex gap-1 overflow-x-auto border-b border-apex-line pt-3 md:hidden">
             {NAV.map((item) => {
               const Icon = item.icon;
               const isActive = tab === item.id;
@@ -544,7 +556,7 @@ export function GameMain({
         <ChatPanel
           open={chatOpen}
           onToggle={() => setChatOpen((v) => !v)}
-          maxHeight={`calc(100dvh / ${SITE_ZOOM * uiZoom})`}
+          maxHeight={`calc(100dvh / ${SITE_ZOOM * uiZoom} - 1rem)`}
         />
       </div>
       </div>
