@@ -141,6 +141,7 @@ export default function Game() {
         } else {
           toast.info("Garage already owns every available car — nothing to add.");
         }
+      } else if (gift.kind === "spins" && gift.amount) {
         dispatch({ type: "GIVE_SPINS", amount: gift.amount });
         toast.success(`🎰 Admin Gift: +${gift.amount.toLocaleString()} free spins!`, {
           duration: 8000,
