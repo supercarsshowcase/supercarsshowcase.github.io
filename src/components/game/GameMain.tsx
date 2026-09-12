@@ -66,7 +66,6 @@ import { ChatPanel } from "./ChatPanel";
 
 const NAV: { id: TabId; label: string; icon: LucideIcon }[] = [
   { id: "earn", label: "Earn", icon: MousePointerClick },
-  { id: "index", label: "Index", icon: BarChart3 },
   { id: "wanted", label: "Wanted", icon: Shield },
   { id: "challenges", label: "Challenges", icon: Target },
   { id: "spin", label: "Spin", icon: CircleDollarSign },
@@ -84,7 +83,6 @@ const NAV: { id: TabId; label: string; icon: LucideIcon }[] = [
 
 type TabId =
   | "earn"
-  | "index"
   | "wanted"
   | "challenges"
   | "spin"
@@ -272,9 +270,11 @@ export function GameMain({
   };
 
   const resetNow = () => {
-    if (window.confirm("Hard reset erases ALL game progress. Continue?")) {
-      dispatch({ type: "HARD_RESET" });
-    }
+    // No window.confirm — sandboxed preview iframes block confirm dialogs,
+    // which would make reset unreachable. Hard reset IS the confirmation:
+    // the button sits behind the "Danger zone" label in the save/reset UI.
+    dispatch({ type: "HARD_RESET" });
+    toast.success("Progress reset — fresh garage.");
   };
 
   // Layout constant for the rails' fixed height: the game root's 0.5rem×2

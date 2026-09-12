@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   GAME_CAR_MAP,
+  STARTER_ID,
   challengeMetric,
   generateWeeklyChallenges,
   getMonday,
@@ -209,12 +210,12 @@ describe("wanted bounties", () => {
     }
   });
 
-  test("bounties last 24 hours and pay 4x total car value", () => {
+  test("bounties last 24 hours and pay 5x total car value", () => {
     const [b] = generateBounties(NOW, 10);
     expect(b.expiresAt - NOW).toBe(24 * 3_600_000);
     let value = 0;
     for (const w of b.wants) value += generateBountyCar(w.carId)!.value * w.count;
-    expect(b.reward).toBe(value * 4);
+    expect(b.reward).toBe(value * 5);
   });
 
   test("canCompleteBounty requires owning every wanted car", () => {
@@ -315,7 +316,7 @@ describe("wanted bounties", () => {
     }
   });
 
-  test("claiming a bounty with your only car is refused (last-car guard)", () => {
+  test("claiming a bounty with your only car succeeds and tops the garage with the starter", () => {
     const now = Date.now();
     const s = initialGameState();
     const bounty: WantedBounty = {
@@ -331,9 +332,13 @@ describe("wanted bounties", () => {
       wantedRefreshAt: now,
     };
     const next = gameReducer(singleCar, { type: "SELL_FOR_BOUNTY", bountyId: "only" });
-    expect(next.cash).toBe(singleCar.cash); // no payout
-    expect(next.ownedCars["rusty-hatch-91"]).toBeDefined(); // car kept
-    expect(next.wantedBounties.find((b) => b.id === "only")?.claimed).toBe(false);
+    expect(next.cash).toBe(singleCar.cash + 999); // claim PAYS — the old refusal was the bug
+    // The claimed bounty is pruned from the board immediately (slot freed).
+    expect(next.wantedBounties.find((b) => b.id === "only")).toBeUndefined();
+    // The emptied garage is re-seeded with the starter so the player is never carless.
+    expect(next.ownedCars[STARTER_ID]).toBeDefined();
+    expect(Object.keys(next.ownedCars).length).toBe(1);
+    expect(next.ownedCars[next.activeCarId]).toBeDefined(); // active car always owned
   });
 
   test("level-up migration never carries claimed across different metrics", () => {

@@ -46,7 +46,7 @@ const BOUNTY_DURATION_MS = 24 * 3_600_000;
 /** Auto-refresh bounties when the board is older than this. */
 const WANTED_AUTO_REFRESH_MS = 20 * 60_000;
 /** Bounty reward multiplier over the (buy) value of the wanted cars. */
-const BOUNTY_REWARD_MULT = 4;
+const BOUNTY_REWARD_MULT = 5;
 /** Manual bounty-board refresh cost ≈ a slice of the player's cash. */
 const WANTED_REFRESH_CASH_PCT = 0.05;
 /** …but never less than this floor, scaled by level. */
@@ -498,29 +498,36 @@ function bountyPool(): GameCarDef[] {
  */
 export function wantedRefreshCost(state: GameState): number {
   const level = levelFrom(state);
-  const floor = WANTED_REFRESH_FLOOR_PER_LEVEL * Math.max(1, level - 1);
+  // Mega-level saves (level in the billions) must still be able to afford a
+  // reroll — the floor's level input is capped at the quest level cap.
+  const floor = WANTED_REFRESH_FLOOR_PER_LEVEL * Math.max(1, Math.min(level, 500) - 1);
   return Math.max(floor, Math.round(state.cash * WANTED_REFRESH_CASH_PCT));
 }
 
 /** Generate a set of wanted bounties appropriate for the player's level. */
 export function generateBounties(now: number, level = 1): WantedBounty[] {
   const allCars = bountyPool();
+  // Mega-level saves (level in the billions) pick from the same top-shelf
+  // pool as level 500 — car unlock levels stop long before that.
+  const lvl = Math.min(level, 500);
   const bounties: WantedBounty[] = [];
   for (let i = 0; i < WANTED_BOUNTY_COUNT; i++) {
     // Each bounty wants 1–3 distinct cars the player can actually own.
     const wantCount = 1 + Math.floor(Math.random() * 3);
-    const shuffled = [...allCars].sort(() => Math.random() - 0.5);
+    // Cars near the player's level pay the best rewards and stay buyable.
+    // (Far-below-level cars paid pocket change — the "rewards too low" bug;
+    // anything above level+2 could be unbuyable at that level.)
+    const inWindow = allCars.filter((c) => Math.abs(c.unlockLevel - lvl) <= 2);
+    const atOrBelow = allCars.filter((c) => c.unlockLevel <= lvl);
+    const candidates =
+      inWindow.length >= wantCount ? inWindow : atOrBelow.length >= wantCount ? atOrBelow : allCars;
+    const shuffled = [...candidates].sort(() => Math.random() - 0.5);
     const wants: { carId: string; count: number }[] = [];
     const usedIds = new Set<string>();
     let totalValue = 0;
     for (const car of shuffled) {
       if (wants.length >= wantCount) break;
       if (usedIds.has(car.id)) continue;
-      // Level gate: bounty cars sit around the player's level (±2 levels),
-      // so a level-1 player never gets a $28M hypercar bounty.
-      const dist = Math.abs(car.unlockLevel - level);
-      if (dist > 2 && car.unlockLevel > level) continue;
-      if (car.value > 25_000_000 && dist > 8) continue;
       usedIds.add(car.id);
       // Players can own one of each car — every requirement must be 1.
       wants.push({ carId: car.id, count: 1 });
@@ -948,36 +955,54 @@ export function gameReducer(prevState: GameState, action: Action): GameState {
     case "SELL_FOR_BOUNTY": {
       const bounty = state.wantedBounties.find((b) => b.id === action.bountyId);
       if (!bounty || bounty.claimed) return state;
-      if (bounty.expiresAt < Date.now()) return state;
+      if (bounty.expiresAt <= Date.now()) return state;
       if (!canCompleteBounty(state, bounty)) return state;
-      // Selling every wanted car must not leave the player with nothing
-      // (same guard as SELL_CAR) — bounties always ask for owned cars, so a
-      // 1-car garage can't complete one anyway, but old saves could.
-      if (Object.keys(state.ownedCars).length <= 1) return state;
       // Remove owned cars that were part of the bounty
       const ownedCars = { ...state.ownedCars };
       for (const { carId } of bounty.wants) {
         delete ownedCars[carId];
       }
+      // A claim may legitimately sell the player's ENTIRE garage (the board
+      // only ever asks for owned cars). Refusing the claim — the old
+      // "can't claim" bug — was worse than topping the garage back up with
+      // the starter, so hand one back and pay out.
+      if (Object.keys(ownedCars).length === 0) {
+        ownedCars[STARTER_ID] = { upgrades: {}, fuel: FUEL_MAX, clicksSinceFuel: 0 };
+      }
       const activeCarId =
         state.activeCarId in ownedCars ? state.activeCarId : (Object.keys(ownedCars)[0] ?? STARTER_ID);
-      return applyAchievements({
-        ...state,
-        cash: state.cash + bounty.reward,
-        totalEarned: state.totalEarned + bounty.reward,
-        ownedCars,
-        activeCarId,
-        wantedBounties: state.wantedBounties.map((b) =>
-          b.id === action.bountyId ? { ...b, claimed: true } : b,
-        ),
-      });
+      // Refill the freed board slot immediately instead of waiting for the
+      // player's next unrelated click.
+      return maintainBounties(
+        applyAchievements({
+          ...state,
+          cash: state.cash + bounty.reward,
+          totalEarned: state.totalEarned + bounty.reward,
+          ownedCars,
+          activeCarId,
+          wantedBounties: state.wantedBounties.map((b) =>
+            b.id === action.bountyId ? { ...b, claimed: true } : b,
+          ),
+        }),
+        Date.now(),
+      );
     }
     case "REFRESH_WANTED": {
-      if (action.cost !== wantedRefreshCost(state)) return state; // stale/staged click
-      if (state.cash < action.cost) return state;
+      // The COST IS COMPUTED HERE, from live state — the panel's copy goes
+      // stale constantly (passive income changes cash every tick), and the
+      // old exact-match check silently rejected most paid rerolls.
+      if (action.cost === 0) {
+        // Free refresh = auto-seed: top up an incomplete board, never wipe
+        // live or claimed bounties, never touch a full board.
+        return maintainBounties(state, action.now);
+      }
+      const cost = wantedRefreshCost(state);
+      if (state.cash < cost) return state;
       return {
         ...state,
-        cash: state.cash - action.cost,
+        cash: state.cash - cost,
+        // A paid reroll swaps in a fresh LIVE board (claimed entries are
+        // invisible history — maintainBounties drops them too).
         wantedBounties: generateBounties(action.now, levelFrom(state)),
         wantedRefreshAt: action.now,
       };
