@@ -48,7 +48,7 @@ import {
   passivePerSec,
   type Action,
 } from "@/game/engine";
-import { gameZoom, SITE_ZOOM } from "@/game/fit";
+import { gameZoom, SITE_ZOOM, vpCap, vpFill } from "@/game/fit";
 import type { GameState } from "@/game/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -270,7 +270,7 @@ export function GameMain({
         className="flex w-full flex-col overflow-visible px-2 py-2 sm:px-3 lg:px-4"
         style={{
           zoom: uiZoom,
-          minHeight: `calc(100dvh / ${SITE_ZOOM * uiZoom})`,
+          minHeight: vpFill(SITE_ZOOM * uiZoom),
         }}
       >
       {/* ── Active Event Banner ── */}
@@ -373,10 +373,12 @@ export function GameMain({
           className="z-10 hidden w-[18rem] shrink-0 flex-col gap-2 md:sticky md:flex"
           style={{
             // Stretch to the row's full height, capped at one viewport (minus
-            // the root's 0.5rem×2 padding). Sticky keeps the nav and the
-            // save/reset block pinned on screen on long tabs — no black gap
-            // above or below, on any tab.
-            maxHeight: "calc(100dvh / var(--site-zoom, 1) - 1rem)",
+            // the root's 0.5rem×2 padding). Divides by the TOTAL effective
+            // zoom (site zoom × game zoom — same as the chat rail) so the
+            // cap stays correct if either zoom factor ever changes. Sticky
+            // keeps the nav and the save/reset block pinned on screen on
+            // long tabs — no black gap above or below, on any tab.
+            maxHeight: vpCap(SITE_ZOOM * uiZoom),
             top: "0.5rem",
           }}
         >
@@ -556,7 +558,7 @@ export function GameMain({
         <ChatPanel
           open={chatOpen}
           onToggle={() => setChatOpen((v) => !v)}
-          maxHeight={`calc(100dvh / ${SITE_ZOOM * uiZoom} - 1rem)`}
+          maxHeight={vpCap(SITE_ZOOM * uiZoom)}
         />
       </div>
       </div>
