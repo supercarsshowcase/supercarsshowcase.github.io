@@ -227,7 +227,10 @@ export function ChatPanel({
                         : "bg-white/10 text-white/70 ring-white/15",
                   )}
                 >
-                  {(mine ? user?.name : msg.name)?.charAt(0).toUpperCase() ?? "?"}
+                  {(mine
+                    ? (user?.username ?? user?.name)
+                    : msg.name
+                  )?.charAt(0).toUpperCase() ?? "?"}
                 </div>
               )}
               <div
@@ -250,9 +253,11 @@ export function ChatPanel({
                       mine ? "text-apex-red" : isStaffMsg ? style!.name : "text-white/60",
                     )}
                   >
-                    {mine ? "You" : msg.name}
+                    {/* Own messages show YOUR name too — hiding it behind
+                        "You" also hid the verified mark you asked to see. */}
+                    {mine ? (user?.username ?? user?.name ?? "You") : msg.name}
                   </span>
-                  {!mine && isStaffMsg && <VerifiedMark role={msg.role!} />}
+                  {isStaffMsg && <VerifiedMark role={msg.role!} />}
                   {isStaffMsg && (
                     <span
                       className={cn(

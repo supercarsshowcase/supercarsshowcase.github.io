@@ -19,25 +19,22 @@ export const getMessages = query({
 export const sendMessage = mutation({
   args: { text: v.string() },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    // Resolve the sender by AUTHENTICATED ID — not by email. Guests and
+    // username/password accounts have no `identity.email`, and the old email
+    // lookup fell through to the FIRST user row, attributing their messages
+    // to a random different account (so "mine" checks and badges never showed).
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Not authenticated");
 
     const text = args.text.trim();
     if (!text || text.length > 500) {
       throw new Error("Message must be 1–500 characters");
     }
 
+    const user = await ctx.db.get(userId);
+    if (!user) throw new Error("User profile not found");
+
     // Rate limit: max 1 message per 2 seconds
-    const user = await ctx.db
-      .query("users")
-      .withIndex("email", (q) =>
-        identity.email ? q.eq("email", identity.email) : q,
-      )
-      .first();
-    const userId = user?._id;
-
-    if (!userId) throw new Error("User profile not found");
-
     const recent = await ctx.db
       .query("chatMessages")
       .withIndex("by_user_created", (q) => q.eq("userId", userId))
@@ -48,11 +45,12 @@ export const sendMessage = mutation({
       throw new Error("Slow down! Wait a moment before sending another message.");
     }
 
-    // Fetch user profile for name/image
+    // Name/image fall back to the auth identity only when the profile lacks them.
+    const identity = await ctx.auth.getUserIdentity();
     const name =
-      user?.username ?? user?.name ?? identity.name ?? "Anonymous";
-    const image = user?.image ?? identity.pictureUrl ?? undefined;
-    const role = user?.role ?? undefined;
+      user.name ?? user.username ?? identity?.name ?? "Anonymous";
+    const image = user.image ?? identity?.pictureUrl ?? undefined;
+    const role = user.role ?? undefined;
 
     await ctx.db.insert("chatMessages", {
       userId,
