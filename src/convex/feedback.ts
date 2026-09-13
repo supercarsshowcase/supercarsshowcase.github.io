@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
@@ -31,11 +31,11 @@ export const submitFeedback = mutation({
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
-    if (userId === null) throw new Error("Sign in to send feedback.");
+    if (userId === null) throw new ConvexError("Sign in to send feedback.");
 
     const message = args.message.trim();
-    if (message.length < 10) throw new Error("Tell us a little more — at least 10 characters.");
-    if (message.length > 1000) throw new Error("Please keep it under 1000 characters.");
+    if (message.length < 10) throw new ConvexError("Tell us a little more — at least 10 characters.");
+    if (message.length > 1000) throw new ConvexError("Please keep it under 1000 characters.");
 
     await ctx.db.insert("feedback", {
       userId,
@@ -52,7 +52,7 @@ export const listFeedback = query({
   args: {},
   handler: async (ctx) => {
     const admin = await getAdmin(ctx);
-    if (!admin) throw new Error("Admin access required.");
+    if (!admin) throw new ConvexError("Admin access required.");
 
     const items = await ctx.db.query("feedback").order("desc").collect();
     const users = await ctx.db.query("users").collect();
@@ -108,10 +108,10 @@ export const setFeedbackStatus = mutation({
   },
   handler: async (ctx, args) => {
     const admin = await getAdmin(ctx);
-    if (!admin) throw new Error("Admin access required.");
+    if (!admin) throw new ConvexError("Admin access required.");
 
     const doc = await ctx.db.get(args.feedbackId);
-    if (!doc) throw new Error("Feedback not found.");
+    if (!doc) throw new ConvexError("Feedback not found.");
     await ctx.db.patch(args.feedbackId, { status: args.status });
   },
 });
@@ -120,10 +120,10 @@ export const deleteFeedback = mutation({
   args: { feedbackId: v.id("feedback") },
   handler: async (ctx, args) => {
     const admin = await getAdmin(ctx);
-    if (!admin) throw new Error("Admin access required.");
+    if (!admin) throw new ConvexError("Admin access required.");
 
     const doc = await ctx.db.get(args.feedbackId);
-    if (!doc) throw new Error("Feedback not found.");
+    if (!doc) throw new ConvexError("Feedback not found.");
     await ctx.db.delete(args.feedbackId);
   },
 });

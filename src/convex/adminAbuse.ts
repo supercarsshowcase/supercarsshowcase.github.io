@@ -1,14 +1,14 @@
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { GAME_CAR_MAP } from "../game/data";
 
 async function requireAdmin(ctx: MutationCtx | QueryCtx) {
   const userId = await getAuthUserId(ctx);
-  if (userId === null) throw new Error("Not authenticated.");
+  if (userId === null) throw new ConvexError("Not authenticated.");
   const user = await ctx.db.get(userId);
   if (!user || (user.role !== "owner" && user.role !== "admin" && user.role !== "moderator"))
-    throw new Error("Admin access required.");
+    throw new ConvexError("Admin access required.");
   return user;
 }
 
@@ -16,7 +16,7 @@ async function requireAdmin(ctx: MutationCtx | QueryCtx) {
  *  explicitly before any min/max validation — an unchecked NaN grant would
  *  be stored and poison the player's save with NaN cash. */
 function requireFinite(name: string, value: number): number {
-  if (!Number.isFinite(value)) throw new Error(`${name} must be a finite number.`);
+  if (!Number.isFinite(value)) throw new ConvexError(`${name} must be a finite number.`);
   return value;
 }
 
@@ -30,10 +30,10 @@ export const giveMoney = mutation({
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
     const target = await ctx.db.get(args.userId);
-    if (!target) throw new Error("User not found.");
+    if (!target) throw new ConvexError("User not found.");
     const amount = requireFinite("Amount", args.amount);
     if (amount <= 0) {
-      throw new Error("Amount must be at least $1.");
+      throw new ConvexError("Amount must be at least $1.");
     }
     // Store the grant in a new table or just log it. For the game, we'll
     // use a Convex "adminGrants" table. But since the game saves locally,
@@ -68,14 +68,14 @@ export const giveCar = mutation({
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
     const target = await ctx.db.get(args.userId);
-    if (!target) throw new Error("User not found.");
+    if (!target) throw new ConvexError("User not found.");
     const carId = args.carId.trim();
-    if (!carId) throw new Error("Car ID required.");
+    if (!carId) throw new ConvexError("Car ID required.");
     // The gift is only delivered via the client reducer's ADD_CAR, which
     // silently drops unknown IDs — an admin typo would gift nothing with a
     // success toast. Validate here so the admin sees the mistake.
     if (!GAME_CAR_MAP[carId]) {
-      throw new Error(`Unknown car ID "${carId}".`);
+      throw new ConvexError(`Unknown car ID "${carId}".`);
     }
 
     await ctx.db.insert("adminGifts", {
@@ -102,10 +102,10 @@ export const setMultiplierEvent = mutation({
     const multiplier = requireFinite("Multiplier", args.multiplier);
     const durationMinutes = requireFinite("Duration", args.durationMinutes);
     if (multiplier < 2 || multiplier > 10_000) {
-      throw new Error("Multiplier must be between 2x and 10,000x.");
+      throw new ConvexError("Multiplier must be between 2x and 10,000x.");
     }
     if (durationMinutes < 1 || durationMinutes > 1440) {
-      throw new Error("Duration must be between 1 and 1440 minutes (24h).");
+      throw new ConvexError("Duration must be between 1 and 1440 minutes (24h).");
     }
     const now = Date.now();
     const expiresAt = now + durationMinutes * 60_000;
@@ -174,8 +174,9 @@ export const getMyGifts = query({
     if (!userId) return [];
     const gifts = await ctx.db
       .query("adminGifts")
-      .filter((q) => q.eq(q.field("userId"), userId))
-      .filter((q) => q.eq(q.field("claimed"), false))
+      .withIndex("by_user_claimed", (q) =>
+        q.eq("userId", userId).eq("claimed", false),
+      )
       .collect();
     // Resolve player-to-player gift senders so the toast can say who sent it.
     const senderIds = new Set(
@@ -197,10 +198,10 @@ export const claimGift = mutation({
   args: { giftId: v.id("adminGifts") },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated.");
+    if (!userId) throw new ConvexError("Not authenticated.");
     const gift = await ctx.db.get(args.giftId);
     if (!gift || gift.userId !== userId || gift.claimed) {
-      throw new Error("Gift not found or already claimed.");
+      throw new ConvexError("Gift not found or already claimed.");
     }
     await ctx.db.patch(args.giftId, { claimed: true });
     return gift;
@@ -217,10 +218,10 @@ export const giveSpins = mutation({
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
     const target = await ctx.db.get(args.userId);
-    if (!target) throw new Error("User not found.");
+    if (!target) throw new ConvexError("User not found.");
     const amount = requireFinite("Amount", args.amount);
     if (amount <= 0 || amount > 10_000_000) {
-      throw new Error("Amount must be between 1 and 10,000,000.");
+      throw new ConvexError("Amount must be between 1 and 10,000,000.");
     }
     await ctx.db.insert("adminGifts", {
       userId: args.userId,
@@ -250,7 +251,7 @@ export const resetPlayerProgress = mutation({
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
     const target = await ctx.db.get(args.userId);
-    if (!target) throw new Error("User not found.");
+    if (!target) throw new ConvexError("User not found.");
 
     const resetOptions: string[] = [];
     if (args.resetCash) resetOptions.push("cash");
@@ -263,7 +264,7 @@ export const resetPlayerProgress = mutation({
     if (args.resetCasino) resetOptions.push("casino");
 
     if (resetOptions.length === 0) {
-      throw new Error("Select at least one thing to reset.");
+      throw new ConvexError("Select at least one thing to reset.");
     }
 
     await ctx.db.insert("adminGifts", {

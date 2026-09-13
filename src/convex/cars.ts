@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
@@ -58,10 +58,10 @@ export const saveCarEdit = mutation({
   args: { slug: v.string(), fields: editFields },
   handler: async (ctx, args) => {
     const admin = await getAdmin(ctx);
-    if (!admin) throw new Error("Admin access required.");
+    if (!admin) throw new ConvexError("Admin access required.");
 
     const slug = args.slug.trim().slice(0, 100);
-    if (!slug) throw new Error("Invalid car.");
+    if (!slug) throw new ConvexError("Invalid car.");
 
     const existing = await ctx.db
       .query("carEdits")
@@ -82,7 +82,7 @@ export const resetCarEdit = mutation({
   args: { slug: v.string() },
   handler: async (ctx, args) => {
     const admin = await getAdmin(ctx);
-    if (!admin) throw new Error("Admin access required.");
+    if (!admin) throw new ConvexError("Admin access required.");
 
     const existing = await ctx.db
       .query("carEdits")
@@ -97,7 +97,7 @@ export const resetAllCarEdits = mutation({
   args: {},
   handler: async (ctx) => {
     const admin = await getAdmin(ctx);
-    if (!admin) throw new Error("Admin access required.");
+    if (!admin) throw new ConvexError("Admin access required.");
 
     const edits = await ctx.db.query("carEdits").collect();
     for (const e of edits) await ctx.db.delete(e._id);

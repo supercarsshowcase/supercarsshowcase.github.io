@@ -1,5 +1,5 @@
 import { query, mutation } from "./_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
 /** Return the latest 100 chat messages (ascending by time). */
@@ -24,15 +24,15 @@ export const sendMessage = mutation({
     // lookup fell through to the FIRST user row, attributing their messages
     // to a random different account (so "mine" checks and badges never showed).
     const userId = await getAuthUserId(ctx);
-    if (userId === null) throw new Error("Not authenticated");
+    if (userId === null) throw new ConvexError("Not authenticated");
 
     const text = args.text.trim();
     if (!text || text.length > 500) {
-      throw new Error("Message must be 1–500 characters");
+      throw new ConvexError("Message must be 1–500 characters");
     }
 
     const user = await ctx.db.get(userId);
-    if (!user) throw new Error("User profile not found");
+    if (!user) throw new ConvexError("User profile not found");
 
     // Rate limit: max 1 message per 2 seconds
     const recent = await ctx.db
@@ -42,7 +42,7 @@ export const sendMessage = mutation({
       .take(1);
 
     if (recent.length > 0 && Date.now() - recent[0].createdAt < 2000) {
-      throw new Error("Slow down! Wait a moment before sending another message.");
+      throw new ConvexError("Slow down! Wait a moment before sending another message.");
     }
 
     // Name/image fall back to the auth identity only when the profile lacks them.
@@ -78,13 +78,13 @@ export const deleteMessage = mutation({
   args: { messageId: v.id("chatMessages") },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
-    if (userId === null) throw new Error("Not authenticated");
+    if (userId === null) throw new ConvexError("Not authenticated");
     const staff = await ctx.db.get(userId);
     if (
       !staff ||
       (staff.role !== "owner" && staff.role !== "admin" && staff.role !== "moderator")
     ) {
-      throw new Error("Only staff can delete messages.");
+      throw new ConvexError("Only staff can delete messages.");
     }
     await ctx.db.delete(args.messageId);
   },

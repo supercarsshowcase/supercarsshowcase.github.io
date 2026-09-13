@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
@@ -55,7 +55,7 @@ export const updateSiteSettings = mutation({
   },
   handler: async (ctx, args) => {
     const admin = await getAdmin(ctx);
-    if (!admin) throw new Error("Admin access required.");
+    if (!admin) throw new ConvexError("Admin access required.");
 
     const accent = /^#[0-9a-fA-F]{6}$/.test(args.accent) ? args.accent : DEFAULT_SITE_SETTINGS.accent;
     const bannerText = args.bannerText.slice(0, 200);
@@ -131,10 +131,10 @@ export const postAnnouncement = mutation({
   args: { message: v.string() },
   handler: async (ctx, args) => {
     const admin = await getAdmin(ctx);
-    if (!admin) throw new Error("Admin access required.");
+    if (!admin) throw new ConvexError("Admin access required.");
 
     const message = args.message.trim().slice(0, 280);
-    if (!message) throw new Error("Message cannot be empty.");
+    if (!message) throw new ConvexError("Message cannot be empty.");
 
     await ctx.db.insert("announcements", {
       authorName: admin.name?.trim() ? admin.name.trim() : "Admin",
@@ -153,13 +153,13 @@ export const postAnnouncements = mutation({
   args: { messages: v.array(v.string()) },
   handler: async (ctx, args) => {
     const admin = await getAdmin(ctx);
-    if (!admin) throw new Error("Admin access required.");
+    if (!admin) throw new ConvexError("Admin access required.");
 
     const messages = args.messages
       .map((m) => m.trim().slice(0, 280))
       .filter(Boolean)
       .slice(0, 8);
-    if (messages.length === 0) throw new Error("Message cannot be empty.");
+    if (messages.length === 0) throw new ConvexError("Message cannot be empty.");
 
     await ctx.db.insert("announcements", {
       authorName: admin.name?.trim() ? admin.name.trim() : "Admin",
@@ -203,9 +203,9 @@ export const bootstrapOwner = mutation({
   args: {},
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
-    if (userId === null) throw new Error("Not authenticated.");
+    if (userId === null) throw new ConvexError("Not authenticated.");
     const user = await ctx.db.get(userId);
-    if (!user) throw new Error("User not found.");
+    if (!user) throw new ConvexError("User not found.");
     if (user.role === "owner") return { already: true };
     await ctx.db.patch(userId, { role: "owner" });
     return { promoted: true };
@@ -216,7 +216,7 @@ export const listUsers = query({
   args: {},
   handler: async (ctx) => {
     const admin = await getAdmin(ctx);
-    if (!admin) throw new Error("Admin access required.");
+    if (!admin) throw new ConvexError("Admin access required.");
 
     const users = await ctx.db.query("users").collect();
     return users
@@ -246,28 +246,28 @@ export const setUserRole = mutation({
   },
   handler: async (ctx, args) => {
     const admin = await getAdmin(ctx);
-    if (!admin) throw new Error("Admin access required.");
+    if (!admin) throw new ConvexError("Admin access required.");
 
     const target = await ctx.db.get(args.userId);
-    if (!target) throw new Error("User not found.");
+    if (!target) throw new ConvexError("User not found.");
 
     // Only the owner can promote someone to owner.
     if (args.role === "owner" && admin.role !== "owner") {
-      throw new Error("Only the owner can promote someone to owner.");
+      throw new ConvexError("Only the owner can promote someone to owner.");
     }
 
     // Never demote the last remaining owner.
     if (target.role === "owner" && args.role !== "owner") {
       const owners = await ctx.db.query("users").collect();
       const ownerCount = owners.filter((u) => u.role === "owner").length;
-      if (ownerCount <= 1) throw new Error("Cannot demote the last owner.");
+      if (ownerCount <= 1) throw new ConvexError("Cannot demote the last owner.");
     }
 
     // Never demote the last remaining admin (avoids locking everyone out).
     if (target.role === "admin" && args.role !== "admin") {
       const admins = await ctx.db.query("users").collect();
       const adminCount = admins.filter((u) => u.role === "admin").length;
-      if (adminCount <= 1) throw new Error("Cannot demote the last admin.");
+      if (adminCount <= 1) throw new ConvexError("Cannot demote the last admin.");
     }
 
     await ctx.db.patch(args.userId, { role: args.role });
@@ -278,28 +278,28 @@ export const deleteUser = mutation({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
     const admin = await getAdmin(ctx);
-    if (!admin) throw new Error("Admin access required.");
+    if (!admin) throw new ConvexError("Admin access required.");
 
     const target = await ctx.db.get(args.userId);
-    if (!target) throw new Error("User not found.");
+    if (!target) throw new ConvexError("User not found.");
 
     // Only the owner can delete other owners.
     if (target.role === "owner" && admin.role !== "owner") {
-      throw new Error("Only the owner can delete another owner.");
+      throw new ConvexError("Only the owner can delete another owner.");
     }
 
     // Never delete the last remaining owner.
     if (target.role === "owner") {
       const owners = await ctx.db.query("users").collect();
       const ownerCount = owners.filter((u) => u.role === "owner").length;
-      if (ownerCount <= 1) throw new Error("Cannot delete the last owner.");
+      if (ownerCount <= 1) throw new ConvexError("Cannot delete the last owner.");
     }
 
     // Never delete the last remaining admin.
     if (target.role === "admin") {
       const admins = await ctx.db.query("users").collect();
       const adminCount = admins.filter((u) => u.role === "admin").length;
-      if (adminCount <= 1) throw new Error("Cannot delete the last admin.");
+      if (adminCount <= 1) throw new ConvexError("Cannot delete the last admin.");
     }
 
     await ctx.db.delete(args.userId);
@@ -312,7 +312,7 @@ export const getAdminStats = query({
   args: {},
   handler: async (ctx) => {
     const admin = await getAdmin(ctx);
-    if (!admin) throw new Error("Admin access required.");
+    if (!admin) throw new ConvexError("Admin access required.");
 
     const [users, signins, visits] = await Promise.all([
       ctx.db.query("users").collect(),

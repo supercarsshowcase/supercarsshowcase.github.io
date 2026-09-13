@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { mutation } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
@@ -21,10 +21,10 @@ export const updateProfile = mutation({
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
-    if (userId === null) throw new Error("Sign in to update your profile.");
+    if (userId === null) throw new ConvexError("Sign in to update your profile.");
 
     const name = args.name.trim().slice(0, MAX_NAME_LENGTH);
-    if (!name) throw new Error("Your name can't be empty.");
+    if (!name) throw new ConvexError("Your name can't be empty.");
 
     const bio = args.bio.trim().slice(0, MAX_BIO_LENGTH);
     const accent = /^#[0-9a-fA-F]{6}$/.test(args.accent) ? args.accent : undefined;
@@ -46,10 +46,10 @@ export const updateAvatar = mutation({
   args: { storageId: v.id("_storage") },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
-    if (userId === null) throw new Error("Sign in to update your profile.");
+    if (userId === null) throw new ConvexError("Sign in to update your profile.");
 
     const url = await ctx.storage.getUrl(args.storageId);
-    if (!url) throw new Error("Upload failed — please try again.");
+    if (!url) throw new ConvexError("Upload failed — please try again.");
 
     await ctx.db.patch(userId, { image: url });
   },
