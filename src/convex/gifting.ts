@@ -76,8 +76,14 @@ export const giftRandomCars = mutation({
     const target = await ctx.db.get(args.userId);
     if (!target) throw new ConvexError("User not found.");
 
-    if (args.count <= 0 || args.count > 1_000_000 || !Number.isFinite(args.count)) {
-      throw new ConvexError("Count must be between 1 and 1,000,000.");
+    // Players own ONE of each car — the whole giftable pool (non-secret,
+    // non-vault) is ~50 cars, so counts beyond that were a broken promise:
+    // the old 1,000,000 cap "succeeded" while delivery silently capped at
+    // what the player didn't already own. Cap at the real pool size.
+    if (args.count <= 0 || args.count > 50 || !Number.isFinite(args.count)) {
+      throw new ConvexError(
+        "Players own one of each car — gift between 1 and 50 cars.",
+      );
     }
 
     await ctx.db.insert("adminGifts", {
@@ -88,7 +94,7 @@ export const giftRandomCars = mutation({
       createdAt: Date.now(),
     });
 
-    return { success: true, count: Math.round(args.count), userName: target.name ?? "Unknown" };
+    return { success: true, count: Math.min(50, Math.round(args.count)), userName: target.name ?? "Unknown" };
   },
 });
 

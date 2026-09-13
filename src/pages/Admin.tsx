@@ -816,7 +816,8 @@ export default function Admin() {
                   Gift Random Cars
                 </h3>
                 <p className="mb-3 text-[11px] text-white/35">
-                  Send random cars to a player. Up to 1M cars at once.
+                  Send random cars a player doesn't own yet. Max 50 — the game
+                  has 50 giftable cars (one of each, secrets & vault excluded).
                 </p>
 
                 <div className="flex items-end gap-2">
@@ -827,7 +828,7 @@ export default function Admin() {
                     <input
                       type="number"
                       min="1"
-                      max="1000000"
+                      max="50"
                       value={abuseRandomCarCount}
                       onChange={(e) => setAbuseRandomCarCount(e.target.value)}
                       placeholder="10"
@@ -841,9 +842,9 @@ export default function Admin() {
                         toast.error("Select a user and enter a count");
                         return;
                       }
-                      const count = Math.min(Number(abuseRandomCarCount), 1_000_000);
+                      const count = Math.min(Math.floor(Number(abuseRandomCarCount)), 50);
                       if (count <= 0 || !isFinite(count)) {
-                        toast.error("Invalid count");
+                        toast.error("Invalid count — enter 1 to 50");
                         return;
                       }
                       // Two-click confirm (window.confirm is blocked in the
@@ -851,7 +852,7 @@ export default function Admin() {
                       const armKey = `gift-${abuseTarget}-${count}`;
                       if (armedGift !== armKey) {
                         setArmedGift(armKey);
-                        toast.info(`Click "Send Cars" again to send ${count.toLocaleString()} cars`);
+                        toast.info(`Click "Send Cars" again to send ${count.toLocaleString()} car${count === 1 ? "" : "s"}`);
                         return;
                       }
                       setArmedGift(null);
@@ -860,7 +861,9 @@ export default function Admin() {
                           userId: abuseTarget as Id<"users">,
                           count,
                         });
-                        toast.success(`Gave ${count.toLocaleString()} random cars!`);
+                        toast.success(
+                          `Gave ${count.toLocaleString()} random car${count === 1 ? "" : "s"} (up to 50 exist — they only get ones they don't own)`,
+                        );
                         setAbuseRandomCarCount("10");
                       } catch (e: unknown) {
                         toast.error(
@@ -875,14 +878,14 @@ export default function Admin() {
                 </div>
                 {/* Quick presets */}
                 <div className="mt-2 flex flex-wrap gap-1.5">
-                  {[10, 50, 100, 500, 1000, 5000, 10000, 100000, 1000000].map((v) => (
+                  {[1, 5, 10, 25, 50].map((v) => (
                     <button
                       key={v}
                       type="button"
                       onClick={() => setAbuseRandomCarCount(String(v))}
                       className="rounded bg-white/5 px-2 py-1 text-[10px] font-bold text-white/60 hover:bg-white/10"
                     >
-                      {v >= 1_000_000 ? "1M" : v >= 1_000 ? `${v / 1_000}K` : v}
+                      {v}
                     </button>
                   ))}
                 </div>
