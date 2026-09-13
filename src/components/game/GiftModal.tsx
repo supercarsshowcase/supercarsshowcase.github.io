@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from "react";
+import { useAuth } from "@/hooks/use-auth";
 import { useMutation, useQuery } from "convex/react";
 import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
@@ -18,6 +19,9 @@ interface GiftModalProps {
 }
 
 export function GiftModal({ open, onClose, currentCash, onSent }: GiftModalProps) {
+  // The recipient search query is auth-gated server-side; skip the
+  // subscription entirely while signed out instead of letting it error.
+  const { isAuthenticated } = useAuth();
   const [search, setSearch] = useState("");
   const [selectedUser, setSelectedUser] = useState<{
     id: string;
@@ -33,7 +37,7 @@ export function GiftModal({ open, onClose, currentCash, onSent }: GiftModalProps
 
   const searchUsers = useQuery(
     api.gifting.searchUsers,
-    search.length >= 2 ? { search } : "skip"
+    isAuthenticated && search.length >= 2 ? { search } : "skip"
   );
   const giftCash = useMutation(api.gifting.giftCash);
 
@@ -179,7 +183,12 @@ export function GiftModal({ open, onClose, currentCash, onSent }: GiftModalProps
           )}
 
           {/* Search Results */}
-          {!selectedUser && search.length >= 2 && searchUsers !== undefined && (
+          {!selectedUser && !isAuthenticated && search.length >= 2 && (
+            <p className="mt-2 rounded-lg border border-white/[0.08] bg-[#0b0b0c] px-3 py-2 text-xs text-white/40">
+              Sign in to gift cash to other players.
+            </p>
+          )}
+          {!selectedUser && isAuthenticated && search.length >= 2 && searchUsers !== undefined && (
             <div className="mt-2 max-h-40 overflow-y-auto rounded-lg border border-white/[0.08] bg-[#0b0b0c]">
               {searchUsers.length === 0 ? (
                 <p className="px-3 py-2 text-xs text-white/30">No users found</p>

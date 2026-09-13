@@ -1,13 +1,16 @@
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
 /** Maximum cash a player can gift to another player. */
 const MAX_PLAYER_GIFT = 10_000_000;
 
+// ConvexError (not plain Error) — production hides plain Error messages
+// from clients, surfacing them as an opaque "Server Error". ConvexError
+// carries the message through so toasts show the real reason.
 async function requireAuth(ctx: MutationCtx | QueryCtx) {
   const userId = await getAuthUserId(ctx);
-  if (userId === null) throw new Error("Not authenticated.");
+  if (userId === null) throw new ConvexError("Not authenticated.");
   return userId;
 }
 
@@ -15,7 +18,7 @@ async function requireAdmin(ctx: MutationCtx | QueryCtx) {
   const userId = await requireAuth(ctx);
   const user = await ctx.db.get(userId);
   if (!user || (user.role !== "owner" && user.role !== "admin" && user.role !== "moderator"))
-    throw new Error("Admin access required.");
+    throw new ConvexError("Admin access required.");
   return { userId, user };
 }
 
@@ -30,17 +33,17 @@ export const giftCash = mutation({
     const senderId = await requireAuth(ctx);
 
     if (senderId === args.recipientId) {
-      throw new Error("You cannot gift yourself.");
+      throw new ConvexError("You cannot gift yourself.");
     }
 
     const recipient = await ctx.db.get(args.recipientId);
-    if (!recipient) throw new Error("Recipient not found.");
+    if (!recipient) throw new ConvexError("Recipient not found.");
 
     if (args.amount <= 0 || !Number.isFinite(args.amount)) {
-      throw new Error("Invalid amount.");
+      throw new ConvexError("Invalid amount.");
     }
     if (args.amount > MAX_PLAYER_GIFT) {
-      throw new Error(`Maximum gift is $${MAX_PLAYER_GIFT.toLocaleString()}.`);
+      throw new ConvexError(`Maximum gift is $${MAX_PLAYER_GIFT.toLocaleString()}.`);
     }
 
     await ctx.db.insert("adminGifts", {
@@ -71,10 +74,10 @@ export const giftRandomCars = mutation({
     await requireAdmin(ctx);
 
     const target = await ctx.db.get(args.userId);
-    if (!target) throw new Error("User not found.");
+    if (!target) throw new ConvexError("User not found.");
 
     if (args.count <= 0 || args.count > 1_000_000 || !Number.isFinite(args.count)) {
-      throw new Error("Count must be between 1 and 1,000,000.");
+      throw new ConvexError("Count must be between 1 and 1,000,000.");
     }
 
     await ctx.db.insert("adminGifts", {
@@ -109,7 +112,11 @@ export const getMyGifts = query({
 export const searchUsers = query({
   args: { search: v.string() },
   handler: async (ctx, args) => {
-    await requireAuth(ctx);
+    // Signed-out visitors can open the gift modal (it lives in the game's
+    // More sheet) — throwing here crashed the subscription on every
+    // keystroke with an opaque "Server Error". Empty result, no crash.
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return [];
     const q = args.search.toLowerCase().trim();
     if (q.length < 2) return [];
 
