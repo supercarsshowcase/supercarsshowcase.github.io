@@ -210,12 +210,14 @@ describe("wanted bounties", () => {
     }
   });
 
-  test("bounties last 24 hours and pay 5x total car value", () => {
+  test("bounties last 24 hours and pay 0.9x total car value", () => {
+    // 0.9× — BELOW value so claim→rebuy loses money (the old 5× reward was
+    // a +4× value money printer), yet ~2.6× plain selling (35%).
     const [b] = generateBounties(NOW, 10);
     expect(b.expiresAt - NOW).toBe(24 * 3_600_000);
     let value = 0;
     for (const w of b.wants) value += generateBountyCar(w.carId)!.value * w.count;
-    expect(b.reward).toBe(value * 5);
+    expect(b.reward).toBe(Math.round(value * 0.9));
   });
 
   test("canCompleteBounty requires owning every wanted car", () => {
@@ -339,6 +341,44 @@ describe("wanted bounties", () => {
     expect(next.ownedCars[STARTER_ID]).toBeDefined();
     expect(Object.keys(next.ownedCars).length).toBe(1);
     expect(next.ownedCars[next.activeCarId]).toBeDefined(); // active car always owned
+  });
+
+  test("empty-wants bounties pay nothing and are pruned", () => {
+    // Corrupt/legacy rows with empty wants passed canCompleteBounty (empty
+    // .every() is true) and paid full reward for ZERO cars.
+    const now = Date.now();
+    const s: GameState = {
+      ...initialGameState(),
+      totalEarned: 50_000,
+      wantedBounties: [
+        { id: "e1", wants: [], reward: 5000, expiresAt: now + 3_600_000, claimed: false },
+      ],
+      wantedRefreshAt: now,
+    };
+    // Claim attempt is refused outright.
+    const claimed = gameReducer(s, { type: "SELL_FOR_BOUNTY", bountyId: "e1" });
+    expect(claimed.cash).toBe(s.cash);
+    // The reducer's upkeep prunes the corrupt row before the claim executes —
+    // it's simply gone from the board (either way, no payout is possible).
+    expect(claimed.wantedBounties.find((b) => b.id === "e1")).toBeUndefined();
+    // Any subsequent action prunes the corrupt row from the board.
+    const pruned = gameReducer(claimed, { type: "TICK", now: now + 1000 });
+    expect(pruned.wantedBounties.find((b) => b.id === "e1")).toBeUndefined();
+  });
+
+  test("bounty rewards stay below car value so claim+rebuy loses money", () => {
+    // The old 5× reward made claim→rebuy a +4× value-per-cycle money printer.
+    for (let trial = 0; trial < 40; trial++) {
+      for (const b of generateBounties(Date.now(), 120)) {
+        const wantedValue = b.wants.reduce(
+          (sum, w) => sum + (generateBountyCar(w.carId)?.value ?? 0),
+          0,
+        );
+        expect(wantedValue).toBeGreaterThan(0);
+        expect(b.reward).toBeLessThan(wantedValue); // strictly cheaper to keep the car
+        expect(b.reward).toBeGreaterThan(wantedValue * 0.3); // but well above plain selling
+      }
+    }
   });
 
   test("level-up migration never carries claimed across different metrics", () => {

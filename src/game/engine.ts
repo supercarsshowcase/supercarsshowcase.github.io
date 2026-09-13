@@ -46,7 +46,12 @@ const BOUNTY_DURATION_MS = 24 * 3_600_000;
 /** Auto-refresh bounties when the board is older than this. */
 const WANTED_AUTO_REFRESH_MS = 20 * 60_000;
 /** Bounty reward multiplier over the (buy) value of the wanted cars. */
-const BOUNTY_REWARD_MULT = 5;
+/** Bounty reward = this × the wanted cars' base value. Must stay BELOW
+ *  1.0: buying a car costs exactly its base value, so a reward ≥ value
+ *  turns claim→rebuy into an infinite money printer (+4× per cycle at 5×).
+ *  0.9× still pays ~2.6× more than plain selling (35%) — a real bonus for
+ *  cars you already own, while rebuy-farming loses 10% per cycle. */
+const BOUNTY_REWARD_MULT = 0.9;
 /** Manual bounty-board refresh cost ≈ a slice of the player's cash. */
 const WANTED_REFRESH_CASH_PCT = 0.05;
 /** …but never less than this floor, scaled by level. */
@@ -593,8 +598,12 @@ function trackWeekly(s: GameState, metric: string, amount: number): WeeklyState 
  * missing — a full board is left untouched so the 24h expiry stays honest.
  */
 function maintainBounties(s: GameState, now: number): GameState {
-  const live = s.wantedBounties.filter((b) => !b.claimed && b.expiresAt > now);
-  const settled = s.wantedBounties.filter((b) => b.claimed);
+  // Corrupt/legacy rows with empty wants passed canCompleteBounty (empty
+  // .every() is true) and paid the full reward for ZERO cars — the literal
+  // "you get the reward but keep the cars" bug. Drop them on upkeep.
+  const valid = (b: WantedBounty) => Array.isArray(b.wants) && b.wants.length > 0;
+  const live = s.wantedBounties.filter((b) => !b.claimed && b.expiresAt > now && valid(b));
+  const settled = s.wantedBounties.filter((b) => b.claimed && valid(b));
   if (live.length >= WANTED_BOUNTY_COUNT) {
     if (live.length + settled.length === s.wantedBounties.length) return s;
     return { ...s, wantedBounties: [...live, ...settled] };
@@ -981,6 +990,10 @@ export function gameReducer(prevState: GameState, action: Action): GameState {
     case "SELL_FOR_BOUNTY": {
       const bounty = state.wantedBounties.find((b) => b.id === action.bountyId);
       if (!bounty || bounty.claimed) return state;
+      // Defense in depth: an empty-wants bounty (corrupt save) must never
+      // pay — it has no cars to take, so a payout would be free money.
+      // maintainBounties drops these on the next upkeep anyway.
+      if (!bounty.wants || bounty.wants.length === 0) return state;
       if (bounty.expiresAt <= Date.now()) return state;
       if (!canCompleteBounty(state, bounty)) return state;
       // Remove owned cars that were part of the bounty
