@@ -69,9 +69,9 @@ const SLICE_CASH = [1, 2, 3, 5, 6, 7, 9, 10, 11];
 
 function SectionHeader({ eyebrow, title, hint }: { eyebrow: string; title: string; hint?: string }) {
   return (
-    <div className="mb-5">
+    <div className="mb-3 md:mb-5">
       <p className="font-display text-[11px] font-semibold uppercase tracking-[0.28em] text-apex-red">{eyebrow}</p>
-      <h3 className="mt-1 font-display text-2xl font-black tracking-tight text-white">{title}</h3>
+      <h3 className="mt-1 font-display text-xl font-black tracking-tight text-white md:text-2xl">{title}</h3>
       {hint && <p className="mt-1 text-xs text-white/40">{hint}</p>}
     </div>
   );

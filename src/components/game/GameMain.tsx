@@ -328,7 +328,7 @@ export function GameMain({
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-4 overflow-hidden rounded-xl border border-apex-red/50 bg-gradient-to-r from-apex-red/20 via-orange-600/20 to-apex-red/20 p-4"
+          className="mb-2 overflow-hidden rounded-xl border border-apex-red/50 bg-gradient-to-r from-apex-red/20 via-orange-600/20 to-apex-red/20 p-3 md:mb-4 md:p-4"
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -372,6 +372,9 @@ export function GameMain({
           >
             <Home className="size-3.5" />
           </Link>
+          {/* Desktop pill row — unchanged on md+. Mobile gets the organized
+              stat strip below instead of five cramped 9px pills. */}
+          <div className="hidden flex-wrap items-center gap-1.5 md:flex">
           <StatPill icon={Coins} label="Cash" value={fmtMoney(cash)} accent />
           <StatPill icon={TrendingUp} label="Income/s" value={fmtMoney(income)} />
           <StatPill icon={Star} label="Level" value={String(level)} />
@@ -387,6 +390,24 @@ export function GameMain({
               Chat
             </button>
           )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Mobile stat strip — three organized, readable cells replace the
+          cramped pill row. Desktop keeps the pills above. ── */}
+      <div className="mb-2 grid grid-cols-3 divide-x divide-apex-line overflow-hidden rounded-lg border border-apex-line bg-apex-panel md:hidden">
+        <div className="min-w-0 px-2 py-1.5 text-center">
+          <p className="text-[8px] font-semibold uppercase tracking-[0.2em] text-white/40">Cash</p>
+          <p className="truncate font-display text-sm font-black text-apex-red">{fmtMoney(cash)}</p>
+        </div>
+        <div className="min-w-0 px-2 py-1.5 text-center">
+          <p className="text-[8px] font-semibold uppercase tracking-[0.2em] text-white/40">Per sec</p>
+          <p className="truncate font-display text-sm font-black text-white">{fmtMoney(income)}</p>
+        </div>
+        <div className="min-w-0 px-2 py-1.5 text-center">
+          <p className="text-[8px] font-semibold uppercase tracking-[0.2em] text-white/40">Level</p>
+          <p className="truncate font-display text-sm font-black text-white">{level}</p>
         </div>
       </div>
 
@@ -749,12 +770,12 @@ function EarnZone({
   return (
     <div className="relative flex min-h-0 flex-col md:h-full">
       {/* ── Earn header with stats row ── */}
-      <div className="mb-2">
+      <div className="order-1 mb-2 md:order-none">
         <div className="flex items-center justify-between">
           <p className="font-display text-[11px] font-semibold uppercase tracking-[0.28em] text-apex-red">
             Earn
           </p>
-          <span className="font-display text-[10px] font-bold uppercase tracking-[0.16em] text-white/30">
+          <span className="hidden font-display text-[10px] font-bold uppercase tracking-[0.16em] text-white/30 md:inline">
             Tap the car to earn cash
           </span>
         </div>
@@ -770,7 +791,7 @@ function EarnZone({
       </div>
 
       {/* ── Detailed info strip ── */}
-      <div className="mb-2 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+      <div className="order-3 mb-2 grid grid-cols-2 gap-1.5 sm:grid-cols-4 md:order-none">
         <div className="rounded-lg border border-apex-line bg-apex-panel px-2 py-1.5">
           <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-white/35">Daily Reward</p>
           <p className="font-display text-xs font-black text-apex-red">{fmtMoney(daily)}</p>
@@ -797,7 +818,7 @@ function EarnZone({
       <div
         onClick={onCarClick}
         className={cn(
-          "group relative flex min-h-[320px] flex-col cursor-pointer select-none overflow-hidden rounded-2xl border bg-[#0b0b0c] transition-all md:min-h-[420px] md:flex-1",
+          "group relative order-2 flex min-h-[320px] flex-col cursor-pointer select-none overflow-hidden rounded-2xl border bg-[#0b0b0c] transition-all md:order-none md:min-h-[420px] md:flex-1",
           clickBlocked
             ? "border-red-500/30"
             : "border-apex-line hover:border-apex-red/30",
@@ -923,7 +944,7 @@ function EarnZone({
               );
             })()}
             {/* Quick specs */}
-            <div className="flex items-center justify-center gap-4 text-[10px] uppercase tracking-[0.14em] text-white/40">
+            <div className="hidden items-center justify-center gap-4 text-[10px] uppercase tracking-[0.14em] text-white/40 md:flex">
               <span className="flex items-center gap-1"><Zap className="size-3 text-apex-red" /> {carPower(state, state.activeCarId).toLocaleString()} hp</span>
               <span className="flex items-center gap-1"><TrendingUp className="size-3 text-emerald-400" /> {fmtMoney(perClick)}/click</span>
               <span className="flex items-center gap-1"><Coins className="size-3 text-amber-400" /> {fmtMoney(income)}/sec</span>
@@ -1034,7 +1055,7 @@ function StaffMark({ role }: { role: string }) {
 
 function EarnStat({ value, label, accent }: { value: string; label: string; accent?: boolean }) {
   return (
-    <div className="bg-apex-panel px-1.5 py-1.5 text-center">
+    <div className="rounded-md border border-apex-line bg-apex-panel px-1.5 py-1.5 text-center md:rounded-none md:border-0">
       <p className={cn("font-display text-xs font-black", accent ? "text-apex-red" : "text-white")}>
         {value}
       </p>

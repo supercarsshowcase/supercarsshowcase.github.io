@@ -13,9 +13,9 @@ function fmtMoney(n: number): string {
 
 function SectionHeader({ eyebrow, title, hint }: { eyebrow: string; title: string; hint?: string }) {
   return (
-    <div className="mb-6">
+    <div className="mb-4 md:mb-6">
       <p className="font-display text-[11px] font-semibold uppercase tracking-[0.28em] text-apex-red">{eyebrow}</p>
-      <h3 className="mt-1 font-display text-2xl font-black tracking-tight text-white">{title}</h3>
+      <h3 className="mt-1 font-display text-xl font-black tracking-tight text-white md:text-2xl">{title}</h3>
       {hint && <p className="mt-1 text-[11px] text-white/30">{hint}</p>}
     </div>
   );
@@ -43,18 +43,18 @@ export function LeaderboardPanel() {
       />
 
       {/* Stats bar */}
-      <div className="mb-6 grid grid-cols-3 gap-3">
-        <div className="rounded-xl border border-apex-line bg-apex-panel p-4 text-center">
+      <div className="mb-4 grid grid-cols-3 gap-2 md:mb-6 md:gap-3">
+        <div className="rounded-xl border border-apex-line bg-apex-panel p-3 text-center md:p-4">
           <Users className="mx-auto mb-2 size-4 text-white/30" />
           <p className="font-display text-lg font-black text-white">{totalPlayers}</p>
           <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-white/30">Players</p>
         </div>
-        <div className="rounded-xl border border-apex-line bg-apex-panel p-4 text-center">
+        <div className="rounded-xl border border-apex-line bg-apex-panel p-3 text-center md:p-4">
           <TrendingUp className="mx-auto mb-2 size-4 text-apex-red/60" />
           <p className="font-display text-lg font-black text-apex-red">{fmtMoney(topCash)}</p>
           <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-white/30">Top Cash</p>
         </div>
-        <div className="rounded-xl border border-apex-line bg-apex-panel p-4 text-center">
+        <div className="rounded-xl border border-apex-line bg-apex-panel p-3 text-center md:p-4">
           <Car className="mx-auto mb-2 size-4 text-white/30" />
           <p className="font-display text-lg font-black text-white">
             {players ? players.reduce((s, p) => s + p.carCount, 0) : 0}
@@ -65,18 +65,18 @@ export function LeaderboardPanel() {
 
       {/* Your rank card */}
       {myRank && (
-        <div className="mb-6 overflow-hidden rounded-xl border border-apex-red/30 bg-gradient-to-r from-apex-red/10 to-transparent">
-          <div className="flex items-center gap-4 px-5 py-4">
-            <div className="flex size-12 shrink-0 items-center justify-center rounded-xl border border-apex-red/30 bg-apex-red/15 font-display text-lg font-black text-apex-red">
+        <div className="mb-4 overflow-hidden rounded-xl border border-apex-red/30 bg-gradient-to-r from-apex-red/10 to-transparent md:mb-6">
+          <div className="flex items-center gap-3 px-3 py-3 md:gap-4 md:px-5 md:py-4">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-apex-red/30 bg-apex-red/15 font-display text-base font-black text-apex-red md:size-12 md:text-lg">
               #{myRank.rank}
             </div>
-            <div className="flex-1">
+            <div className="min-w-0 flex-1">
               <p className="font-display text-xs font-bold uppercase tracking-[0.12em] text-apex-red">Your Position</p>
-              <p className="mt-0.5 font-display text-lg font-black text-white">{myRank.name}</p>
+              <p className="mt-0.5 truncate font-display text-base font-black text-white md:text-lg">{myRank.name}</p>
             </div>
-            <div className="text-right">
-              <p className="font-display text-xl font-black text-apex-red">{fmtMoney(myRank.cash)}</p>
-              <p className="text-[11px] text-white/30">in your account</p>
+            <div className="shrink-0 text-right">
+              <p className="font-display text-lg font-black text-apex-red md:text-xl">{fmtMoney(myRank.cash)}</p>
+              <p className="text-[10px] text-white/30 md:text-[11px]">in your account</p>
             </div>
           </div>
         </div>
@@ -96,11 +96,13 @@ export function LeaderboardPanel() {
       ) : (
         <div className="space-y-px overflow-hidden rounded-xl border border-apex-line bg-apex-line">
           {/* Header row */}
-          <div className="grid grid-cols-[3rem_1fr_8rem_6rem] gap-3 bg-[#0a0a0c] px-4 py-2.5">
+          {/* Mobile drops the Earned column (3-col grid) so the name column
+              keeps room on ~375px screens; desktop restores the 4-col grid. */}
+          <div className="grid grid-cols-[2rem_1fr_5.5rem] gap-2 bg-[#0a0a0c] px-2.5 py-2.5 md:grid-cols-[3rem_1fr_8rem_6rem] md:gap-3 md:px-4 md:py-2.5">
             <span className="text-[9px] font-semibold uppercase tracking-[0.2em] text-white/25">#</span>
             <span className="text-[9px] font-semibold uppercase tracking-[0.2em] text-white/25">Player</span>
             <span className="text-right text-[9px] font-semibold uppercase tracking-[0.2em] text-white/25">Cash</span>
-            <span className="text-right text-[9px] font-semibold uppercase tracking-[0.2em] text-white/25">Earned</span>
+            <span className="hidden text-right text-[9px] font-semibold uppercase tracking-[0.2em] text-white/25 md:block">Earned</span>
           </div>
 
           {players.map((p, i) => {
@@ -113,7 +115,7 @@ export function LeaderboardPanel() {
               <div
                 key={i}
                 className={cn(
-                  "grid grid-cols-[3rem_1fr_8rem_6rem] items-center gap-3 px-4 py-3 transition-colors",
+                  "grid grid-cols-[2rem_1fr_5.5rem] items-center gap-2 px-2.5 py-2.5 transition-colors md:grid-cols-[3rem_1fr_8rem_6rem] md:gap-3 md:px-4 md:py-3",
                   isTop3
                     ? cn(style!.bg, "border-l-2", style!.border.replace("border-", "border-l-"))
                     : "bg-[#0c0c0e] hover:bg-white/[0.02]"
@@ -159,7 +161,7 @@ export function LeaderboardPanel() {
                 </div>
 
                 {/* Total earned */}
-                <div className="text-right">
+                <div className="hidden text-right md:block">
                   <p className="text-[11px] text-white/30 tabular-nums">
                     {fmtMoney(p.totalEarned)}
                   </p>
