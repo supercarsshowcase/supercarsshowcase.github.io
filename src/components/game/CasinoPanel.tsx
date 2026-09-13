@@ -260,7 +260,7 @@ function TradeCarsPanel({ state, dispatch }: { state: GameState; dispatch: React
               <Car className="size-4 shrink-0 text-white/30" />
               <div className="flex-1 min-w-0">
                 <p className="truncate text-xs font-bold text-white">{car.brand} {car.name}</p>
-                <p className="text-[11px] text-white/30">${Math.floor(car.value * 0.7).toLocaleString()} chips</p>
+                <p className="text-[11px] text-white/30">${Math.floor(car.value * 0.7).toLocaleString()} money</p>
               </div>
               <button type="button" onClick={() => trade(car.id)}
                 className="shrink-0 rounded-lg bg-apex-red/80 px-3 py-1.5 text-[11px] font-bold uppercase text-white hover:bg-apex-red">
@@ -613,6 +613,9 @@ function CrashGame({ state, dispatch }: { state: GameState; dispatch: React.Disp
   const [winAmount, setWinAmount] = useState(0);
   const [history, setHistory] = useState<number[]>([]);
   const [points, setPoints] = useState<{ x: number; y: number }[]>([{ x: 0, y: 96 }]);
+  // 30s lockout after every round — no rapid-fire re-betting.
+  const [cooldown, setCooldown] = useState(0);
+  const cooldownTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const rafRef = useRef(0);
   const startedAt = useRef(0);
   const crashPoint = useRef(1);
@@ -622,7 +625,23 @@ function CrashGame({ state, dispatch }: { state: GameState; dispatch: React.Disp
   // crash after the player already bailed (race between frame and click).
   const cashedRef = useRef(false);
 
+  const beginCooldown = useCallback(() => {
+    if (cooldownTimer.current) clearInterval(cooldownTimer.current);
+    setCooldown(30);
+    cooldownTimer.current = setInterval(() => {
+      setCooldown((s) => {
+        if (s <= 1) {
+          if (cooldownTimer.current) clearInterval(cooldownTimer.current);
+          cooldownTimer.current = null;
+          return 0;
+        }
+        return s - 1;
+      });
+    }, 1000);
+  }, []);
+
   const start = useCallback(() => {
+    if (cooldown > 0) return;
     if (state.cash < bet) return toast.error("Not enough cash!");
     dispatch({ type: "ADD_CASH", amount: -bet });
     // BRUTAL distribution: P(crash ≥ x) = 0.85/x — a 15% house edge (was 3%).
@@ -647,6 +666,7 @@ function CrashGame({ state, dispatch }: { state: GameState; dispatch: React.Disp
         setCrashed(true);
         setPlaying(false);
         setHistory((h) => [final, ...h].slice(0, 20));
+        beginCooldown();
         toast.error(`Crashed at ${final.toFixed(2)}× — bet lost`);
         return;
       }
@@ -659,7 +679,7 @@ function CrashGame({ state, dispatch }: { state: GameState; dispatch: React.Disp
       rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
-  }, [bet, state.cash, dispatch]);
+  }, [bet, state.cash, dispatch, cooldown, beginCooldown]);
 
   const cashOut = useCallback(() => {
     if (!playing || cashedRef.current) return;
@@ -675,10 +695,17 @@ function CrashGame({ state, dispatch }: { state: GameState; dispatch: React.Disp
     setPlaying(false);
     setHistory((h) => [at, ...h].slice(0, 20));
     // Crash pays CASH ONLY — no casino car prizes from this game.
+    beginCooldown();
     toast.success(`Cashed out at ${at.toFixed(2)}× — +$${win.toLocaleString()}`);
-  }, [playing, bet, dispatch]);
+  }, [playing, bet, dispatch, beginCooldown]);
 
-  useEffect(() => () => cancelAnimationFrame(rafRef.current), []);
+  useEffect(
+    () => () => {
+      cancelAnimationFrame(rafRef.current);
+      if (cooldownTimer.current) clearInterval(cooldownTimer.current);
+    },
+    [],
+  );
 
   const curveD = useMemo(
     () => points.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(" "),
@@ -714,7 +741,7 @@ function CrashGame({ state, dispatch }: { state: GameState; dispatch: React.Disp
         {/* Sidebar — bet controls, like the reference layout */}
         <div className="w-full shrink-0 space-y-2 lg:w-56">
           <label className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40">
-            Enter the amount of chips you want to bet
+            Enter the amount of money you want to bet
           </label>
           <div className="flex gap-1.5">
             <input
@@ -807,9 +834,12 @@ function CrashGame({ state, dispatch }: { state: GameState; dispatch: React.Disp
           <TrendingUp className="size-6" />CASH OUT — ${(bet * multiplier).toFixed(0)}
         </button>
       ) : (
-        <button type="button" onClick={start} disabled={state.cash < bet}
-          className="mt-4 inline-flex items-center gap-3 rounded-2xl bg-apex-red px-16 py-5 font-display text-xl font-black uppercase tracking-wider text-white transition-all hover:bg-apex-red/80 hover:scale-105 disabled:opacity-40 shadow-lg shadow-apex-red/30">
-          <TrendingUp className="size-6" />{crashed ? "Play Again" : "Start"} — ${bet.toLocaleString()}
+        <button type="button" onClick={start} disabled={state.cash < bet || cooldown > 0}
+          className="mt-4 inline-flex items-center gap-3 rounded-2xl bg-apex-red px-16 py-5 font-display text-xl font-black uppercase tracking-wider text-white transition-all hover:bg-apex-red/80 hover:scale-105 disabled:cursor-not-allowed disabled:opacity-40 shadow-lg shadow-apex-red/30">
+          <TrendingUp className="size-6" />
+          {cooldown > 0
+            ? `Next round in ${cooldown}s`
+            : `${crashed ? "Play Again" : "Start"} — $${bet.toLocaleString()}`}
         </button>
       )}
       {cashedOut && <ResultBadge won={true}>Cashed out at {cashedAt.toFixed(2)}× — +${winAmount.toLocaleString()}</ResultBadge>}
