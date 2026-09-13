@@ -613,7 +613,6 @@ function CrashGame({ state, dispatch }: { state: GameState; dispatch: React.Disp
   const [winAmount, setWinAmount] = useState(0);
   const [history, setHistory] = useState<number[]>([]);
   const [points, setPoints] = useState<{ x: number; y: number }[]>([{ x: 0, y: 96 }]);
-  const [carPrize, setCarPrize] = useState<string | null>(null);
   const rafRef = useRef(0);
   const startedAt = useRef(0);
   const crashPoint = useRef(1);
@@ -626,13 +625,15 @@ function CrashGame({ state, dispatch }: { state: GameState; dispatch: React.Disp
   const start = useCallback(() => {
     if (state.cash < bet) return toast.error("Not enough cash!");
     dispatch({ type: "ADD_CASH", amount: -bet });
-    // Classic crash distribution: P(crash ≥ x) = 0.97/x — a ~3% house edge,
-    // median ≈ 1.94×, rare moonshots up to 150× (the old curve capped at 2.5×).
-    crashPoint.current = Math.min(150, Math.max(1.0, 0.97 / (1 - Math.random())));
+    // BRUTAL distribution: P(crash ≥ x) = 0.85/x — a 15% house edge (was 3%).
+    // Median ≈ 1.7×, ~16% of rounds bust near-instantly below 1.01× before
+    // you can even react, and 2×+ only holds 42% of the time. Moonshots to
+    // 150× still exist — you just earn them rarely.
+    crashPoint.current = Math.min(150, Math.max(1.0, 0.85 / (1 - Math.random())));
     cashedRef.current = false;
     lastMult.current = 1;
     lastPush.current = 0;
-    setPlaying(true); setCrashed(false); setCashedOut(false); setCashedAt(0); setWinAmount(0); setCarPrize(null); setMultiplier(1.0); setPoints([{ x: 0, y: 96 }]);
+    setPlaying(true); setCrashed(false); setCashedOut(false); setCashedAt(0); setWinAmount(0); setMultiplier(1.0); setPoints([{ x: 0, y: 96 }]);
     startedAt.current = performance.now();
 
     const tick = () => {
@@ -673,8 +674,7 @@ function CrashGame({ state, dispatch }: { state: GameState; dispatch: React.Disp
     setMultiplier(at);
     setPlaying(false);
     setHistory((h) => [at, ...h].slice(0, 20));
-    const prize = checkCasinoPrize(dispatch);
-    if (prize) setCarPrize(prize);
+    // Crash pays CASH ONLY — no casino car prizes from this game.
     toast.success(`Cashed out at ${at.toFixed(2)}× — +$${win.toLocaleString()}`);
   }, [playing, bet, dispatch]);
 
@@ -814,11 +814,6 @@ function CrashGame({ state, dispatch }: { state: GameState; dispatch: React.Disp
       )}
       {cashedOut && <ResultBadge won={true}>Cashed out at {cashedAt.toFixed(2)}× — +${winAmount.toLocaleString()}</ResultBadge>}
       {crashed && !cashedOut && <ResultBadge won={false}>Crashed at {multiplier.toFixed(2)}×</ResultBadge>}
-      {carPrize && (
-        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="flex items-center gap-3 rounded-xl border border-amber-500/50 bg-amber-500/20 px-6 py-4">
-          <Award className="size-6 text-amber-400 shrink-0" /><div><p className="text-xs font-bold uppercase tracking-wider text-amber-400">Casino Prize Won!</p><p className="mt-1 font-display text-lg font-black text-white">{carPrize}</p></div>
-        </motion.div>
-      )}
     </GameLayout>
   );
 }
