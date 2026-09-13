@@ -594,6 +594,15 @@ function RouletteGame({ state, dispatch }: { state: GameState; dispatch: React.D
 /* ══════════════════════════════════════════════════════════════════════════ */
 /*  CRASH                                                                    */
 /* ══════════════════════════════════════════════════════════════════════════ */
+/** Curve point for a moment of a crash round: x sweeps the panel over
+ *  ~15s, y is log-scaled so even a 150× peak fits under the ceiling. */
+function crashXY(elapsedMs: number, mult: number): { x: number; y: number } {
+  return {
+    x: Math.min(96, (elapsedMs / 15_000) * 96),
+    y: 96 - (Math.log(mult) / Math.log(200)) * 90,
+  };
+}
+
 function CrashGame({ state, dispatch }: { state: GameState; dispatch: React.Dispatch<Action> }) {
   const [bet, setBet] = useState(10000);
   const [playing, setPlaying] = useState(false);
@@ -601,56 +610,214 @@ function CrashGame({ state, dispatch }: { state: GameState; dispatch: React.Disp
   const [crashed, setCrashed] = useState(false);
   const [cashedOut, setCashedOut] = useState(false);
   const [cashedAt, setCashedAt] = useState(0);
+  const [winAmount, setWinAmount] = useState(0);
+  const [history, setHistory] = useState<number[]>([]);
+  const [points, setPoints] = useState<{ x: number; y: number }[]>([{ x: 0, y: 96 }]);
   const [carPrize, setCarPrize] = useState<string | null>(null);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const crashPoint = useRef(0);
+  const rafRef = useRef(0);
+  const startedAt = useRef(0);
+  const crashPoint = useRef(1);
+  const lastMult = useRef(1);
+  const lastPush = useRef(0);
+  // Set inside cashOut so the animation loop can never settle a round as a
+  // crash after the player already bailed (race between frame and click).
+  const cashedRef = useRef(false);
 
   const start = useCallback(() => {
     if (state.cash < bet) return toast.error("Not enough cash!");
-    dispatch({ type: "ADD_CASH", amount: -bet }); setPlaying(true); setCrashed(false); setCashedOut(false); setCashedAt(0); setCarPrize(null); setMultiplier(1.0);
-    crashPoint.current = Math.max(1.01, Math.pow(Math.random(), 0.5) * 1.5 + 1);
-    let mult = 1.0;
-    timerRef.current = setInterval(() => { mult += 0.008 + mult * 0.002; setMultiplier(mult); if (mult >= crashPoint.current) { if (timerRef.current) clearInterval(timerRef.current); setCrashed(true); setPlaying(false); } }, 50);
+    dispatch({ type: "ADD_CASH", amount: -bet });
+    // Classic crash distribution: P(crash ≥ x) = 0.97/x — a ~3% house edge,
+    // median ≈ 1.94×, rare moonshots up to 150× (the old curve capped at 2.5×).
+    crashPoint.current = Math.min(150, Math.max(1.0, 0.97 / (1 - Math.random())));
+    cashedRef.current = false;
+    lastMult.current = 1;
+    lastPush.current = 0;
+    setPlaying(true); setCrashed(false); setCashedOut(false); setCashedAt(0); setWinAmount(0); setCarPrize(null); setMultiplier(1.0); setPoints([{ x: 0, y: 96 }]);
+    startedAt.current = performance.now();
+
+    const tick = () => {
+      if (cashedRef.current) return;
+      const elapsed = performance.now() - startedAt.current;
+      // Exponential growth — e^(0.00018·t): 2× at ~3.8s, 10× at ~12.8s.
+      const mult = Math.exp(0.00018 * elapsed);
+      if (mult >= crashPoint.current) {
+        const final = crashPoint.current;
+        setMultiplier(final);
+        setCrashed(true);
+        setPlaying(false);
+        setHistory((h) => [final, ...h].slice(0, 20));
+        toast.error(`Crashed at ${final.toFixed(2)}× — bet lost`);
+        return;
+      }
+      lastMult.current = mult;
+      setMultiplier(mult);
+      if (elapsed - lastPush.current > 60) {
+        lastPush.current = elapsed;
+        setPoints((p) => [...p, crashXY(elapsed, mult)]);
+      }
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
   }, [bet, state.cash, dispatch]);
 
   const cashOut = useCallback(() => {
-    if (!playing || crashed) return; if (timerRef.current) clearInterval(timerRef.current);    const win = Math.floor(bet * multiplier);
+    if (!playing || cashedRef.current) return;
+    cashedRef.current = true;
+    cancelAnimationFrame(rafRef.current);
+    const at = lastMult.current;
+    const win = Math.floor(bet * at);
     dispatch({ type: "ADD_CASH", amount: win });
     setCashedOut(true);
-    setCashedAt(multiplier); setPlaying(false);
-    toast.success(`Cashed out at ${multiplier.toFixed(2)}× — +$${win.toLocaleString()}`);
-  }, [playing, crashed, bet, multiplier, dispatch]);
+    setCashedAt(at);
+    setWinAmount(win);
+    setMultiplier(at);
+    setPlaying(false);
+    setHistory((h) => [at, ...h].slice(0, 20));
+    const prize = checkCasinoPrize(dispatch);
+    if (prize) setCarPrize(prize);
+    toast.success(`Cashed out at ${at.toFixed(2)}× — +$${win.toLocaleString()}`);
+  }, [playing, bet, dispatch]);
 
-  useEffect(() => () => { if (timerRef.current) clearInterval(timerRef.current); }, []);
+  useEffect(() => () => cancelAnimationFrame(rafRef.current), []);
+
+  const curveD = useMemo(
+    () => points.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(" "),
+    [points],
+  );
+  const tip = points[points.length - 1] ?? { x: 0, y: 96 };
 
   return (
     <GameLayout title="Crash" icon={<TrendingUp className="size-7 text-green-400" />}>
-      <div className="flex flex-col items-center gap-6">
-        <div className={cn("flex h-52 w-full max-w-lg items-center justify-center rounded-3xl border-2 text-8xl font-black font-mono transition-colors shadow-2xl",
-          crashed ? "border-red-500 bg-red-500/10 text-red-400" : cashedOut ? "border-green-500 bg-green-500/10 text-green-400"
-          : playing ? "border-amber-500 bg-amber-500/10 text-amber-400" : "border-white/20 bg-[#0a0a0c] text-white/30")}>
-          {crashed ? <div className="flex items-center gap-3"><Flame className="size-12 text-red-400" />CRASHED</div> : `${multiplier.toFixed(2)}×`}
+      {/* Previous crashes strip — green above 2×, red below (like the reference) */}
+      {history.length > 0 && (
+        <div className="mb-3">
+          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">
+            Previous Crashes
+          </p>
+          <div className="chat-scroll flex gap-1.5 overflow-x-auto pb-1">
+            {history.map((m, i) => (
+              <span
+                key={`${i}-${m}`}
+                className={cn(
+                  "shrink-0 rounded-full px-2.5 py-1 font-mono text-xs font-bold",
+                  m >= 2 ? "bg-green-500/15 text-green-400" : "bg-red-500/15 text-red-400",
+                )}
+              >
+                ×{m.toFixed(2)}
+              </span>
+            ))}
+          </div>
         </div>
-        <div className="w-full max-w-lg"><BetInput value={bet} onChange={setBet} max={state.cash} /></div>
-        {playing ? (
-          <button type="button" onClick={cashOut}
-            className="inline-flex items-center gap-3 rounded-2xl bg-green-600 px-16 py-6 font-display text-2xl font-black uppercase tracking-wider text-white transition-all hover:bg-green-700 hover:scale-105 animate-pulse shadow-lg shadow-green-600/30">
-            <TrendingUp className="size-6" />CASH OUT — ${(bet * multiplier).toFixed(0)}
+      )}
+
+      <div className="flex flex-col gap-4 lg:flex-row">
+        {/* Sidebar — bet controls, like the reference layout */}
+        <div className="w-full shrink-0 space-y-2 lg:w-56">
+          <label className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40">
+            Enter the amount of chips you want to bet
+          </label>
+          <div className="flex gap-1.5">
+            <input
+              type="number"
+              min={1}
+              value={bet}
+              onChange={(e) => setBet(Math.max(1, Math.floor(Number(e.target.value) || 0)))}
+              className="min-h-[38px] min-w-0 flex-1 rounded-md border border-white/15 bg-[#0b0b0c] px-2.5 font-mono text-sm font-bold text-white outline-none focus:border-apex-red"
+            />
+            <button
+              type="button"
+              onClick={() => setBet(Math.max(1, Math.floor(state.cash)))}
+              disabled={playing}
+              className="min-h-[38px] shrink-0 rounded-md border border-white/15 bg-white/[0.06] px-3 text-[11px] font-bold text-white transition-colors hover:border-apex-red disabled:opacity-40"
+            >
+              All-in
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={cashOut}
+            disabled={!playing}
+            className="min-h-[38px] w-full rounded-md border border-white/15 bg-white/[0.06] text-xs font-bold uppercase tracking-[0.1em] text-white transition-colors hover:border-green-500 disabled:opacity-40"
+          >
+            Cash Out
           </button>
-        ) : (
-          <button type="button" onClick={start} disabled={state.cash < bet}
-            className="inline-flex items-center gap-3 rounded-2xl bg-apex-red px-16 py-5 font-display text-xl font-black uppercase tracking-wider text-white transition-all hover:bg-apex-red/80 hover:scale-105 disabled:opacity-40 shadow-lg shadow-apex-red/30">
-            <TrendingUp className="size-6" />{crashed ? "Play Again" : "Start"} — ${bet.toLocaleString()}
-          </button>
-        )}
-        {cashedOut && <ResultBadge won={true}>Cashed out at {cashedAt.toFixed(2)}×</ResultBadge>}
-        {crashed && !cashedOut && <ResultBadge won={false}>Crashed at {multiplier.toFixed(2)}×</ResultBadge>}
-        {carPrize && (
-          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="flex items-center gap-3 rounded-xl border border-amber-500/50 bg-amber-500/20 px-6 py-4">
-            <Award className="size-6 text-amber-400 shrink-0" /><div><p className="text-xs font-bold uppercase tracking-wider text-amber-400">Casino Prize Won!</p><p className="mt-1 font-display text-lg font-black text-white">{carPrize}</p></div>
-          </motion.div>
-        )}
+          <p className="text-[11px] leading-relaxed text-white/35">
+            In Crash, you have to Cash Out before the crash. Your bet is
+            multiplied by the multiplier, and your bet is lost if you don't
+            Cash Out before the crash.
+          </p>
+        </div>
+
+        {/* Chart panel — the multiplier curve */}
+        <div
+          className={cn(
+            "relative h-64 flex-1 overflow-hidden rounded-lg border transition-colors sm:h-80",
+            crashed ? "border-red-500/60" : cashedOut ? "border-green-500/60" : "border-white/15",
+          )}
+        >
+          {/* Grid */}
+          <svg className="absolute inset-0 h-full w-full" preserveAspectRatio="none" viewBox="0 0 100 100">
+            {[25, 50, 75].map((y) => (
+              <line key={y} x1="0" y1={y} x2="100" y2={y} stroke="rgba(255,255,255,0.07)" strokeWidth="0.2" />
+            ))}
+            {[25, 50, 75].map((x) => (
+              <line key={x} x1={x} y1="0" x2={x} y2="100" stroke="rgba(255,255,255,0.07)" strokeWidth="0.2" />
+            ))}
+          </svg>
+
+          {/* The multiplier */}
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+            <span
+              className={cn(
+                "font-mono text-6xl font-black tabular-nums transition-colors sm:text-8xl",
+                crashed ? "text-red-500" : cashedOut ? "text-green-400" : playing ? "text-white" : "text-white/25",
+              )}
+            >
+              ×{multiplier.toFixed(2)}
+            </span>
+          </div>
+
+          {/* The curve */}
+          <svg className="absolute inset-0 h-full w-full" preserveAspectRatio="none" viewBox="0 0 100 100">
+            {playing && (
+              <polyline
+                points={`0,96 ${points.map((p) => `${p.x},${p.y}`).join(" ")} ${tip.x},96`}
+                fill={crashed ? "rgba(239,68,68,0.08)" : "rgba(74,222,128,0.07)"}
+                stroke="none"
+              />
+            )}
+            <polyline
+              points={points.map((p) => `${p.x},${p.y}`).join(" ")}
+              fill="none"
+              stroke={crashed ? "#ef4444" : cashedOut ? "#4ade80" : "#4ade80"}
+              strokeWidth="0.9"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+            {/* Rocket at the tip */}
+            <circle cx={tip.x} cy={tip.y} r="1.4" fill={crashed ? "#ef4444" : "#fbbf24"} />
+          </svg>
+        </div>
       </div>
+
+      {playing ? (
+        <button type="button" onClick={cashOut}
+          className="mt-4 inline-flex items-center gap-3 rounded-2xl bg-green-600 px-16 py-6 font-display text-2xl font-black uppercase tracking-wider text-white transition-all hover:bg-green-700 hover:scale-105 animate-pulse shadow-lg shadow-green-600/30">
+          <TrendingUp className="size-6" />CASH OUT — ${(bet * multiplier).toFixed(0)}
+        </button>
+      ) : (
+        <button type="button" onClick={start} disabled={state.cash < bet}
+          className="mt-4 inline-flex items-center gap-3 rounded-2xl bg-apex-red px-16 py-5 font-display text-xl font-black uppercase tracking-wider text-white transition-all hover:bg-apex-red/80 hover:scale-105 disabled:opacity-40 shadow-lg shadow-apex-red/30">
+          <TrendingUp className="size-6" />{crashed ? "Play Again" : "Start"} — ${bet.toLocaleString()}
+        </button>
+      )}
+      {cashedOut && <ResultBadge won={true}>Cashed out at {cashedAt.toFixed(2)}× — +${winAmount.toLocaleString()}</ResultBadge>}
+      {crashed && !cashedOut && <ResultBadge won={false}>Crashed at {multiplier.toFixed(2)}×</ResultBadge>}
+      {carPrize && (
+        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="flex items-center gap-3 rounded-xl border border-amber-500/50 bg-amber-500/20 px-6 py-4">
+          <Award className="size-6 text-amber-400 shrink-0" /><div><p className="text-xs font-bold uppercase tracking-wider text-amber-400">Casino Prize Won!</p><p className="mt-1 font-display text-lg font-black text-white">{carPrize}</p></div>
+        </motion.div>
+      )}
     </GameLayout>
   );
 }
