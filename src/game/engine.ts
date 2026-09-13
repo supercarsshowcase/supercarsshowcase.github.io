@@ -418,6 +418,7 @@ function newAchievements(state: GameState): { id: string; cash: number; rep: num
 export type Action =
   | { type: "CLICK"; amount: number; globalMultiplier?: number }
   | { type: "TICK"; now: number; globalMultiplier?: number }
+  | { type: "CLAIM_OFFLINE"; amount: number; now: number }
   | { type: "BUY_CAR"; id: string }
   | { type: "ADD_CASH"; amount: number }
   | { type: "ADD_CAR"; carId: string }
@@ -682,6 +683,20 @@ export function gameReducer(prevState: GameState, action: Action): GameState {
         ownedCars,
       };
       return applyAchievements(next);
+    }
+    case "CLAIM_OFFLINE": {
+      // Offline earnings, credited once on mount BEFORE the first TICK —
+      // otherwise TICK's own dt would re-credit the whole away-gap at 100%.
+      const amount = Math.max(0, Math.round(action.amount));
+      if (amount <= 0) return { ...state, lastTick: action.now };
+      const weekly = trackWeekly(state, "earned", amount);
+      return applyAchievements({
+        ...state,
+        cash: state.cash + amount,
+        totalEarned: state.totalEarned + amount,
+        lastTick: action.now,
+        weekly,
+      });
     }
     case "TICK": {
       const dt = Math.min(28_800, Math.max(0, (action.now - state.lastTick) / 1000));

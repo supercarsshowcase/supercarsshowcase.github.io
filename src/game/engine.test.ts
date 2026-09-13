@@ -42,6 +42,35 @@ describe("gameReducer", () => {
     expect(next.ownedCars[STARTER_ID]).toBeDefined();
   });
 
+  it("CLAIM_OFFLINE credits cash, totalEarned, weekly and advances lastTick", () => {
+    const s = make({ totalEarned: 50_000 });
+    const next = gameReducer(s, {
+      type: "CLAIM_OFFLINE",
+      amount: 12_345,
+      now: s.lastTick + 3_600_000,
+    });
+    expect(next.cash).toBe(12_345);
+    expect(next.totalEarned).toBe(62_345);
+    expect(next.lastTick).toBe(s.lastTick + 3_600_000);
+    expect(next.weekly.weeklyEarned).toBe(12_345);
+  });
+
+  it("CLAIM_OFFLINE rounds fractional amounts", () => {
+    const s = make();
+    const next = gameReducer(s, { type: "CLAIM_OFFLINE", amount: 99.6, now: s.lastTick + 1000 });
+    expect(next.cash).toBe(100);
+  });
+
+  it("CLAIM_OFFLINE ignores zero/negative amounts but still advances lastTick", () => {
+    const s = make({ cash: 500 });
+    const zero = gameReducer(s, { type: "CLAIM_OFFLINE", amount: 0, now: s.lastTick + 1000 });
+    expect(zero.cash).toBe(500);
+    expect(zero.lastTick).toBe(s.lastTick + 1000);
+    const neg = gameReducer(s, { type: "CLAIM_OFFLINE", amount: -50, now: s.lastTick + 1000 });
+    expect(neg.cash).toBe(500);
+    expect(neg.lastTick).toBe(s.lastTick + 1000);
+  });
+
   it("TICK adds passive income", () => {
     const s = make({ totalEarned: 50_000 });
     const next = gameReducer(s, {
