@@ -66,13 +66,19 @@ const REGIONS = ["GB EN", "US EN", "DE DE", "FR FR", "IT IT", "AE EN"];
 
 function Logo({ name }: { name?: string }) {
   const words = (name || "Supercars Showcase").split(/\s+/).filter(Boolean);
+  const first = words[0] ?? "S";
   return (
-    <Link to="/" className="group flex items-center gap-2">
-      {/* Speed slash — a small skewed accent that nudges on hover */}
+    <Link to="/" className="group flex items-center gap-2.5">
+      {/* Plate badge — a skewed red block carrying the first letter, like a
+          race number plate. Nudges flatter on hover. */}
       <span
         aria-hidden="true"
-        className="h-4 w-[3px] -skew-x-[18deg] rounded-full bg-apex-red shadow-[0_0_10px_rgba(255,46,0,0.7)] transition-transform duration-300 group-hover:translate-x-0.5"
-      />
+        className="flex h-8 w-8 shrink-0 -skew-x-[12deg] items-center justify-center bg-apex-red shadow-[0_0_18px_rgba(255,46,0,0.45)] transition-transform duration-300 group-hover:-skew-x-[20deg]"
+      >
+        <span className="skew-x-[12deg] font-display text-lg font-black uppercase italic leading-none text-white">
+          {first.charAt(0)}
+        </span>
+      </span>
       {words.map((word, i) => (
         <Fragment key={i}>
           {i > 0 && (
@@ -192,10 +198,22 @@ export function AppShell() {
           aria-hidden="true"
           className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-apex-red/80 to-transparent"
         />
+        {/* Left edge racing stripe — full header height */}
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-apex-red-bright via-apex-red to-apex-red-deep"
+        />
+        {/* Top sheen — faint light falloff for depth */}
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/[0.05] to-transparent"
+        />
         <div className="relative mx-auto flex h-16 max-w-[1400px] items-center justify-between gap-3 px-4 sm:px-6">
           <div className="flex items-center gap-6">
             <Logo name={settings?.siteName} />
-            <nav className="hidden items-center gap-1 lg:flex">
+            {/* Nav tray — the links sit in a recessed panel; the active
+                route is a filled red chip instead of a thin underline. */}
+            <nav className="hidden items-center gap-0.5 rounded-lg border border-white/10 bg-white/[0.04] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] lg:flex">
               {NAV_LINKS.map((link) => (
                 <NavLink
                   key={link.to}
@@ -203,21 +221,14 @@ export function AppShell() {
                   end={link.end}
                   className={({ isActive }) =>
                     cn(
-                      "relative rounded-md px-3 py-2 font-display text-[13px] font-semibold uppercase tracking-[0.16em] transition-all",
+                      "rounded-md px-3 py-1.5 font-display text-[13px] font-semibold uppercase tracking-[0.16em] transition-all",
                       isActive
-                        ? "text-white"
-                        : "text-white/55 hover:bg-white/[0.06] hover:text-white",
+                        ? "bg-apex-red text-white shadow-[0_0_16px_rgba(255,46,0,0.5)]"
+                        : "text-white/55 hover:bg-white/[0.08] hover:text-white",
                     )
                   }
                 >
-                  {({ isActive }) => (
-                    <>
-                      {nav[link.key] ?? link.label}
-                      {isActive && (
-                        <span className="absolute inset-x-3 -bottom-[1px] h-0.5 rounded-full bg-apex-red shadow-[0_0_12px_rgba(255,46,0,0.9)]" />
-                      )}
-                    </>
-                  )}
+                  {nav[link.key] ?? link.label}
                 </NavLink>
               ))}
               {isAdmin && (
@@ -225,10 +236,10 @@ export function AppShell() {
                   to="/admin"
                   className={({ isActive }) =>
                     cn(
-                      "relative inline-flex items-center gap-1.5 px-3 py-2 font-display text-[13px] font-semibold uppercase tracking-[0.16em] transition-colors",
+                      "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 font-display text-[13px] font-semibold uppercase tracking-[0.16em] transition-all",
                       isActive
-                        ? "text-apex-red"
-                        : "text-white/55 hover:bg-apex-red/10 hover:text-apex-red",
+                        ? "bg-apex-red/20 text-apex-red"
+                        : "text-white/45 hover:bg-apex-red/10 hover:text-apex-red",
                     )
                   }
                 >
