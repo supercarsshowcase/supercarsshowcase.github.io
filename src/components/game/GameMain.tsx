@@ -572,35 +572,8 @@ export function GameMain({
             </div>
           )}
 
-          {/* Mobile nav — hidden: replaced by the fixed bottom tab bar
-              below (thumb-reachable, never scrolls away, safe-area aware). */}
-          <div className="mt-auto hidden gap-1 overflow-x-auto border-b border-apex-line pt-3 md:hidden">
-            {NAV.map((item) => {
-              const Icon = item.icon;
-              const isActive = tab === item.id;
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => {
-                    if (item.id === "gift") {
-                      setShowGiftModal(true);
-                    } else {
-                      setTab(item.id);
-                    }
-                  }}
-                  className={cn(
-                    "relative flex shrink-0 items-center gap-1 px-2 py-1.5 font-display text-[10px] font-semibold uppercase tracking-[0.10em] transition-colors",
-                    isActive ? "text-white" : "text-white/45 hover:text-white",
-                  )}
-                >
-                  <Icon className={cn("size-3 shrink-0", isActive ? "text-apex-red" : "text-white/40")} />
-                  {item.label}
-                  {isActive && <span className="absolute inset-x-2 -bottom-px h-0.5 bg-apex-red" />}
-                </button>
-              );
-            })}
-          </div>
+          {/* (Old mobile nav strip removed — superseded by the fixed bottom
+              tab bar; nothing renders here on any width.) */}
         </main>
 
         {/* ── Chat panel (desktop) ── */}
@@ -611,8 +584,28 @@ export function GameMain({
         />
       </div>
 
-      {/* ── Mobile bottom tab bar — fixed, safe-area aware, thumb-reachable.
-          Primary tabs get their own slot; the remaining 10 live under More. ── */}
+      {/* Bottom-bar spacer — INSIDE the game root (so it joins the scroll
+          flow and content can scroll clear of the fixed tab bar) and inside
+          the zoom wrapper (so it scales with the game, never leaving a dead
+          band). Desktop ignores it. */}
+      <div className="h-[76px] md:hidden" aria-hidden="true" />
+      </div>
+
+      {/* ── Mobile bottom tab bar — FIXED OUTSIDE the zoom wrapper (fixed
+          positioning inside a CSS-zoom tree scales its viewport coordinates,
+          so a future SITE_ZOOM ≠ 1 would shove the bar off-screen; the
+          GiftModal/MobileChatSheet already follow this pattern). Safe-area
+          aware, thumb-reachable. Primary tabs get their own slot; the
+          remaining 10 live under More. ── */}
+      {/* Tap-away layer: touch has no Escape, so a tap anywhere outside the
+          bar dismisses the More sheet. Desktop never renders it (md:hidden). */}
+      {moreOpen && (
+        <div
+          className="fixed inset-0 z-30 md:hidden"
+          onClick={() => setMoreOpen(false)}
+          aria-hidden="true"
+        />
+      )}
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-apex-line bg-black/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden">
         <div className="mx-auto grid max-w-lg grid-cols-6 px-1">
           {PRIMARY_TABS.map((id) => {
@@ -697,11 +690,6 @@ export function GameMain({
             </button>
           </div>
         )}
-      </div>
-
-      {/* Bottom-bar spacer — keeps content clear of the fixed bar on mobile
-          (desktop ignores both). */}
-      <div className="h-[76px] md:hidden" aria-hidden="true" />
       </div>
 
       {/* Gift modal sits outside the zoom wrapper so it stays viewport-fixed */}
