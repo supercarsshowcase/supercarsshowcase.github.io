@@ -13,7 +13,14 @@ import {
   Warehouse,
   UserRound,
   Verified,
+  Home,
+  CarFront,
+  BarChart3,
+  Gamepad2,
+  MessageSquare,
+  type LucideIcon,
 } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useApp } from "@/context/app-context";
@@ -44,12 +51,28 @@ const NAV_LINKS: { to: string; label: string; key: keyof typeof NAV_COPY; end?: 
   { to: "/feedback", label: "Feedback", key: "feedback" },
 ];
 
+/** Icons for the mobile nav rows (desktop shows text-only links). */
+const NAV_ICONS: Record<string, LucideIcon> = {
+  home: Home,
+  garage: CarFront,
+  myGarage: Warehouse,
+  rankings: BarChart3,
+  favorites: Heart,
+  game: Gamepad2,
+  feedback: MessageSquare,
+};
+
 const REGIONS = ["GB EN", "US EN", "DE DE", "FR FR", "IT IT", "AE EN"];
 
 function Logo({ name }: { name?: string }) {
   const words = (name || "Supercars Showcase").split(/\s+/).filter(Boolean);
   return (
-    <Link to="/" className="group flex items-center gap-1.5">
+    <Link to="/" className="group flex items-center gap-2">
+      {/* Speed slash — a small skewed accent that nudges on hover */}
+      <span
+        aria-hidden="true"
+        className="h-4 w-[3px] -skew-x-[18deg] rounded-full bg-apex-red shadow-[0_0_10px_rgba(255,46,0,0.7)] transition-transform duration-300 group-hover:translate-x-0.5"
+      />
       {words.map((word, i) => (
         <Fragment key={i}>
           {i > 0 && (
@@ -70,6 +93,16 @@ export function AppShell() {
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  // Glass deepens + a drop shadow appears once the page scrolls, so content
+  // slides under the header with clear separation (no-op on /game, where the
+  // header never scrolls).
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
   const isGame = location.pathname === "/game";
 
   const isAdmin = user?.role === "owner" || user?.role === "admin" || user?.role === "moderator";
@@ -146,8 +179,20 @@ export function AppShell() {
       {/* Site header stays visible on /game so the site nav (Feedback,
           Machines, Rankings…) is always reachable; the game fills the
           space below it. */}
-      <header className="sticky top-0 z-50 border-b border-apex-line bg-black/85 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between gap-3 px-4 sm:px-6">
+      <header
+        className={cn(
+          "sticky top-0 z-50 border-b border-apex-line backdrop-blur-xl transition-[background-color,box-shadow] duration-300",
+          scrolled
+            ? "bg-black/90 shadow-[0_10px_40px_rgba(0,0,0,0.55)]"
+            : "bg-black/60",
+        )}
+      >
+        {/* Racing stripe — a hairline of the accent across the top edge */}
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-apex-red/80 to-transparent"
+        />
+        <div className="relative mx-auto flex h-16 max-w-[1400px] items-center justify-between gap-3 px-4 sm:px-6">
           <div className="flex items-center gap-6">
             <Logo name={settings?.siteName} />
             <nav className="hidden items-center gap-1 lg:flex">
@@ -158,10 +203,10 @@ export function AppShell() {
                   end={link.end}
                   className={({ isActive }) =>
                     cn(
-                      "relative px-3 py-2 font-display text-[13px] font-semibold uppercase tracking-[0.16em] transition-colors",
+                      "relative rounded-md px-3 py-2 font-display text-[13px] font-semibold uppercase tracking-[0.16em] transition-all",
                       isActive
                         ? "text-white"
-                        : "text-white/55 hover:text-white",
+                        : "text-white/55 hover:bg-white/[0.06] hover:text-white",
                     )
                   }
                 >
@@ -169,7 +214,7 @@ export function AppShell() {
                     <>
                       {nav[link.key] ?? link.label}
                       {isActive && (
-                        <span className="absolute inset-x-3 -bottom-[1px] h-0.5 bg-apex-red" />
+                        <span className="absolute inset-x-3 -bottom-[1px] h-0.5 rounded-full bg-apex-red shadow-[0_0_12px_rgba(255,46,0,0.9)]" />
                       )}
                     </>
                   )}
@@ -183,7 +228,7 @@ export function AppShell() {
                       "relative inline-flex items-center gap-1.5 px-3 py-2 font-display text-[13px] font-semibold uppercase tracking-[0.16em] transition-colors",
                       isActive
                         ? "text-apex-red"
-                        : "text-white/55 hover:text-apex-red",
+                        : "text-white/55 hover:bg-apex-red/10 hover:text-apex-red",
                     )
                   }
                 >
@@ -198,7 +243,7 @@ export function AppShell() {
             <button
               type="button"
               onClick={surpriseMe}
-              className="hidden items-center gap-2 rounded-md border border-white/15 px-3 py-2 font-display text-[12px] font-semibold uppercase tracking-[0.14em] text-white/80 transition-colors hover:border-apex-red hover:text-white md:flex"
+              className="hidden items-center gap-2 rounded-md border border-apex-red/50 bg-apex-red/15 px-3 py-2 font-display text-[12px] font-semibold uppercase tracking-[0.14em] text-white shadow-[0_0_16px_rgba(255,46,0,0.2)] transition-all hover:bg-apex-red hover:shadow-[0_0_26px_rgba(255,46,0,0.45)] md:flex"
             >
               <Shuffle className="size-3.5" />
               {nav.surprise}
@@ -210,7 +255,7 @@ export function AppShell() {
                 value={region}
                 onChange={(e) => setRegion(e.target.value)}
                 aria-label="Region"
-                className="h-9 cursor-pointer appearance-none rounded-md border border-white/15 bg-transparent pl-3 pr-8 font-display text-[12px] font-semibold uppercase tracking-[0.1em] text-white/80 outline-none transition-colors hover:border-white/30 focus:border-apex-red"
+                className="h-9 cursor-pointer appearance-none rounded-md border border-white/10 bg-white/[0.04] pl-3 pr-8 font-display text-[12px] font-semibold uppercase tracking-[0.1em] text-white/80 outline-none transition-colors hover:border-white/25 focus:border-apex-red"
               >
                 {REGIONS.map((r) => (
                   <option key={r} value={r} className="bg-[#0b0b0c] text-white">
@@ -227,7 +272,7 @@ export function AppShell() {
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value as CurrencyCode)}
                 aria-label="Currency"
-                className="h-9 cursor-pointer appearance-none rounded-md border border-white/15 bg-transparent pl-3 pr-8 font-display text-[12px] font-semibold uppercase tracking-[0.1em] text-white/80 outline-none transition-colors hover:border-white/30 focus:border-apex-red"
+                className="h-9 cursor-pointer appearance-none rounded-md border border-white/10 bg-white/[0.04] pl-3 pr-8 font-display text-[12px] font-semibold uppercase tracking-[0.1em] text-white/80 outline-none transition-colors hover:border-white/25 focus:border-apex-red"
               >
                 {(Object.keys(CURRENCIES) as CurrencyCode[]).map((code) => (
                   <option key={code} value={code} className="bg-[#0b0b0c] text-white">
@@ -240,7 +285,7 @@ export function AppShell() {
 
             <Link
               to="/favorites"
-              className="relative flex size-9 items-center justify-center rounded-md border border-white/15 text-white/80 transition-colors hover:border-apex-red hover:text-white"
+              className="relative flex size-9 items-center justify-center rounded-md border border-white/10 bg-white/[0.04] text-white/80 transition-colors hover:border-apex-red hover:text-white"
               aria-label="Favorites"
             >
               <Heart className="size-4" />
@@ -257,7 +302,7 @@ export function AppShell() {
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
-                    className="flex size-9 items-center justify-center rounded-md border border-white/15 text-white/80 transition-colors hover:border-apex-red hover:text-white"
+                    className="flex size-9 items-center justify-center rounded-md border border-white/10 bg-white/[0.04] text-white/80 transition-colors hover:border-apex-red hover:text-white"
                     aria-label="Account"
                   >
                     {user?.image ? (
@@ -344,7 +389,7 @@ export function AppShell() {
             ) : (
               <Link
                 to="/auth"
-                className="inline-flex items-center gap-2 rounded-md border border-apex-red/50 bg-apex-red/10 px-3 py-2 font-display text-[12px] font-semibold uppercase tracking-[0.12em] text-white transition-colors hover:bg-apex-red hover:text-white"
+                className="inline-flex items-center gap-2 rounded-md bg-apex-red px-3.5 py-2 font-display text-[12px] font-semibold uppercase tracking-[0.12em] text-white shadow-[0_0_20px_rgba(255,46,0,0.35)] transition-all hover:bg-apex-red-bright hover:shadow-[0_0_28px_rgba(255,46,0,0.5)]"
               >
                 <LogIn className="size-3.5" />
                 <span className="hidden sm:inline">{nav.signIn}</span>
@@ -354,7 +399,7 @@ export function AppShell() {
             <button
               type="button"
               onClick={() => setMobileOpen((v) => !v)}
-              className="flex size-9 items-center justify-center rounded-md border border-white/15 text-white/80 lg:hidden"
+              className="flex size-9 items-center justify-center rounded-md border border-white/10 bg-white/[0.04] text-white/80 transition-colors hover:border-apex-red hover:text-white lg:hidden"
               aria-label="Menu"
             >
               {mobileOpen ? <X className="size-4" /> : <Menu className="size-4" />}
@@ -362,48 +407,72 @@ export function AppShell() {
           </div>
         </div>
 
+        <AnimatePresence>
         {mobileOpen && (
-          <nav className="border-t border-apex-line bg-black px-4 py-3 lg:hidden">
-            <div className="flex flex-col">
-              {NAV_LINKS.map((link) => (
-                <NavLink
-                  key={link.to}
-                  to={link.to}
-                  end={link.end}
-                  onClick={() => setMobileOpen(false)}
-                  className={({ isActive }) =>
-                    cn(
-                      "border-b border-apex-line py-3 font-display text-sm font-semibold uppercase tracking-[0.16em] last:border-0",
-                      isActive ? "text-apex-red" : "text-white/70",
-                    )
-                  }
-                >
-                  {nav[link.key] ?? link.label}
-                </NavLink>
-              ))}
+          <motion.nav
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.22, ease: "easeOut" }}
+            className="overflow-hidden border-t border-apex-line bg-black/95 backdrop-blur-xl lg:hidden"
+          >
+            <div className="flex flex-col px-4 py-3">
+              {NAV_LINKS.map((link, i) => {
+                const RowIcon = NAV_ICONS[link.key];
+                return (
+                  <motion.div
+                    key={link.to}
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.03 * i, duration: 0.2 }}
+                  >
+                    <NavLink
+                      to={link.to}
+                      end={link.end}
+                      onClick={() => setMobileOpen(false)}
+                      className={({ isActive }) =>
+                        cn(
+                          "flex items-center gap-3 border-b border-apex-line py-3.5 font-display text-sm font-semibold uppercase tracking-[0.16em] transition-colors",
+                          isActive ? "text-apex-red" : "text-white/70",
+                        )
+                      }
+                    >
+                      {RowIcon && (
+                        <RowIcon className={cn("size-4", link.to === location.pathname ? "text-apex-red" : "text-white/35")} />
+                      )}
+                      {nav[link.key] ?? link.label}
+                      {link.to === "/game" && (
+                        <span className="ml-auto rounded-sm bg-apex-red px-1.5 py-0.5 text-[8px] font-black tracking-[0.12em] text-white">
+                          PLAY
+                        </span>
+                      )}
+                    </NavLink>
+                  </motion.div>
+                );
+              })}
               <NavLink
                 to="/compare"
                 onClick={() => setMobileOpen(false)}
-                className="border-b border-apex-line py-3 font-display text-sm font-semibold uppercase tracking-[0.16em] text-white/70"
+                className="flex items-center gap-3 border-b border-apex-line py-3.5 font-display text-sm font-semibold uppercase tracking-[0.16em] text-white/70"
               >
-                {nav.compare}
+                <Shuffle className="size-4 text-white/35" /> {nav.compare}
               </NavLink>
               {isAdmin && (
                 <NavLink
                   to="/admin"
                   onClick={() => setMobileOpen(false)}
-                  className="border-b border-apex-line py-3 font-display text-sm font-semibold uppercase tracking-[0.16em] text-apex-red"
+                  className="flex items-center gap-3 border-b border-apex-line py-3.5 font-display text-sm font-semibold uppercase tracking-[0.16em] text-apex-red"
                 >
-                  <Shield className="mr-2 inline size-4" /> {nav.admin}
+                  <Shield className="size-4" /> {nav.admin}
                 </NavLink>
               )}
               {!isAuthenticated && (
                 <NavLink
                   to="/auth"
                   onClick={() => setMobileOpen(false)}
-                  className="border-b border-apex-line py-3 font-display text-sm font-semibold uppercase tracking-[0.16em] text-apex-red"
+                  className="flex items-center gap-3 border-b border-apex-line py-3.5 font-display text-sm font-semibold uppercase tracking-[0.16em] text-apex-red"
                 >
-                  {nav.signIn}
+                  <LogIn className="size-4" /> {nav.signIn}
                 </NavLink>
               )}
               <button
@@ -412,13 +481,14 @@ export function AppShell() {
                   setMobileOpen(false);
                   surpriseMe();
                 }}
-                className="mt-1 flex items-center gap-2 py-3 font-display text-sm font-semibold uppercase tracking-[0.16em] text-white/70"
+                className="mt-2.5 flex items-center justify-center gap-2 rounded-md border border-apex-red/50 bg-apex-red/10 py-3 font-display text-sm font-semibold uppercase tracking-[0.16em] text-white transition-colors active:bg-apex-red"
               >
-                <Shuffle className="size-4" /> Surprise Me
+                <Shuffle className="size-4 text-apex-red" /> Surprise Me
               </button>
             </div>
-          </nav>
+          </motion.nav>
         )}
+        </AnimatePresence>
       </header>
 
       {/* On the game page the main area is the scroll container.
