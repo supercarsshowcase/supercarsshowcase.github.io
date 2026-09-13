@@ -12,6 +12,14 @@ async function requireAdmin(ctx: MutationCtx | QueryCtx) {
   return user;
 }
 
+/** NaN slips past every range comparison (NaN <= 0 is false), so guard it
+ *  explicitly before any min/max validation — an unchecked NaN grant would
+ *  be stored and poison the player's save with NaN cash. */
+function requireFinite(name: string, value: number): number {
+  if (!Number.isFinite(value)) throw new Error(`${name} must be a finite number.`);
+  return value;
+}
+
 // ── Give money to a user ──────────────────────────────────────────────────────
 
 export const giveMoney = mutation({
@@ -23,7 +31,8 @@ export const giveMoney = mutation({
     await requireAdmin(ctx);
     const target = await ctx.db.get(args.userId);
     if (!target) throw new Error("User not found.");
-    if (args.amount <= 0) {
+    const amount = requireFinite("Amount", args.amount);
+    if (amount <= 0) {
       throw new Error("Amount must be at least $1.");
     }
     // Store the grant in a new table or just log it. For the game, we'll
@@ -41,11 +50,11 @@ export const giveMoney = mutation({
     await ctx.db.insert("adminGifts", {
       userId: args.userId,
       kind: "money",
-      amount: args.amount,
+      amount: Math.round(amount),
       claimed: false,
       createdAt: Date.now(),
     });
-    return { success: true, amount: args.amount, userName: target.name ?? "Unknown" };
+    return { success: true, amount: Math.round(amount), userName: target.name ?? "Unknown" };
   },
 });
 
@@ -90,14 +99,16 @@ export const setMultiplierEvent = mutation({
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
-    if (args.multiplier < 2 || args.multiplier > 10_000) {
+    const multiplier = requireFinite("Multiplier", args.multiplier);
+    const durationMinutes = requireFinite("Duration", args.durationMinutes);
+    if (multiplier < 2 || multiplier > 10_000) {
       throw new Error("Multiplier must be between 2x and 10,000x.");
     }
-    if (args.durationMinutes < 1 || args.durationMinutes > 1440) {
+    if (durationMinutes < 1 || durationMinutes > 1440) {
       throw new Error("Duration must be between 1 and 1440 minutes (24h).");
     }
     const now = Date.now();
-    const expiresAt = now + args.durationMinutes * 60_000;
+    const expiresAt = now + durationMinutes * 60_000;
 
     // Upsert the single active event doc
     const existing = await ctx.db
@@ -107,16 +118,16 @@ export const setMultiplierEvent = mutation({
 
     if (existing) {
       await ctx.db.patch(existing._id, {
-        multiplier: args.multiplier,
-        label: args.label.trim() || `${args.multiplier}x EVENT`,
+        multiplier,
+        label: args.label.trim() || `${multiplier}x EVENT`,
         expiresAt,
         createdAt: now,
       });
     } else {
       await ctx.db.insert("multiplierEvents", {
         key: "active",
-        multiplier: args.multiplier,
-        label: args.label.trim() || `${args.multiplier}x EVENT`,
+        multiplier,
+        label: args.label.trim() || `${multiplier}x EVENT`,
         expiresAt,
         createdAt: now,
       });
@@ -207,13 +218,14 @@ export const giveSpins = mutation({
     await requireAdmin(ctx);
     const target = await ctx.db.get(args.userId);
     if (!target) throw new Error("User not found.");
-    if (args.amount <= 0 || args.amount > 10_000_000) {
+    const amount = requireFinite("Amount", args.amount);
+    if (amount <= 0 || amount > 10_000_000) {
       throw new Error("Amount must be between 1 and 10,000,000.");
     }
     await ctx.db.insert("adminGifts", {
       userId: args.userId,
       kind: "spins",
-      amount: Math.round(args.amount),
+      amount: Math.round(amount),
       claimed: false,
       createdAt: Date.now(),
     });

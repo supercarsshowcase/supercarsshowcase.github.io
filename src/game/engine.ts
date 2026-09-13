@@ -638,7 +638,10 @@ export function gameReducer(prevState: GameState, action: Action): GameState {
   const state = upkeep;
   switch (action.type) {
     case "CLICK": {
-      const amount = Math.max(1, Math.round(action.amount));
+      // A $0 click is legitimate — a car with empty fuel earns nothing and
+      // the UI shows $0. Only junk input gets the $1 floor; clamping a real
+      // 0 up to 1 paid cash the UI promised was $0.
+      const amount = action.amount > 0 ? Math.max(1, Math.round(action.amount)) : 0;
       const wasStarter = state.activeCarId === STARTER_ID;
       const nextClicks = state.clicksOnStarter + (wasStarter ? 1 : 0);
       const weeklyEarned = trackWeekly(state, "earned", amount);

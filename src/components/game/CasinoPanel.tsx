@@ -354,21 +354,33 @@ function CoinflipGame({ state, dispatch }: { state: GameState; dispatch: React.D
           dispatch({ type: "ADD_CASH", amount: -bet });
         }
       } else {
+        // The staked car always changes hands — a win used to KEEP the stake
+        // AND grant a prize car (free money on every flip), and when the
+        // player already owned the prize, ADD_CAR silently no-oped: the
+        // stake vanished with nothing in return.
+        dispatch({ type: "REMOVE_CAR", carId: selectedCar! });
         if (wonGame) {
           const betCar = GAME_CAR_MAP[selectedCar!]; const betValue = betCar?.value ?? 0;
           const houseCars = ["ferrari-f8-19", "huracan-15", "911-turbo-s-19", "mclaren-720s-17", "amg-gt-black-18", "ferrari-458-12", "911-gt3-18", "amg-c63-18", "m4-18", "corvette-c6-08"]
             .map((id) => GAME_CAR_MAP[id]).filter((c) => c && Math.abs(c.value - betValue) < betValue * 0.5);
           const prizeCar = houseCars.length > 0 ? houseCars[Math.floor(Math.random() * houseCars.length)] : GAME_CAR_MAP["ferrari-f8-19"]!;
-          dispatch({ type: "ADD_CAR", carId: prizeCar.id }); setWonCar(`${prizeCar.brand} ${prizeCar.name}`);
-          toast.success(`WON a ${prizeCar.name}!`);
+          if (state.ownedCars[prizeCar.id]) {
+            // Each car exists only once — pay its crate-scrap value instead.
+            const scrap = Math.round(prizeCar.value * 0.2);
+            dispatch({ type: "ADD_CASH", amount: scrap });
+            setWonCar(`${prizeCar.brand} ${prizeCar.name} — $${scrap.toLocaleString()} cash payout`);
+            toast.success(`Already own the ${prizeCar.name} — paid cash instead!`);
+          } else {
+            dispatch({ type: "ADD_CAR", carId: prizeCar.id }); setWonCar(`${prizeCar.brand} ${prizeCar.name}`);
+            toast.success(`WON a ${prizeCar.name}!`);
+          }
         } else {
-          dispatch({ type: "REMOVE_CAR", carId: selectedCar! });
           const lost = GAME_CAR_MAP[selectedCar!]; setLostCar(lost ? `${lost.brand} ${lost.name}` : selectedCar);
         }
       }
       setSpinning(false);
     }, 1500);
-  }, [mode, bet, pick, selectedCar, state.cash, dispatch]);
+  }, [mode, bet, pick, selectedCar, state.cash, state.ownedCars, dispatch]);
 
   return (
     <GameLayout title="Coinflip" icon={<CircleDot className="size-7 text-amber-400" />}>

@@ -1148,6 +1148,15 @@ export default function Admin() {
                         toast.error("Select at least one thing to reset");
                         return;
                       }
+                      // Two-click confirm: this wipes real progress with no
+                      // undo, and a stray click used to fire it instantly.
+                      const armKey = `reset-${abuseTarget}-${selected.join(",")}`;
+                      if (armedResetAll !== armKey) {
+                        setArmedResetAll(armKey);
+                        toast.info("Click Reset Progress again to confirm");
+                        return;
+                      }
+                      setArmedResetAll(null);
                       try {
                         const result = await resetPlayerProgress({
                           userId: abuseTarget as Id<"users">,
@@ -1165,9 +1174,21 @@ export default function Admin() {
                         toast.error(e instanceof Error ? e.message : "Failed");
                       }
                     }}
-                    className="mt-2 rounded-md border border-red-500/40 bg-red-500/10 px-4 py-2 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-red-400 hover:bg-red-500/20 disabled:opacity-30"
+                    title={
+                      armedResetAll?.startsWith(`reset-${abuseTarget}`)
+                        ? "Click again to confirm reset"
+                        : "Click twice to reset"
+                    }
+                    className={cn(
+                      "mt-2 rounded-md border px-4 py-2 font-display text-[10px] font-bold uppercase tracking-[0.12em] disabled:opacity-30",
+                      armedResetAll?.startsWith(`reset-${abuseTarget}`)
+                        ? "animate-pulse border-red-500 bg-red-500/30 text-white"
+                        : "border-red-500/40 bg-red-500/10 text-red-400 hover:bg-red-500/20",
+                    )}
                   >
-                    Reset Progress
+                    {armedResetAll?.startsWith(`reset-${abuseTarget}`)
+                      ? "Confirm Reset"
+                      : "Reset Progress"}
                   </button>
                 </div>
               </div>
