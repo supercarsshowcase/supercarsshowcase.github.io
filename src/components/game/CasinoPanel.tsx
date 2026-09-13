@@ -720,6 +720,7 @@ function CrashGame({ state, dispatch }: { state: GameState; dispatch: React.Disp
             <input
               type="number"
               min={1}
+              inputMode="numeric"
               value={bet}
               onChange={(e) => setBet(Math.max(1, Math.floor(Number(e.target.value) || 0)))}
               className="min-h-[38px] min-w-0 flex-1 rounded-md border border-white/15 bg-[#0b0b0c] px-2.5 font-mono text-sm font-bold text-white outline-none focus:border-apex-red"
