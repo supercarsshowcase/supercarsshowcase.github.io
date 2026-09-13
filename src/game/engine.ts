@@ -654,8 +654,11 @@ export function gameReducer(prevState: GameState, action: Action): GameState {
         const prevClicks = activeOwned.clicksSinceFuel ?? 0;
         const newClicks = prevClicks + 1;
         const fuel = activeOwned.fuel ?? FUEL_MAX;
-        if (newClicks >= FUEL_DRAIN_INTERVAL && fuel > 0) {
-          const newFuel = fuel - 1;
+        if (newClicks >= FUEL_DRAIN_INTERVAL) {
+          // Roll the counter whether or not fuel remains — letting it grow
+          // unbounded while empty meant the first click after a refuel
+          // instantly burned 1 fuel the player just paid for.
+          const newFuel = fuel > 0 ? fuel - 1 : fuel;
           ownedCars = {
             ...ownedCars,
             [state.activeCarId]: { ...activeOwned, fuel: newFuel, clicksSinceFuel: 0 },
@@ -956,7 +959,7 @@ export function gameReducer(prevState: GameState, action: Action): GameState {
         cash: state.cash - cost,
         ownedCars: {
           ...state.ownedCars,
-          [action.carId]: { ...owned, fuel: FUEL_MAX },
+          [action.carId]: { ...owned, fuel: FUEL_MAX, clicksSinceFuel: 0 },
         },
       };
     }

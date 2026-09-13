@@ -76,6 +76,46 @@ describe("passivePerSec", () => {
   });
 });
 
+describe("CLICK fuel gating", () => {
+  it("pays $0 when the active car is out of fuel (no $1 clamp drip)", () => {
+    const s = make({
+      activeCarId: STARTER_ID,
+      ownedCars: {
+        [STARTER_ID]: { upgrades: {}, fuel: 0, clicksSinceFuel: 0 },
+      },
+    });
+    expect(clickValue(s)).toBe(0);
+    const next = gameReducer(s, { type: "CLICK", amount: clickValue(s) });
+    expect(next.cash).toBe(0);
+    expect(next.totalEarned).toBe(0);
+  });
+
+  it("pays real amounts normally with fuel", () => {
+    const s = make();
+    const next = gameReducer(s, { type: "CLICK", amount: 250 });
+    expect(next.cash).toBe(250);
+  });
+
+  it("floors only junk input to $1", () => {
+    const s = make();
+    const next = gameReducer(s, { type: "CLICK", amount: 0.4 });
+    expect(next.cash).toBe(1);
+  });
+
+  it("out-of-fuel clicks still drain fuel counters", () => {
+    const s = make({
+      activeCarId: STARTER_ID,
+      ownedCars: {
+        [STARTER_ID]: { upgrades: {}, fuel: 0, clicksSinceFuel: 99 },
+      },
+    });
+    const next = gameReducer(s, { type: "CLICK", amount: 0 });
+    // fuel stays 0, but the click counter rolls over the drain interval
+    expect(next.ownedCars[STARTER_ID].fuel).toBe(0);
+    expect(next.ownedCars[STARTER_ID].clicksSinceFuel).toBe(0);
+  });
+});
+
 describe("upgradeCost", () => {
   it("returns finite for valid upgrade", () => {
     const s = make({ totalEarned: 50_000 });
