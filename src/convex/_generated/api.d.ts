@@ -14,6 +14,7 @@ import type * as auth_emailOtp from "../auth/emailOtp.js";
 import type * as auth_usernamePassword from "../auth/usernamePassword.js";
 import type * as cars from "../cars.js";
 import type * as chat from "../chat.js";
+import type * as coinflip from "../coinflip.js";
 import type * as feedback from "../feedback.js";
 import type * as gameSaves from "../gameSaves.js";
 import type * as garage from "../garage.js";
@@ -39,6 +40,7 @@ declare const fullApi: ApiFromModules<{
   "auth/usernamePassword": typeof auth_usernamePassword;
   cars: typeof cars;
   chat: typeof chat;
+  coinflip: typeof coinflip;
   feedback: typeof feedback;
   gameSaves: typeof gameSaves;
   garage: typeof garage;

@@ -200,6 +200,32 @@ const schema = defineSchema(
       .index("by_created", ["createdAt"])
       .index("by_user_created", ["userId", "createdAt"]),
 
+    // Online 1v1 coinflip — real matchmaking. Creator posts a bet + side;
+    // an opponent joins on the opposite side; the flip runs SERVER-SIDE at
+    // join so both clients see one authoritative result.
+    coinflipMatches: defineTable({
+      status: v.union(
+        v.literal("open"),
+        v.literal("done"),
+        v.literal("cancelled"),
+      ),
+      bet: v.number(),
+      creatorId: v.id("users"),
+      creatorName: v.string(),
+      creatorPick: v.union(v.literal("heads"), v.literal("tails")),
+      opponentId: v.optional(v.id("users")),
+      opponentName: v.optional(v.string()),
+      opponentPick: v.optional(v.union(v.literal("heads"), v.literal("tails"))),
+      winnerId: v.optional(v.id("users")),
+      winnerSide: v.optional(v.union(v.literal("heads"), v.literal("tails"))),
+      createdAt: v.number(),
+      flippedAt: v.optional(v.number()),
+      // Server-side dedupe flag: creator payout/refund applied exactly once.
+      creatorSettled: v.optional(v.boolean()),
+    })
+      .index("by_status", ["status"])
+      .index("by_creator", ["creatorId"]),
+
   },
   {
     schemaValidation: false,

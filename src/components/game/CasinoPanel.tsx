@@ -31,6 +31,11 @@ import type { Action } from "@/game/engine";
 import { GAME_CAR_MAP, GAME_CARS } from "@/game/data";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useQuery, useMutation } from "convex/react";
+import type { FunctionReturnType } from "convex/server";
+import { api } from "@/convex/_generated/api";
+import { useAuth } from "@/hooks/use-auth";
+import { OnlineCoinflip as OnlineCoinflipReal } from "@/components/game/OnlineCoinflip";
 
 /* ── Types ─────────────────────────────────────────────────────────────── */
 type GameId =
@@ -58,7 +63,7 @@ const GAMES: GameDef[] = [
   { id: "crash", name: "Crash", icon: <TrendingUp className="size-7 text-green-400" />, category: "game", desc: "Cash out before it crashes" },
   { id: "mines", name: "Mines", icon: <Crosshair className="size-7 text-white/70" />, category: "game", desc: "Avoid the mines" },
   { id: "jackpot", name: "Jackpot", icon: <Zap className="size-7 text-amber-400" />, category: "game", desc: "Pool cash or cars for the big win" },
-  { id: "online-coinflip", name: "Online Coinflip 1v1", icon: <Swords className="size-7 text-blue-400" />, category: "online", desc: "Challenge another player" },
+  { id: "online-coinflip", name: "Online Coinflip 1v1", icon: <Swords className="size-7 text-blue-400" />, category: "online", desc: "Real 1v1 vs other players" },
   { id: "online-jackpot", name: "Online Jackpot", icon: <Star className="size-7 text-purple-400" />, category: "online", desc: "Pool with others" },
 ];
 
@@ -168,7 +173,7 @@ export function CasinoPanel({ state, dispatch }: { state: GameState; dispatch: R
             {game === "crash" && <CrashGame state={state} dispatch={dispatch} />}
             {game === "mines" && <MinesGame state={state} dispatch={dispatch} />}
             {game === "jackpot" && <JackpotGame state={state} dispatch={dispatch} />}
-            {game === "online-coinflip" && <OnlineCoinflip state={state} dispatch={dispatch} />}
+            {game === "online-coinflip" && <OnlineCoinflipReal state={state} dispatch={dispatch} />}
             {game === "online-jackpot" && <OnlineJackpot state={state} dispatch={dispatch} />}
             {game === "trade-cars" && <TradeCarsPanel state={state} dispatch={dispatch} />}
           </motion.div>
