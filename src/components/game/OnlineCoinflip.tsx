@@ -105,7 +105,11 @@ export function OnlineCoinflip({ state, dispatch }: { state: GameState; dispatch
           }
         })
         .catch(() => {
-          settledIds.current.delete(m._id); // network hiccup — allow retry
+          // Network hiccup — allow a retry, but NOT synchronously: the query
+          // subscription re-fires immediately on reconnect, and an instant
+          // delete here would tight-loop failing settle calls.
+          const id = m._id;
+          window.setTimeout(() => settledIds.current.delete(id), 3_000);
         });
     }
   }, [myRecent, settleCreator, dispatch]);
