@@ -10,7 +10,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { Crown, CircleDot, Swords } from "lucide-react";
+import { Crown, CircleDot, Swords, Star } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "@/convex/_generated/api";
@@ -23,6 +23,7 @@ import { toast } from "sonner";
 type CoinflipOpenRow = FunctionReturnType<typeof api.coinflip.listOpen>[number];
 type CoinflipMyRow = FunctionReturnType<typeof api.coinflip.listMyRecent>[number];
 type Side = "heads" | "tails";
+type RevealData = { myPick: Side; oppPick: Side; winnerSide: Side; won: boolean; opponent: string; payout: number };
 
 /* ── Shared casino chrome (kept local to avoid a circular import) ──────── */
 function CoinIcon({ side, size = "md" }: { side: Side | "unknown"; size?: "sm" | "md" | "lg" }) {
@@ -74,7 +75,40 @@ export function OnlineCoinflip({ state, dispatch }: { state: GameState; dispatch
   const [bet, setBet] = useState(10000);
   const [pick, setPick] = useState<Side>("heads");
   const [busy, setBusy] = useState(false);
-  const [reveal, setReveal] = useState<{ myPick: Side; oppPick: Side; winnerSide: Side; won: boolean; opponent: string; payout: number } | null>(null);
+  const [reveal, setReveal] = useState<RevealData | null>(null);
+  const [tossing, setTossing] = useState(false);
+  const [tossId, setTossId] = useState(0);
+  const [flipHistory, setFlipHistory] = useState<{ side: Side; won: boolean }[]>([]);
+  const [now, setNow] = useState(Date.now());
+  const tossTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // A real toss: the coin spins ~5 turns in the air for 2.5s before the
+  // result lands — history entry and toasts fire on landing, not mid-air.
+  const startToss = useCallback((data: RevealData) => {
+    setReveal(data);
+    setTossing(true);
+    setTossId((n) => n + 1);
+    if (tossTimer.current) clearTimeout(tossTimer.current);
+    tossTimer.current = setTimeout(() => {
+      setTossing(false);
+      setFlipHistory((h) => [{ side: data.winnerSide, won: data.won }, ...h].slice(0, 12));
+      if (data.won) toast.success(`You beat ${data.opponent}! +$${data.payout.toLocaleString()}`);
+      else toast.error(`${data.opponent} won the flip.`);
+    }, 2600);
+  }, []);
+
+  // Ticker so lobby "time left" stays fresh.
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(t);
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (tossTimer.current) clearTimeout(tossTimer.current);
+    },
+    [],
+  );
 
   // Creator-side payout/refund — exactly-once via the server flag. The
   // joiner settles from the join() mutation's return value instead.
@@ -92,7 +126,7 @@ export function OnlineCoinflip({ state, dispatch }: { state: GameState; dispatch
             toast.info(`No opponent showed up — $${r.payout.toLocaleString()} refunded.`);
           } else {
             if (r.won) dispatch({ type: "ADD_CASH", amount: r.payout });
-            setReveal({
+            startToss({
               myPick: m.myPick as Side,
               oppPick: m.myPick === "heads" ? "tails" : "heads",
               winnerSide: m.winnerSide as Side,
@@ -100,8 +134,6 @@ export function OnlineCoinflip({ state, dispatch }: { state: GameState; dispatch
               opponent: m.opponentName,
               payout: r.payout,
             });
-            if (r.won) toast.success(`You beat ${m.opponentName}! +$${r.payout.toLocaleString()}`);
-            else toast.error(`${m.opponentName} won the flip.`);
           }
         })
         .catch(() => {
@@ -112,7 +144,7 @@ export function OnlineCoinflip({ state, dispatch }: { state: GameState; dispatch
           window.setTimeout(() => settledIds.current.delete(id), 3_000);
         });
     }
-  }, [myRecent, settleCreator, dispatch]);
+  }, [myRecent, settleCreator, dispatch, startToss]);
 
   const myOpenMatch: CoinflipMyRow | undefined = myRecent?.find((m) => m.status === "open" && m.iAmCreator);
   const lobby: CoinflipOpenRow[] = (openMatches ?? []).filter((m) => !m.mine);
@@ -137,13 +169,11 @@ export function OnlineCoinflip({ state, dispatch }: { state: GameState; dispatch
       const myPick: Side = m.creatorPick === "heads" ? "tails" : "heads";
       dispatch({ type: "ADD_CASH", amount: -m.bet }); // stake
       if (r.youWon) dispatch({ type: "ADD_CASH", amount: r.winnerPayout });
-      setReveal({ myPick, oppPick: m.creatorPick as Side, winnerSide: r.flip as Side, won: r.youWon, opponent: r.creatorName, payout: r.youWon ? r.winnerPayout : 0 });
-      if (r.youWon) toast.success(`You beat ${r.creatorName}! +$${r.winnerPayout.toLocaleString()}`);
-      else toast.error(`${r.creatorName} won the flip.`);
+      startToss({ myPick, oppPick: m.creatorPick as Side, winnerSide: r.flip as Side, won: r.youWon, opponent: r.creatorName, payout: r.youWon ? r.winnerPayout : 0 });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Match already taken.");
     } finally { setBusy(false); }
-  }, [state.cash, joinMatch, dispatch]);
+  }, [state.cash, joinMatch, dispatch, startToss]);
 
   return (
     <div className="rounded-2xl border border-white/10 bg-[#111114] p-4 sm:p-8 lg:p-10">
@@ -173,7 +203,25 @@ export function OnlineCoinflip({ state, dispatch }: { state: GameState; dispatch
           </motion.div>
         )}
 
-        {reveal && (
+        {reveal && tossing && (
+          <div className="flex w-full flex-col items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-6 py-8">
+            {/* The toss: the coin launches up, spins ~5 turns in the air,
+                and falls back onto the felt — 3D two-faced, not a text swap. */}
+            <div className="toss-stage">
+              {/* Final rotation encodes the server's result: N×1800deg shows
+                  heads, N×1800+180deg shows tails — so the spin ALWAYS lands
+                  on the face the server flipped. */}
+              <div key={tossId} className="toss-coin" style={{ "--spin-turns": `${tossId * 1800 + (reveal.winnerSide === "tails" ? 180 : 0)}deg` } as React.CSSProperties}>
+                <div className="coin-face coin-heads"><Crown className="size-12 text-amber-900 drop-shadow-lg" /></div>
+                <div className="coin-face coin-tails"><Star className="size-12 text-gray-800 drop-shadow-lg" /></div>
+                <div className="coin-edge" />
+              </div>
+            </div>
+            <p className="font-display text-sm font-bold uppercase tracking-[0.2em] text-white/40 animate-pulse">The coin is in the air…</p>
+          </div>
+        )}
+
+        {reveal && !tossing && (
           <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="flex w-full flex-col items-center gap-4 rounded-xl border border-white/10 bg-white/[0.03] px-6 py-6">
             <p className={cn("font-display text-xl font-black uppercase tracking-wider", reveal.won ? "text-emerald-400" : "text-apex-red")}>
               {reveal.won ? `Victory — +$${reveal.payout.toLocaleString()}` : "Defeat"}
@@ -187,6 +235,21 @@ export function OnlineCoinflip({ state, dispatch }: { state: GameState; dispatch
               <div className="text-center"><p className="mb-1 text-xs text-white/30">{reveal.opponent || "Opponent"}</p><CoinIcon side={reveal.oppPick} size="lg" /></div>
             </div>
           </motion.div>
+        )}
+
+        {flipHistory.length > 0 && (
+          <div className="w-full">
+            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">Your flips</p>
+            <div className="chat-scroll flex gap-1.5 overflow-x-auto pb-1">
+              {flipHistory.map((f, i) => (
+                <span key={`${i}-${f.side}-${f.won}`}
+                  className={cn("shrink-0 rounded-full px-2.5 py-1 font-mono text-xs font-bold",
+                    f.won ? "bg-emerald-500/15 text-emerald-400" : "bg-red-500/15 text-red-400")}>
+                  {f.side === "heads" ? "H" : "T"} {f.won ? "✓" : "✗"}
+                </span>
+              ))}
+            </div>
+          </div>
         )}
 
         {isAuthenticated && !myOpenMatch && (
@@ -225,7 +288,7 @@ export function OnlineCoinflip({ state, dispatch }: { state: GameState; dispatch
                 <div key={m._id} className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-black/30 px-3 py-2.5">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-bold text-white">{m.creatorName}</p>
-                    <p className="text-xs text-white/40">picked <span className="font-bold uppercase text-white/70">{m.creatorPick}</span> · ${m.bet.toLocaleString()}</p>
+                    <p className="text-xs text-white/40">picked <span className="font-bold uppercase text-white/70">{m.creatorPick}</span> · ${m.bet.toLocaleString()} · expires in {Math.max(0, Math.ceil((m.createdAt + 5 * 60_000 - now) / 60_000))}m</p>
                   </div>
                   <button type="button" disabled={busy || state.cash < m.bet} onClick={() => joinFn(m)}
                     className="shrink-0 rounded-lg bg-blue-600 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-white transition-colors hover:bg-blue-700 disabled:opacity-40">

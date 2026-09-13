@@ -204,3 +204,94 @@
     -webkit-tap-highlight-color: transparent;
   }
 }
+
+/* ── Coin toss — realistic 3D coin for the online coinflip ─────────────
+   A two-faced 3D coin (heads / tails on opposite transforms) that is
+   launched upward, spins ~5 turns along its X axis while airborne, then
+   drops onto the felt with a small bounce. A separate shadow scales with
+   the coin's height to sell the arc. Only ever shown in a mobile/desktop
+   modal-sized panel, so fixed px sizes are fine. */
+.toss-stage {
+  position: relative;
+  height: 190px;
+  width: 190px;
+  perspective: 700px;
+}
+.toss-stage::after {
+  /* Ground shadow — shrinks while the coin is high, sharpens on landing. */
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 6px;
+  width: 96px;
+  height: 18px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(0, 0, 0, 0.55), transparent 70%);
+  transform: translateX(-50%);
+  animation: toss-shadow 2.6s cubic-bezier(0.3, 0, 0.4, 1) forwards;
+}
+.toss-coin {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 120px;
+  height: 120px;
+  margin: -60px 0 0 -60px;
+  transform-style: preserve-3d;
+  /* Two animations: vertical toss arc + the spin. The spin's final
+     rotation lands on the side the server actually flipped — chosen by
+     appending 0deg (heads) or 180deg (tails) via the inline style set
+     from the known result BEFORE the animation starts. */
+  animation:
+    toss-arc 2.6s cubic-bezier(0.3, 0, 0.4, 1) forwards,
+    toss-spin 2.6s cubic-bezier(0.35, 0, 0.3, 1) forwards;
+}
+@keyframes toss-arc {
+  0% { transform: translateY(0) scale(1); }
+  12% { transform: translateY(-14px) scale(1.02); }   /* push-off */
+  50% { transform: translateY(-150px) scale(1.12); }  /* apex */
+  82% { transform: translateY(0) scale(1); }          /* first contact */
+  88% { transform: translateY(-26px) scale(1.01); }   /* bounce */
+  94% { transform: translateY(0) scale(1); }
+  97% { transform: translateY(-8px); }
+  100% { transform: translateY(0) scale(1); }
+}
+@keyframes toss-spin {
+  from { transform: rotateX(0deg); }
+  to { transform: rotateX(var(--spin-turns, 1800deg)); }
+}
+@keyframes toss-shadow {
+  0% { opacity: 0.55; transform: translateX(-50%) scale(1); }
+  50% { opacity: 0.18; transform: translateX(-50%) scale(0.55); }  /* apex */
+  82% { opacity: 0.6; transform: translateX(-50%) scale(1); }
+  88% { opacity: 0.4; transform: translateX(-50%) scale(0.8); }
+  100% { opacity: 0.55; transform: translateX(-50%) scale(1); }
+}
+.coin-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border: 4px solid;
+  backface-visibility: hidden;
+}
+.coin-heads {
+  border-color: #d97706;
+  background: linear-gradient(145deg, #fbbf24, #d97706 60%, #b45309);
+  box-shadow: inset 0 0 18px rgba(120, 53, 15, 0.45), 0 8px 22px rgba(0, 0, 0, 0.45);
+}
+.coin-tails {
+  border-color: #9ca3af;
+  background: linear-gradient(215deg, #d1d5db, #6b7280 60%, #4b5563);
+  box-shadow: inset 0 0 18px rgba(17, 24, 39, 0.45), 0 8px 22px rgba(0, 0, 0, 0.45);
+  transform: rotateX(180deg);
+}
+.coin-edge {
+  position: absolute;
+  inset: -3px;
+  border-radius: 9999px;
+  background: conic-gradient(#b45309, #fbbf24, #92400e, #fbbf24, #b45309);
+  transform: translateZ(-4px) scale(0.99);
+}
