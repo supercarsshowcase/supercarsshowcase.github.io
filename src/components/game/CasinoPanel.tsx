@@ -221,6 +221,7 @@ function CasinoLobby({ state, dispatch, onSelect }: { state: GameState; dispatch
                   <p className="font-display text-sm font-bold text-white group-hover:text-apex-red transition-colors">
                     {g.name}
                     {g.id === "online-jackpot" && <span className="ml-2 rounded bg-apex-red px-2 py-0.5 text-[11px] font-bold uppercase text-white">NEW!</span>}
+                    {g.id === "online-coinflip" && <span className="ml-2 inline-flex items-center gap-1 rounded bg-emerald-500/20 px-2 py-0.5 text-[11px] font-bold uppercase text-emerald-400"><span className="inline-block size-1.5 animate-pulse rounded-full bg-emerald-400" />Live</span>}
                   </p>
                   <p className="text-xs text-white/35 mt-0.5">{g.desc}</p>
                 </div>
