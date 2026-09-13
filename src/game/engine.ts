@@ -331,12 +331,16 @@ export function spinSupercarPool01() {
   );
 }
 
-/** Tier 3: Ultra-rare $1B car (0.001% chance) */
+/** Tier 3: Ultra-rare $1B+ car (0.001% chance) — label-matched: every car
+ *  in this pool is worth at least $1B, so the wheel's "$1B+" badge never
+ *  over-promises. */
 export function spinSupercarPool001() {
   return Object.values(GAME_CAR_MAP).filter(
-    (c) => !c.secret && c.value >= 500_000_000,
+    (c) => !c.secret && c.value >= 1_000_000_000,
   );
 }
+
+
 
 const HOUR_MS = 3_600_000;
 
