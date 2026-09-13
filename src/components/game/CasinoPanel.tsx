@@ -310,10 +310,10 @@ function BetInput({ value, onChange, max }: { value: number; onChange: (v: numbe
 /* ── Helper: GameLayout ────────────────────────────────────────────────── */
 function GameLayout({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-[#111114] p-8 lg:p-10">
-      <div className="mb-8 flex items-center gap-4">
-        <div className="flex size-14 items-center justify-center rounded-xl bg-white/5">{icon}</div>
-        <h3 className="font-display text-3xl font-black text-white">{title}</h3>
+    <div className="rounded-2xl border border-white/10 bg-[#111114] p-4 sm:p-8 lg:p-10">
+      <div className="mb-6 flex items-center gap-3 sm:mb-8 sm:gap-4">
+        <div className="flex size-11 items-center justify-center rounded-xl bg-white/5 sm:size-14">{icon}</div>
+        <h3 className="font-display text-2xl font-black text-white sm:text-3xl">{title}</h3>
       </div>
       {children}
     </div>
@@ -446,7 +446,7 @@ function CoinflipGame({ state, dispatch }: { state: GameState; dispatch: React.D
         )}
 
         <button type="button" onClick={play} disabled={spinning || (mode === "cash" ? state.cash < bet : !selectedCar)}
-          className="inline-flex items-center gap-3 rounded-2xl bg-apex-red px-16 py-5 font-display text-xl font-black uppercase tracking-wider text-white transition-all hover:bg-apex-red/80 hover:scale-105 disabled:opacity-40 disabled:hover:scale-100 shadow-lg shadow-apex-red/30">
+          className="inline-flex items-center gap-3 rounded-2xl bg-apex-red px-10 py-4 font-display text-lg font-black uppercase tracking-wider text-white transition-all hover:bg-apex-red/80 hover:scale-105 active:scale-105 disabled:opacity-40 disabled:hover:scale-100 shadow-lg shadow-apex-red/30 sm:px-16 sm:py-5 sm:text-xl">
           {spinning ? <CircleDot className="size-6 animate-spin" /> : <CircleDot className="size-6" />}
           {spinning ? "Flipping..." : mode === "cash" ? `Flip — $${bet.toLocaleString()}` : "Flip for a Car!"}
         </button>
@@ -536,28 +536,31 @@ function RouletteGame({ state, dispatch }: { state: GameState; dispatch: React.D
           <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}
             className={cn("flex size-20 items-center justify-center rounded-full text-2xl font-black text-white border-2", numColor(landing), "border-white shadow-xl")}>{landing}</motion.div>
         )}
-        <div className="overflow-x-auto w-full max-w-3xl">
-          <div className="flex gap-1.5 mb-1.5">
+        {/* Roulette table: tiles flex to the viewport on phones (fixed
+            56px tiles force a 700px+ table — unusable on a phone); desktop
+            keeps the fixed size-14 tiles exactly as before. */}
+        <div className="w-full max-w-3xl">
+          <div className="flex gap-1 mb-1.5 sm:gap-1.5">
             <button type="button" onClick={() => placeBet({ kind: "number", value: 0 })}
-              className={cn("size-14 rounded-xl text-base font-bold text-white border-2 transition-all", numColor(0), currentBet?.kind === "number" && currentBet.value === 0 ? "ring-2 ring-amber-400" : "border-white/20")}>0</button>
+              className={cn("flex h-11 flex-1 items-center justify-center rounded-lg text-sm font-bold text-white border-2 transition-all sm:h-14 sm:flex-none sm:size-14 sm:rounded-xl sm:text-base", numColor(0), currentBet?.kind === "number" && currentBet.value === 0 ? "ring-2 ring-amber-400" : "border-white/20")}>0</button>
           </div>
           {GRID_ROWS.map((row, ri) => (
-            <div key={ri} className="flex gap-1.5 mb-1.5">
+            <div key={ri} className="flex gap-1 mb-1.5 sm:gap-1.5">
               {row.map((n) => (
                 <button key={n} type="button" onClick={() => placeBet({ kind: "number", value: n })}
-                  className={cn("size-14 rounded-xl text-sm font-bold text-white border-2 transition-all", numColor(n), currentBet?.kind === "number" && currentBet.value === n ? "ring-2 ring-amber-400" : "border-white/20 hover:ring-2 hover:ring-white/30")}>{n}</button>
+                  className={cn("flex h-11 flex-1 items-center justify-center rounded-lg text-xs font-bold text-white border-2 transition-all sm:h-14 sm:flex-none sm:size-14 sm:rounded-xl sm:text-sm", numColor(n), currentBet?.kind === "number" && currentBet.value === n ? "ring-2 ring-amber-400" : "border-white/20 hover:ring-2 hover:ring-white/30")}>{n}</button>
               ))}
               <button type="button" onClick={() => placeBet({ kind: "range", value: ri === 0 ? "3rd" : ri === 1 ? "2nd" : "1st" })}
-                className="w-20 rounded-xl text-xs font-bold text-white bg-white/10 border-2 border-white/20 hover:bg-white/20">2 to 1</button>
+                className="w-14 h-11 rounded-lg text-[10px] font-bold text-white bg-white/10 border-2 border-white/20 hover:bg-white/20 sm:w-20 sm:h-14 sm:text-xs sm:rounded-xl">2 to 1</button>
             </div>
           ))}
-          <div className="flex gap-1.5 mb-1.5">
+          <div className="flex gap-1 mb-1.5 sm:gap-1.5">
             {[{ l: "1st 12", v: "1st" as const }, { l: "2nd 12", v: "2nd" as const }, { l: "3rd 12", v: "3rd" as const }].map((d) => (
               <button key={d.v} type="button" onClick={() => placeBet({ kind: "range", value: d.v })}
-                className="flex-1 h-12 rounded-xl text-sm font-bold text-white bg-white/10 border-2 border-white/20 hover:bg-white/20">{d.l}</button>
+                className="flex-1 h-11 rounded-lg text-xs font-bold text-white bg-white/10 border-2 border-white/20 hover:bg-white/20 sm:h-12 sm:rounded-xl sm:text-sm">{d.l}</button>
             ))}
           </div>
-          <div className="flex gap-1.5">
+          <div className="flex gap-1 sm:gap-1.5">
             {[{ l: "1-18", b: { kind: "range" as const, value: "1-18" as const } },
               { l: "EVEN", b: { kind: "parity" as const, value: "even" as const } },
               { l: "RED", b: { kind: "color" as const, value: "red" as const }, cls: "bg-red-600 hover:bg-red-700" },
@@ -566,7 +569,7 @@ function RouletteGame({ state, dispatch }: { state: GameState; dispatch: React.D
               { l: "19-36", b: { kind: "range" as const, value: "19-36" as const } }
             ].map((opt) => (
               <button key={opt.l} type="button" onClick={() => placeBet(opt.b)}
-                className={cn("flex-1 h-12 rounded-xl text-sm font-bold text-white border-2 border-white/20 transition-all",
+                className={cn("flex-1 h-11 rounded-lg text-[11px] font-bold text-white border-2 border-white/20 transition-all sm:h-12 sm:rounded-xl sm:text-sm",
                   opt.cls ?? "bg-white/10 hover:bg-white/20", JSON.stringify(currentBet) === JSON.stringify(opt.b) && "ring-2 ring-amber-400")}>{opt.l}</button>
             ))}
           </div>
@@ -699,16 +702,18 @@ function MinesGame({ state, dispatch }: { state: GameState; dispatch: React.Disp
               className={cn("rounded-lg px-5 py-2 text-sm font-bold transition-colors", mineCount === n ? "bg-apex-red text-white" : "bg-white/5 text-white/40 hover:bg-white/10")}>{n}</button>
           ))}
         </div>
-        <div className="grid grid-cols-5 gap-3">
+        {/* Full-width tiles on phones (72px fixed tiles overflow 375px
+            viewports); desktop keeps its fixed size-18 grid. */}
+        <div className="grid w-full max-w-md grid-cols-5 gap-2 sm:max-w-none sm:gap-3">
           {Array.from({ length: ROWS * COLS }, (_, i) => {
             const isRevealed = revealed.has(i); const isMine = mines.has(i); const isGameOverMine = gameOver && isMine;
             return (
               <button key={i} type="button" onClick={() => reveal(i)} disabled={!playing || isRevealed || gameOver}
-                className={cn("flex size-18 items-center justify-center rounded-2xl border-2 text-xl font-bold transition-all hover:scale-105",
+                className={cn("flex aspect-square items-center justify-center rounded-xl border-2 text-lg font-bold transition-all active:scale-105 sm:aspect-auto sm:size-18 sm:rounded-2xl sm:text-xl sm:hover:scale-105",
                   isRevealed ? isMine ? "border-red-500 bg-red-500/20 text-red-400" : "border-green-500 bg-green-500/20 text-green-400"
-                  : isGameOverMine ? "border-red-500/50 bg-red-500/10 text-red-400" : "border-white/15 bg-[#0a0a0c] hover:border-white/30")}>
-                {isRevealed ? (isMine ? <Bomb className="size-7" /> : <Diamond className="size-7 text-green-400" />)
-                : isGameOverMine ? <Bomb className="size-7" /> : null}
+                  : isGameOverMine ? "border-red-500/50 bg-red-500/10 text-red-400" : "border-white/15 bg-[#0a0a0c] sm:hover:border-white/30")}>
+                {isRevealed ? (isMine ? <Bomb className="size-5 sm:size-7" /> : <Diamond className="size-5 text-green-400 sm:size-7" />)
+                : isGameOverMine ? <Bomb className="size-5 sm:size-7" /> : null}
               </button>
             );
           })}
@@ -721,7 +726,7 @@ function MinesGame({ state, dispatch }: { state: GameState; dispatch: React.Disp
         )}
         {!playing && !gameOver && (
           <button type="button" onClick={start} disabled={state.cash < bet}
-            className="inline-flex items-center gap-3 rounded-2xl bg-apex-red px-16 py-5 font-display text-xl font-black uppercase tracking-wider text-white transition-all hover:bg-apex-red/80 hover:scale-105 disabled:opacity-40 shadow-lg shadow-apex-red/30">
+            className="inline-flex items-center gap-3 rounded-2xl bg-apex-red px-8 py-4 font-display text-lg font-black uppercase tracking-wider text-white transition-all hover:bg-apex-red/80 hover:scale-105 active:scale-105 disabled:opacity-40 shadow-lg shadow-apex-red/30 sm:px-16 sm:py-5 sm:text-xl">
             <Crosshair className="size-5" />START — ${bet.toLocaleString()}
           </button>
         )}

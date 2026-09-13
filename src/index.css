@@ -195,3 +195,12 @@
 .chat-scroll::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
 }
+
+/* Mobile-only touch polish — desktop (hover + pointer) renders exactly as
+   before: no tap-highlight flash, and :active/:hover styles don't stick
+   after a touch ends. */
+@media (hover: none) and (pointer: coarse) {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+}

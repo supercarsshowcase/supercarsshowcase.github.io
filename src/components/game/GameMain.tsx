@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Boxes,
@@ -10,6 +10,7 @@ import {
   Flame,
   Gift,
   Home,
+  Menu,
   MessageCircle,
   MousePointerClick,
   Package,
@@ -28,7 +29,10 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Link } from "react-router";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import { SmartImage } from "@/components/SmartImage";
+import { useAuth } from "@/hooks/use-auth";
 import {
   GAME_CAR_MAP,
   RARITY_META,
@@ -60,6 +64,12 @@ import {
 import type { GameState } from "@/game/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import {
+  BadgeCheck,
+  Crown,
+  Send,
+  X,
+} from "lucide-react";
 import { GamePanels } from "./GamePanels";
 import { GiftModal } from "./GiftModal";
 import { ChatPanel } from "./ChatPanel";
@@ -80,6 +90,10 @@ const NAV: { id: TabId; label: string; icon: LucideIcon }[] = [
   { id: "prestige", label: "Prestige", icon: Sparkles },
   { id: "gift", label: "Gift", icon: Gift },
 ];
+
+/** Tabs promoted to the mobile bottom bar; everything else lives in "More".
+ *  Desktop ignores this — it renders the full sidebar nav. */
+const PRIMARY_TABS: TabId[] = ["earn", "spin", "casino", "garage"];
 
 type TabId =
   | "earn"
@@ -156,6 +170,8 @@ export function GameMain({
   const [tab, setTab] = useState<TabId>("earn");
   const [showGiftModal, setShowGiftModal] = useState(false);
   const [chatOpen, setChatOpen] = useState(true);
+  const [mobileChatOpen, setMobileChatOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const [popups, setPopups] = useState<Popup[]>([]);
   const popupId = useRef(0);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -374,13 +390,13 @@ export function GameMain({
         </div>
       </div>
 
-      {/* ── Mobile action row ── */}
-      <div className="mb-1 flex flex-wrap items-center gap-1.5 md:hidden">
+      {/* ── Mobile action row (compact, thumb-friendly) ── */}
+      <div className="mb-1 flex items-center gap-1.5 md:hidden">
         <button
           type="button"
           onClick={claimDaily}
           disabled={!canClaim}
-          className="inline-flex items-center gap-1.5 rounded-md border border-apex-red/40 bg-apex-red/10 px-2.5 py-1.5 font-display text-[11px] font-bold uppercase tracking-[0.12em] text-white transition-colors hover:bg-apex-red disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-white/40"
+          className="inline-flex min-h-[38px] flex-1 items-center justify-center gap-1.5 rounded-lg border border-apex-red/40 bg-apex-red/10 px-2.5 py-1.5 font-display text-[11px] font-bold uppercase tracking-[0.12em] text-white transition-colors active:bg-apex-red disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-white/40"
         >
           <Gift className="size-4 text-apex-red" />
           {canClaim ? `Daily ${fmtMoney(daily)}` : `Daily in ${waitLabel}`}
@@ -391,16 +407,11 @@ export function GameMain({
         <button
           type="button"
           onClick={saveNow}
-          className="inline-flex items-center gap-1.5 rounded-md border border-white/15 px-2.5 py-1.5 font-display text-[11px] font-bold uppercase tracking-[0.12em] text-white/70 transition-colors hover:border-apex-red hover:text-white"
+          className="inline-flex size-[38px] items-center justify-center rounded-lg border border-white/15 text-white/70 transition-colors active:border-apex-red active:text-white"
+          aria-label="Save game"
+          title="Save game"
         >
-          <Save className="size-4" /> Save
-        </button>
-        <button
-          type="button"
-          onClick={resetNow}
-          className="inline-flex items-center gap-1.5 rounded-md border border-white/15 px-2.5 py-1.5 font-display text-[11px] font-bold uppercase tracking-[0.12em] text-white/40 transition-colors hover:border-apex-red hover:text-apex-red"
-        >
-          <Trash2 className="size-4" /> Reset
+          <Save className="size-4" />
         </button>
       </div>
 
@@ -561,10 +572,9 @@ export function GameMain({
             </div>
           )}
 
-          {/* Mobile nav — pinned to the bottom of the area on short pages
-              (mt-auto), so it can never float mid-screen with dead space
-              below it. */}
-          <div className="mt-auto flex gap-1 overflow-x-auto border-b border-apex-line pt-3 md:hidden">
+          {/* Mobile nav — hidden: replaced by the fixed bottom tab bar
+              below (thumb-reachable, never scrolls away, safe-area aware). */}
+          <div className="mt-auto hidden gap-1 overflow-x-auto border-b border-apex-line pt-3 md:hidden">
             {NAV.map((item) => {
               const Icon = item.icon;
               const isActive = tab === item.id;
@@ -600,6 +610,98 @@ export function GameMain({
           height={vpRail(SITE_ZOOM * uiZoom, railExtraRem)}
         />
       </div>
+
+      {/* ── Mobile bottom tab bar — fixed, safe-area aware, thumb-reachable.
+          Primary tabs get their own slot; the remaining 10 live under More. ── */}
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-apex-line bg-black/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden">
+        <div className="mx-auto grid max-w-lg grid-cols-6 px-1">
+          {PRIMARY_TABS.map((id) => {
+            const item = NAV.find((n) => n.id === id)!;
+            const Icon = item.icon;
+            const isActive = tab === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() => {
+                  setTab(id);
+                  setMoreOpen(false);
+                }}
+                className="relative flex min-h-[52px] flex-col items-center justify-center gap-0.5 px-0.5 font-display text-[9px] font-bold uppercase tracking-[0.08em] transition-colors"
+              >
+                <Icon className={cn("size-5 transition-colors", isActive ? "text-apex-red" : "text-white/45")} />
+                <span className={isActive ? "text-white" : "text-white/45"}>{item.label}</span>
+                {isActive && <span className="absolute inset-x-4 top-0 h-0.5 rounded-full bg-apex-red" />}
+              </button>
+           );
+          })}
+          <button
+            type="button"
+            onClick={() => setMoreOpen((v) => !v)}
+            className="relative flex min-h-[52px] flex-col items-center justify-center gap-0.5 px-0.5 font-display text-[9px] font-bold uppercase tracking-[0.08em] transition-colors"
+          >
+            <Menu className={cn("size-5 transition-colors", moreOpen ? "text-apex-red" : "text-white/45")} />
+            <span className={moreOpen ? "text-white" : "text-white/45"}>More</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setMobileChatOpen(true)}
+            className="relative flex min-h-[52px] flex-col items-center justify-center gap-0.5 px-0.5 font-display text-[9px] font-bold uppercase tracking-[0.08em] transition-colors"
+          >
+            <MessageCircle className="size-5 text-white/45" />
+            <span className="text-white/45">Chat</span>
+          </button>
+        </div>
+        {/* More — sheet of the remaining tabs, overlaying the content */}
+        {moreOpen && (
+          <div className="max-h-[45dvh] overflow-y-auto border-t border-apex-line bg-black/95 p-2">
+            <div className="grid grid-cols-3 gap-1.5">
+              {NAV.filter((item) => !PRIMARY_TABS.includes(item.id)).map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => {
+                      if (item.id === "gift") {
+                        setShowGiftModal(true);
+                      } else {
+                        setTab(item.id);
+                      }
+                      setMoreOpen(false);
+                    }}
+                    className={cn(
+                      "flex min-h-[48px] flex-col items-center justify-center gap-1 rounded-lg border px-1 py-2 font-display text-[9px] font-bold uppercase tracking-[0.08em] transition-colors",
+                      tab === item.id
+                        ? "border-apex-red/50 bg-apex-red/10 text-white"
+                        : "border-white/10 bg-white/[0.03] text-white/55",
+                    )}
+                  >
+                    <Icon className="size-4 text-apex-red" />
+                    {item.label}
+                  </button>
+                );
+              })}
+            </div>
+            {/* Hard reset — removed from the mobile action row, kept reachable
+                here behind a deliberate trip into More. */}
+            <button
+              type="button"
+              onClick={() => {
+                setMoreOpen(false);
+                resetNow();
+              }}
+              className="mt-1.5 flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] font-display text-[10px] font-bold uppercase tracking-[0.14em] text-white/40 transition-colors active:border-apex-red active:text-apex-red"
+            >
+              <Trash2 className="size-4" /> Reset Progress
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Bottom-bar spacer — keeps content clear of the fixed bar on mobile
+          (desktop ignores both). */}
+      <div className="h-[76px] md:hidden" aria-hidden="true" />
       </div>
 
       {/* Gift modal sits outside the zoom wrapper so it stays viewport-fixed */}
@@ -608,6 +710,13 @@ export function GameMain({
         onClose={() => setShowGiftModal(false)}
         currentCash={cash}
         onSent={(amount) => dispatch({ type: "ADD_CASH", amount: -amount })}
+      />
+
+      {/* Mobile chat — full-screen sheet, thumb-typing height. The desktop
+          rail (hidden md:flex) is untouched. */}
+      <MobileChatSheet
+        open={mobileChatOpen}
+        onClose={() => setMobileChatOpen(false)}
       />
     </>
   );
@@ -700,7 +809,7 @@ function EarnZone({
       <div
         onClick={onCarClick}
         className={cn(
-          "group relative flex min-h-0 flex-col md:min-h-[420px] cursor-pointer select-none overflow-hidden rounded-2xl border bg-[#0b0b0c] transition-all md:flex-1",
+          "group relative flex min-h-[320px] flex-col cursor-pointer select-none overflow-hidden rounded-2xl border bg-[#0b0b0c] transition-all md:min-h-[420px] md:flex-1",
           clickBlocked
             ? "border-red-500/30"
             : "border-apex-line hover:border-apex-red/30",
@@ -842,9 +951,10 @@ function EarnZone({
               </span>
             </div>
           ) : (
-            <p className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-apex-red/40 bg-apex-red/10 px-4 py-1.5 font-display text-[11px] font-bold uppercase tracking-[0.2em] text-white transition-colors group-hover:bg-apex-red">
+            <p className="mt-2 inline-flex animate-pulse items-center gap-1.5 rounded-full border border-apex-red/40 bg-apex-red/10 px-4 py-1.5 font-display text-[11px] font-bold uppercase tracking-[0.2em] text-white transition-colors group-hover:bg-apex-red group-active:bg-apex-red">
               <MousePointerClick className="size-4" />
-              Click the car to earn
+              <span className="hidden sm:inline">Click the car to earn</span>
+              <span className="sm:hidden">Tap the car to earn</span>
             </p>
           )}
         </div>
@@ -875,6 +985,65 @@ function EarnZone({
   );
 }
 
+/** Staff identity — mirrors ChatPanel's announcement-overlay colors. */
+const STAFF_STYLES: Record<
+  string,
+  { label: string; name: string; glow: string; border: string; badgeBg: string; ring: string }
+> = {
+  owner: {
+    label: "OWNER",
+    name: "text-amber-400",
+    glow: "rgba(234,179,8,0.45)",
+    border: "border-amber-400/60",
+    badgeBg: "bg-amber-400/15 text-amber-300",
+    ring: "ring-amber-400/70",
+  },
+  admin: {
+    label: "ADMIN",
+    name: "text-apex-red",
+    glow: "rgba(255,46,0,0.45)",
+    border: "border-apex-red/60",
+    badgeBg: "bg-apex-red/15 text-apex-red",
+    ring: "ring-apex-red/70",
+  },
+  moderator: {
+    label: "MOD",
+    name: "text-emerald-400",
+    glow: "rgba(34,197,94,0.45)",
+    border: "border-emerald-400/50",
+    badgeBg: "bg-emerald-400/15 text-emerald-300",
+    ring: "ring-emerald-400/60",
+  },
+};
+
+function formatChatTime(ts: number) {
+  const d = new Date(ts);
+  return `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
+}
+
+/** The verified check next to staff names in the mobile chat sheet. */
+function StaffMark({ role }: { role: string }) {
+  const style = STAFF_STYLES[role];
+  if (!style) return null;
+  return (
+    <span
+      title={`Verified ${style.label}`}
+      className={cn(
+        "inline-flex shrink-0 items-center justify-center rounded-full p-px",
+        style.badgeBg,
+      )}
+    >
+      {role === "owner" ? (
+        <Crown className="size-2.5" strokeWidth={2.5} />
+      ) : role === "admin" ? (
+        <Shield className="size-2.5" strokeWidth={2.5} />
+      ) : (
+        <BadgeCheck className="size-3" strokeWidth={2.5} />
+      )}
+    </span>
+  );
+}
+
 function EarnStat({ value, label, accent }: { value: string; label: string; accent?: boolean }) {
   return (
     <div className="bg-apex-panel px-1.5 py-1.5 text-center">
@@ -884,6 +1053,210 @@ function EarnStat({ value, label, accent }: { value: string; label: string; acce
       <p className="text-[8px] font-semibold uppercase tracking-[0.2em] text-white/35">
         {label}
       </p>
+    </div>
+  );
+}
+
+/**
+ * Mobile full-screen chat sheet — mirrors ChatPanel's messages, send and
+ * staff-delete logic exactly, but sized for thumbs: full width, sticky
+ * header/input with safe-area padding. Desktop keeps the side rail.
+ */
+function MobileChatSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { user, isAuthenticated } = useAuth();
+  const messages = useQuery(api.chat.getMessages) ?? [];
+  const sendMessage = useMutation(api.chat.sendMessage);
+  const deleteMessage = useMutation(api.chat.deleteMessage);
+  const [text, setText] = useState("");
+  const listRef = useRef<HTMLDivElement>(null);
+  const [autoScroll, setAutoScroll] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const myRole = user?.role ?? null;
+  const isStaff = myRole === "owner" || myRole === "admin" || myRole === "moderator";
+  const onlineNow = useMemo(() => {
+    const set = new Set<string>();
+    for (const m of messages) set.add(m.userId);
+    return set.size;
+  }, [messages]);
+
+  useEffect(() => {
+    const el = listRef.current;
+    if (!open || !el || !autoScroll) return;
+    el.scrollTop = el.scrollHeight;
+  }, [open, messages.length, autoScroll]);
+
+  const handleSend = useCallback(async () => {
+    const msg = text.trim();
+    if (!msg || sending) return;
+    setSending(true);
+    setError(null);
+    try {
+      await sendMessage({ text: msg });
+      setText("");
+      setAutoScroll(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to send message");
+    } finally {
+      setSending(false);
+    }
+  }, [text, sending, sendMessage]);
+
+  const handleDelete = useCallback(
+    async (messageId: string) => {
+      try {
+        await deleteMessage({ messageId: messageId as never });
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Could not delete message");
+      }
+    },
+    [deleteMessage],
+  );
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-[60] flex flex-col bg-[#0a0a0c]">
+      {/* Header */}
+      <div className="flex items-center gap-1.5 border-b border-apex-line bg-black/85 px-3 py-2.5 pt-[max(0.625rem,env(safe-area-inset-top))]">
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex size-9 items-center justify-center rounded-md border border-white/15 text-white/70 active:border-apex-red active:text-white"
+          aria-label="Close chat"
+        >
+          <X className="size-4" />
+        </button>
+        <span className="font-display text-sm font-bold uppercase tracking-[0.16em] text-white">Chat</span>
+        <span className="inline-flex items-center gap-1 rounded-full bg-green-500/15 px-1.5 py-px text-[9px] font-bold uppercase tracking-wider text-green-400">
+          <span className="size-1 animate-pulse rounded-full bg-green-400" />
+          Live · {onlineNow}
+        </span>
+        {isStaff && myRole && STAFF_STYLES[myRole] && <StaffMark role={myRole} />}
+      </div>
+
+      {/* Messages */}
+      <div
+        ref={listRef}
+        onScroll={(e) => {
+          const el = e.currentTarget;
+          setAutoScroll(el.scrollHeight - el.scrollTop - el.clientHeight < 40);
+        }}
+        className="chat-scroll min-h-0 flex-1 space-y-2.5 overflow-y-auto px-3 py-2"
+      >
+        {messages.length === 0 && (
+          <p className="mt-10 text-center text-sm text-white/25">No messages yet. Say hello!</p>
+        )}
+        {messages.map((msg) => {
+          const mine = user != null && msg.userId === user._id;
+          const style = msg.role ? STAFF_STYLES[msg.role] : undefined;
+          const isStaffMsg = Boolean(style);
+          const canDelete = isStaff && !mine;
+          return (
+            <div key={msg._id} className={cn("flex items-start gap-2", mine && "flex-row-reverse")}>
+              <div
+                className={cn(
+                  "mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ring-1",
+                  mine
+                    ? "bg-apex-red/25 text-apex-red ring-apex-red/50"
+                    : isStaffMsg
+                      ? cn(style!.badgeBg, style!.ring)
+                      : "bg-white/10 text-white/70 ring-white/15",
+                )}
+              >
+                {(mine ? (user?.username ?? user?.name) : msg.name)?.charAt(0).toUpperCase() ?? "?"}
+              </div>
+              <div
+                style={isStaffMsg && !mine ? { boxShadow: `0 0 12px ${style!.glow}` } : undefined}
+                className={cn(
+                  "min-w-0 max-w-[82%] rounded-xl border px-2.5 py-1.5",
+                  mine
+                    ? "border-apex-red/30 bg-apex-red/10"
+                    : isStaffMsg
+                      ? style!.border
+                      : "border-white/[0.06] bg-white/[0.04]",
+                )}
+              >
+                <div className="flex items-center gap-1">
+                  <span
+                    className={cn(
+                      "truncate text-[11px] font-bold",
+                      mine ? "text-apex-red" : isStaffMsg ? style!.name : "text-white/60",
+                    )}
+                  >
+                    {mine ? (user?.username ?? user?.name ?? "You") : msg.name}
+                  </span>
+                  {isStaffMsg && <StaffMark role={msg.role!} />}
+                  {isStaffMsg && (
+                    <span
+                      className={cn(
+                        "shrink-0 rounded px-1 py-px text-[8px] font-black uppercase tracking-wider",
+                        style!.badgeBg,
+                      )}
+                    >
+                      {style!.label}
+                    </span>
+                  )}
+                  <span className="ml-auto shrink-0 text-[9px] text-white/25">
+                    {formatChatTime(msg.createdAt)}
+                  </span>
+                  {canDelete && (
+                    <button
+                      type="button"
+                      onClick={() => void handleDelete(msg._id)}
+                      aria-label="Delete message"
+                      title="Delete message"
+                      className="ml-1 flex size-6 shrink-0 items-center justify-center rounded text-white/30 active:text-apex-red"
+                    >
+                      <Trash2 className="size-3" />
+                    </button>
+                  )}
+                </div>
+                <p className="mt-0.5 break-words text-[13px] leading-snug text-white/85">
+                  {msg.text}
+                </p>
+              </div>
+        </div>
+          );
+        })}
+      </div>
+
+      {/* Input — big touch target, safe-area bottom */}
+      <div className="border-t border-apex-line bg-black/85 px-2.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void handleSend();
+          }}
+          className="flex items-center gap-1.5"
+        >
+          <input
+            type="text"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            maxLength={500}
+            enterKeyHint="send"
+            autoComplete="off"
+            placeholder={
+              !isAuthenticated ? "Sign in to chat" : (error ?? "Message the garage…")
+            }
+            disabled={!isAuthenticated || sending}
+            className={cn(
+              "min-h-[42px] min-w-0 flex-1 rounded-lg border bg-white/5 px-3 text-[14px] text-white outline-none transition-colors placeholder:text-white/25 focus:border-apex-red/50",
+              error ? "border-red-500/40 placeholder:text-red-300/70" : "border-white/10",
+            )}
+          />
+          <button
+            type="submit"
+            disabled={!isAuthenticated || !text.trim() || sending}
+            className="flex size-[42px] shrink-0 items-center justify-center rounded-lg bg-apex-red text-white transition-all active:bg-apex-red/80 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/30"
+            aria-label="Send message"
+          >
+            <Send className="size-4" />
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
