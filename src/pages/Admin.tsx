@@ -129,12 +129,33 @@ function useArmConfirm(timeoutMs = 4_000) {
 
 // ── Extracted: Users & Roles + Quick UI Settings (avoids Babel nesting) ─────
 function OwnerSettingsGrid() {
+  const { user: me } = useAuth();
+  const iAmOwner = me?.role === "owner";
   const users = useQuery(api.site.listUsers);
   const settings = useQuery(api.site.getSiteSettings);
   const setUserRole = useMutation(api.site.setUserRole);
   const deleteUser = useMutation(api.site.deleteUser);
   const updateSettings = useMutation(api.site.updateSiteSettings);
   const [armedDelete, setArmedDelete] = useArmConfirm();
+
+  const ownerCount = users?.filter((u) => u.role === "owner").length ?? 0;
+  const adminCount = users?.filter((u) => u.role === "admin").length ?? 0;
+
+  /** Client-side mirror of the server's guards — returns a reason when the
+   *  change would be rejected, so the UI explains instead of surfacing a
+   *  masked "Server Error" toast with no explanation. */
+  const roleBlockReason = (
+    target: { role?: string },
+    next: "owner" | "admin" | "moderator" | "user",
+  ): string | null => {
+    if (next === "owner" && !iAmOwner)
+      return "Only the owner can promote someone to owner.";
+    if (target.role === "owner" && next !== "owner" && ownerCount <= 1)
+      return "Cannot demote the last owner.";
+    if (target.role === "admin" && next !== "admin" && adminCount <= 1)
+      return "Cannot demote the last admin.";
+    return null;
+  };
 
   const [accent, setAccent] = useState("#ff2e00");
   const [siteName, setSiteName] = useState("Supercars Showcase");
@@ -187,7 +208,12 @@ function OwnerSettingsGrid() {
       await setUserRole({ userId: userId as unknown as Id<"users">, role });
       toast.success(`Role updated to ${role}`);
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Failed to update role");
+      const msg = e instanceof Error ? e.message : "";
+      toast.error(
+        msg && !msg.includes("Server Error")
+          ? msg
+          : "Couldn't update the role — refresh the page and try again.",
+      );
     }
   };
 
@@ -209,7 +235,7 @@ function OwnerSettingsGrid() {
             {users.map((u) => (
               <li
                 key={u._id}
-                className="flex items-center justify-between gap-3 px-5 py-3"
+                className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-5 py-3"
               >
                 <div className="flex min-w-0 items-center gap-3">
                   {u.image ? (
@@ -260,22 +286,35 @@ function OwnerSettingsGrid() {
                 <div className="flex shrink-0 items-center gap-2">
                   <select
                     value={u.role ?? "user"}
-                    onChange={(e) =>
-                      void setRole(
-                        u._id,
-                        e.target.value as
-                          | "owner"
-                          | "admin"
-                          | "moderator"
-                          | "user",
-                      )
-                    }
+                    onChange={(e) => {
+                      const next = e.target.value as
+                        | "owner"
+                        | "admin"
+                        | "moderator"
+                        | "user";
+                      const blocked = roleBlockReason(u, next);
+                      if (blocked) {
+                        toast.error(blocked);
+                        return;
+                      }
+                      void setRole(u._id, next);
+                    }}
                     className="cursor-pointer rounded-md border border-white/[0.08] bg-[#0b0b0c] px-2 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-white outline-none focus:border-apex-red"
                   >
                     <option value="user">User</option>
                     <option value="moderator">Moderator</option>
                     <option value="admin">Admin</option>
-                    <option value="owner">Owner</option>
+                    <option
+                      value="owner"
+                      disabled={!iAmOwner}
+                      title={
+                        iAmOwner
+                          ? undefined
+                          : "Only the owner can promote to owner"
+                      }
+                    >
+                      Owner
+                    </option>
                   </select>
                   <button
                     type="button"
@@ -317,6 +356,13 @@ function OwnerSettingsGrid() {
               </li>
             ))}
           </ul>
+        )}
+        {users && users.length > 0 && (
+          <p className="px-5 py-3 text-[11px] text-white/30">
+            Roles: user → moderator → admin → owner. Only the owner can promote
+            to owner; the last owner and last admin can never be demoted or
+            deleted.
+          </p>
         )}
       </CollapsibleSection>
 

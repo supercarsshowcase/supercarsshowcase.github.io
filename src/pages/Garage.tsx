@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Search, ChevronDown, RotateCcw } from "lucide-react";
+import { Search, ChevronDown, RotateCcw, SlidersHorizontal } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { carsList, brandNames, categories } from "@/data/cars";
@@ -8,6 +8,7 @@ import { formatPriceCompact } from "@/lib/format";
 import { CarCard } from "@/components/CarCard";
 import { Slider } from "@/components/ui/slider";
 import { GARAGE_COPY, tmpl } from "@/data/page-copy";
+import { cn } from "@/lib/utils";
 import type { Car, SortMode } from "@/lib/types";
 
 const PRICE_MAX = 50_000_000;
@@ -77,6 +78,15 @@ export default function Garage() {
   const [rarity, setRarity] = useState("All Rarities");
   const [maxPrice, setMaxPrice] = useState(PRICE_MAX);
   const [sort, setSort] = useState<SortMode>("price-desc");
+  // Mobile: the filter rail collapses behind a toggle (desktop keeps the
+  // always-visible sidebar — phones get the full-width car grid instead).
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const activeFilterCount =
+    (brand !== "All Brands" ? 1 : 0) +
+    (category !== "All Categories" ? 1 : 0) +
+    (rarity !== "All Rarities" ? 1 : 0) +
+    (maxPrice < PRICE_MAX ? 1 : 0) +
+    (query.trim() ? 1 : 0);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -127,11 +137,37 @@ export default function Garage() {
   };
 
   return (
-    <div className="mx-auto flex max-w-[1600px] gap-0 px-4 py-12 sm:px-6">
-      {/* ── LEFT SIDEBAR ── */}
-      <aside className="w-[280px] shrink-0 border-r border-white/[0.06] pr-6">
-        {/* Header */}
-        <div className="mb-8 flex items-center justify-between">
+    <div className="mx-auto flex max-w-[1600px] flex-col gap-8 px-4 py-12 sm:px-6 lg:flex-row lg:gap-0">
+      {/* ── FILTER RAIL ──
+          Mobile: full-width, collapsed behind a "Filters" toggle with an
+          active-count badge. Desktop (lg+): the original fixed sidebar. */}
+      <aside className="w-full shrink-0 border-b border-white/[0.06] pb-6 lg:w-[280px] lg:border-b-0 lg:border-r lg:pb-0 lg:pr-6">
+        <button
+          type="button"
+          onClick={() => setFiltersOpen((v) => !v)}
+          aria-expanded={filtersOpen}
+          className="mb-4 flex w-full items-center justify-between rounded-md border border-white/[0.08] bg-[#0b0b0c] px-4 py-3 transition-colors active:border-apex-red lg:hidden"
+        >
+          <span className="flex items-center gap-2 font-display text-[11px] font-bold uppercase tracking-[0.2em] text-white/70">
+            <SlidersHorizontal className="size-4 text-apex-red" />
+            {copy.filtersLbl}
+            {activeFilterCount > 0 && (
+              <span className="rounded-full bg-apex-red px-1.5 py-0.5 text-[9px] font-bold text-white">
+                {activeFilterCount}
+              </span>
+            )}
+          </span>
+          <ChevronDown
+            className={cn(
+              "size-4 text-white/40 transition-transform",
+              filtersOpen && "rotate-180",
+            )}
+          />
+        </button>
+
+        <div className={cn("space-y-6", filtersOpen ? "block" : "hidden", "lg:block")}>
+        {/* Header (desktop-only label row; mobile carries Reset via the panel) */}
+        <div className="mb-8 hidden items-center justify-between lg:flex">
           <span className="font-display text-[11px] font-bold uppercase tracking-[0.2em] text-white/50">
             {copy.filtersLbl}
           </span>
@@ -207,12 +243,22 @@ export default function Garage() {
             options={SORT_OPTIONS.map((o) => o.label)}
           />
         </div>
+
+        {/* Mobile-only reset (the desktop header row above is hidden on phones) */}
+        <button
+          type="button"
+          onClick={reset}
+          className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-md border border-white/[0.08] py-2.5 font-display text-[10px] font-semibold uppercase tracking-[0.14em] text-white/45 transition-colors active:border-apex-red active:text-apex-red lg:hidden"
+        >
+          <RotateCcw className="size-3" /> {copy.resetLbl}
+        </button>
+        </div>
       </aside>
 
       {/* ── MAIN CONTENT ── */}
-      <main className="min-w-0 flex-1 pl-8">
+      <main className="min-w-0 flex-1 lg:pl-8">
         {/* Top header */}
-        <div className="mb-8 flex items-end justify-between">
+        <div className="mb-8 flex flex-wrap items-end justify-between gap-3">
           <div>
             <p className="inline-flex items-center gap-1.5 font-display text-[11px] font-semibold uppercase tracking-[0.28em] text-apex-red">
               <span className="inline-block size-1.5 rounded-full bg-apex-red" /> {copy.eyebrow}
@@ -234,7 +280,7 @@ export default function Garage() {
             ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center rounded-lg border border-white/[0.06] bg-[#0b0b0c] px-6 py-32 text-center">
+          <div className="flex flex-col items-center justify-center rounded-lg border border-white/[0.06] bg-[#0b0b0c] px-6 py-20 text-center sm:py-32">
             <p className="font-display text-3xl font-black text-white">
               {copy.emptyTitle}
             </p>

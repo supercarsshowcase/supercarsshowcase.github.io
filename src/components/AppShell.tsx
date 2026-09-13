@@ -68,7 +68,7 @@ function Logo({ name }: { name?: string }) {
   const words = (name || "Supercars Showcase").split(/\s+/).filter(Boolean);
   const first = words[0] ?? "S";
   return (
-    <Link to="/" className="group flex items-center gap-2.5">
+    <Link to="/" className="group flex min-w-0 items-center gap-2.5">
       {/* Plate badge — a skewed red block carrying the first letter, like a
           race number plate. Nudges flatter on hover. */}
       <span
@@ -79,16 +79,22 @@ function Logo({ name }: { name?: string }) {
           {first.charAt(0)}
         </span>
       </span>
-      {words.map((word, i) => (
-        <Fragment key={i}>
-          {i > 0 && (
-            <span className="size-1.5 shrink-0 rounded-full bg-apex-red transition-transform group-hover:scale-150" />
-          )}
-          <span className="font-display text-base font-black uppercase tracking-tight text-white sm:text-lg">
-            {word}
-          </span>
-        </Fragment>
-      ))}
+      {/* Multi-word site names used to overflow small phones — first word
+          always shows; from the second on, phones keep just the initial
+          dot-joined word, desktop keeps everything. */}
+      <span className="flex min-w-0 items-center gap-1.5 truncate sm:gap-1.5">
+        <span className="font-display text-base font-black uppercase tracking-tight text-white sm:text-lg">
+          {words[0]}
+        </span>
+        {words.slice(1).map((word, i) => (
+          <Fragment key={i + 1}>
+            <span className="hidden size-1.5 shrink-0 rounded-full bg-apex-red transition-transform group-hover:scale-150 sm:block" />
+            <span className="hidden truncate font-display text-base font-black uppercase tracking-tight text-white sm:inline sm:text-lg">
+              {word}
+            </span>
+          </Fragment>
+        ))}
+      </span>
     </Link>
   );
 }
@@ -208,7 +214,7 @@ export function AppShell() {
           aria-hidden="true"
           className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/[0.05] to-transparent"
         />
-        <div className="relative mx-auto flex h-16 max-w-[1400px] items-center justify-between gap-3 px-4 sm:px-6">
+        <div className="relative mx-auto flex h-16 max-w-[1400px] items-center justify-between gap-2 px-3 sm:gap-3 sm:px-6">
           <div className="flex items-center gap-6">
             <Logo name={settings?.siteName} />
             {/* Nav tray — the links sit in a recessed panel; the active

@@ -71,7 +71,7 @@ export default function Landing() {
       {/* HERO */}
       <section className="relative flex min-h-[calc(100vh_-_4rem)] items-center overflow-hidden">
         <HeroBackground />
-        <div className="relative z-10 mx-auto w-full max-w-[1400px] px-4 py-20 sm:px-6">
+        <div className="relative z-10 mx-auto w-full max-w-[1400px] px-4 py-14 sm:px-6 sm:py-20">
           <motion.div
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
@@ -82,7 +82,7 @@ export default function Landing() {
               <span className="inline-block size-2 rounded-full bg-apex-red" />
               {copy.heroKicker}
             </p>
-            <h1 className="mt-6 font-display text-6xl font-black leading-[0.9] tracking-tight sm:text-8xl">
+            <h1 className="mt-6 font-display text-5xl font-black leading-[0.9] tracking-tight sm:text-8xl">
               {copy.heroLine1}
               <br />
               <span className="text-white/35">{copy.heroSubA}</span>{" "}
@@ -91,17 +91,17 @@ export default function Landing() {
             <p className="mt-7 max-w-lg text-base leading-7 text-white/70 sm:text-lg">
               {copy.heroBody}
             </p>
-            <div className="mt-9 flex flex-wrap items-center gap-4">
+            <div className="mt-9 flex flex-wrap gap-3 sm:items-center sm:gap-4">
               <Link
                 to="/garage"
-                className="group inline-flex items-center gap-2 rounded-md bg-apex-red px-6 py-3.5 font-display text-sm font-bold uppercase tracking-[0.14em] text-white transition-all hover:bg-apex-red-bright hover:shadow-[0_0_40px_-8px_rgba(255,46,0,0.7)]"
+                className="group inline-flex flex-1 items-center justify-center gap-2 rounded-md bg-apex-red px-6 py-3.5 font-display text-sm font-bold uppercase tracking-[0.14em] text-white transition-all hover:bg-apex-red-bright hover:shadow-[0_0_40px_-8px_rgba(255,46,0,0.7)] sm:flex-none"
               >
                 {copy.cta1Lbl}
                 <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
               </Link>
               <Link
                 to="/brands/bugatti"
-                className="inline-flex items-center gap-2 rounded-md border border-white/25 px-6 py-3.5 font-display text-sm font-bold uppercase tracking-[0.14em] text-white transition-colors hover:border-white hover:bg-white/5"
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-md border border-white/25 px-6 py-3.5 font-display text-sm font-bold uppercase tracking-[0.14em] text-white transition-colors hover:border-white hover:bg-white/5 sm:flex-none"
               >
                 {copy.cta2Lbl}
               </Link>
@@ -172,7 +172,7 @@ export default function Landing() {
       })()}
 
       {/* FEATURED */}
-      <section className="mx-auto max-w-[1400px] px-4 py-20 sm:px-6">
+      <section className="mx-auto max-w-[1400px] px-4 py-12 sm:px-6 sm:py-20">
         <div className="mb-10 flex items-end justify-between gap-4">
           <div>
             <p className="font-display text-[11px] font-semibold uppercase tracking-[0.28em] text-apex-red">
@@ -198,7 +198,7 @@ export default function Landing() {
 
       {/* MARQUES */}
       <section className="border-t border-apex-line bg-black/40">
-        <div className="mx-auto max-w-[1400px] px-4 py-20 sm:px-6">
+        <div className="mx-auto max-w-[1400px] px-4 py-12 sm:px-6 sm:py-20">
           <div className="mb-10">
             <p className="font-display text-[11px] font-semibold uppercase tracking-[0.28em] text-apex-red">
               {copy.marquesEyebrow}
@@ -233,7 +233,7 @@ export default function Landing() {
       {/* CTA */}
       <section className="relative overflow-hidden border-t border-apex-line">
         <div className="absolute inset-0 bg-gradient-to-br from-[#2a0a04] via-apex-ink to-apex-ink" />
-        <div className="relative mx-auto max-w-[1400px] px-4 py-20 text-center sm:px-6">
+        <div className="relative mx-auto max-w-[1400px] px-4 py-14 text-center sm:px-6 sm:py-20">
           <h2 className="font-display text-4xl font-black tracking-tight sm:text-5xl">
             {(() => {
               const w = (copy.ctaHeading || "").trim().split(/\s+/).filter(Boolean);
