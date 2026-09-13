@@ -246,31 +246,46 @@ export const setUserRole = mutation({
   },
   handler: async (ctx, args) => {
     const admin = await getAdmin(ctx);
-    if (!admin) throw new ConvexError("Admin access required.");
+    // Result objects instead of thrown errors: production masks thrown
+    // messages into an anonymous "Server Error", so policy rejections are
+    // returned as data the client can toast properly.
+    if (!admin) return { ok: false as const, reason: "Admin access required." };
 
     const target = await ctx.db.get(args.userId);
-    if (!target) throw new ConvexError("User not found.");
+    if (!target) return { ok: false as const, reason: "User not found." };
 
     // Only the owner can promote someone to owner.
     if (args.role === "owner" && admin.role !== "owner") {
-      throw new ConvexError("Only the owner can promote someone to owner.");
+      return {
+        ok: false as const,
+        reason: "Only the owner can promote someone to owner.",
+      };
     }
 
     // Never demote the last remaining owner.
     if (target.role === "owner" && args.role !== "owner") {
       const owners = await ctx.db.query("users").collect();
       const ownerCount = owners.filter((u) => u.role === "owner").length;
-      if (ownerCount <= 1) throw new ConvexError("Cannot demote the last owner.");
+      if (ownerCount <= 1)
+        return { ok: false as const, reason: "Cannot demote the last owner." };
     }
 
-    // Never demote the last remaining admin (avoids locking everyone out).
-    if (target.role === "admin" && args.role !== "admin") {
+    // The last admin is only protected from NON-owner actors — the owner
+    // outranks admins, can always re-promote someone, and must be able to
+    // demote admins to keep the roster clean.
+    if (
+      target.role === "admin" &&
+      args.role !== "admin" &&
+      admin.role !== "owner"
+    ) {
       const admins = await ctx.db.query("users").collect();
       const adminCount = admins.filter((u) => u.role === "admin").length;
-      if (adminCount <= 1) throw new ConvexError("Cannot demote the last admin.");
+      if (adminCount <= 1)
+        return { ok: false as const, reason: "Cannot demote the last admin." };
     }
 
     await ctx.db.patch(args.userId, { role: args.role });
+    return { ok: true as const };
   },
 });
 
@@ -278,31 +293,37 @@ export const deleteUser = mutation({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
     const admin = await getAdmin(ctx);
-    if (!admin) throw new ConvexError("Admin access required.");
+    if (!admin) return { ok: false as const, reason: "Admin access required." };
 
     const target = await ctx.db.get(args.userId);
-    if (!target) throw new ConvexError("User not found.");
+    if (!target) return { ok: false as const, reason: "User not found." };
 
     // Only the owner can delete other owners.
     if (target.role === "owner" && admin.role !== "owner") {
-      throw new ConvexError("Only the owner can delete another owner.");
+      return {
+        ok: false as const,
+        reason: "Only the owner can delete another owner.",
+      };
     }
 
     // Never delete the last remaining owner.
     if (target.role === "owner") {
       const owners = await ctx.db.query("users").collect();
       const ownerCount = owners.filter((u) => u.role === "owner").length;
-      if (ownerCount <= 1) throw new ConvexError("Cannot delete the last owner.");
+      if (ownerCount <= 1)
+        return { ok: false as const, reason: "Cannot delete the last owner." };
     }
 
-    // Never delete the last remaining admin.
-    if (target.role === "admin") {
+    // Same as setUserRole: the last-admin guard does not bind the owner.
+    if (target.role === "admin" && admin.role !== "owner") {
       const admins = await ctx.db.query("users").collect();
       const adminCount = admins.filter((u) => u.role === "admin").length;
-      if (adminCount <= 1) throw new ConvexError("Cannot delete the last admin.");
+      if (adminCount <= 1)
+        return { ok: false as const, reason: "Cannot delete the last admin." };
     }
 
     await ctx.db.delete(args.userId);
+    return { ok: true as const };
   },
 });
 

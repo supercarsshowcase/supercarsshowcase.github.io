@@ -152,7 +152,13 @@ function OwnerSettingsGrid() {
       return "Only the owner can promote someone to owner.";
     if (target.role === "owner" && next !== "owner" && ownerCount <= 1)
       return "Cannot demote the last owner.";
-    if (target.role === "admin" && next !== "admin" && adminCount <= 1)
+    // Last-admin protection does not bind the owner — mirrors the server.
+    if (
+      target.role === "admin" &&
+      next !== "admin" &&
+      adminCount <= 1 &&
+      !iAmOwner
+    )
       return "Cannot demote the last admin.";
     return null;
   };
@@ -204,17 +210,19 @@ function OwnerSettingsGrid() {
     userId: string,
     role: "owner" | "admin" | "moderator" | "user",
   ) => {
-    try {
-      await setUserRole({ userId: userId as unknown as Id<"users">, role });
-      toast.success(`Role updated to ${role}`);
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "";
-      toast.error(
-        msg && !msg.includes("Server Error")
-          ? msg
-          : "Couldn't update the role — refresh the page and try again.",
-      );
-    }
+    // The mutation returns { ok, reason } instead of throwing (production
+    // masks thrown messages), so the reason is always shown verbatim.
+    const res = await setUserRole({
+      userId: userId as unknown as Id<"users">,
+      role,
+    }).catch(
+      (e: unknown): { ok: boolean; reason: string } => ({
+        ok: false,
+        reason: e instanceof Error ? e.message : "Failed to update role",
+      }),
+    );
+    if (res?.ok) toast.success(`Role updated to ${role}`);
+    else toast.error(res?.reason ?? "Couldn't update the role");
   };
 
   return (
@@ -327,7 +335,14 @@ function OwnerSettingsGrid() {
                       }
                       setArmedDelete(null);
                       void deleteUser({ userId: u._id }).then(
-                        () => toast.success(`Deleted ${u.name}'s account`),
+                        (res) => {
+                          if (res?.ok)
+                            toast.success(`Deleted ${u.name}'s account`);
+                          else
+                            toast.error(
+                              res?.reason ?? "Could not delete user",
+                            );
+                        },
                         (e: unknown) => {
                           toast.error(
                             e instanceof Error
@@ -360,8 +375,8 @@ function OwnerSettingsGrid() {
         {users && users.length > 0 && (
           <p className="px-5 py-3 text-[11px] text-white/30">
             Roles: user → moderator → admin → owner. Only the owner can promote
-            to owner; the last owner and last admin can never be demoted or
-            deleted.
+            to owner; the last owner can never be demoted or deleted. The owner
+            can always manage admins and mods.
           </p>
         )}
       </CollapsibleSection>
