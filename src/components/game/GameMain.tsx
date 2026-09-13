@@ -606,8 +606,8 @@ export function GameMain({
           aria-hidden="true"
         />
       )}
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-apex-line bg-black/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden">
-        <div className="mx-auto grid max-w-lg grid-cols-6 px-1">
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-apex-line bg-black/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden" style={{ touchAction: "manipulation" }}>
+        <div className="mx-auto grid max-w-lg grid-cols-6 px-1 select-none">
           {PRIMARY_TABS.map((id) => {
             const item = NAV.find((n) => n.id === id)!;
             const Icon = item.icon;
