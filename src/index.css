@@ -254,17 +254,16 @@
   height: 120px;
   margin: -60px 0 0 -60px;
   transform-style: preserve-3d;
-  /* Two animations: vertical toss arc + the spin. The spin's final
-     rotation lands on the side the server actually flipped — chosen by
-     appending 0deg (heads) or 180deg (tails) via the inline style set
-     from the known result BEFORE the animation starts. Duration is
+  /* ONE animation that owns transform: the toss arc and the spin are
+     merged into a single keyframe set (toss-toss). Two same-property
+     animations on one element silently override each other, which let
+     the arc's final frame erase the spin — the coin then always rested
+     showing heads (a flat gold frame) even on tails. The final rotation
+     is chosen BEFORE the animation starts via --spin-end: 10800deg =
+     heads (30 turns), 10890deg = tails (half-turn more). Duration is
      overridable per game via --toss-ms (defaults to the online 2.6s). */
-  animation-duration: var(--toss-ms, 2600ms);
-  animation-timing-function: cubic-bezier(0.3, 0, 0.4, 1);
-  animation-fill-mode: forwards;
-  animation-name: toss-arc, toss-spin;
+  animation: toss-toss var(--toss-ms, 2600ms) cubic-bezier(0.3, 0, 0.4, 1) forwards;
 }
-.toss-coin { animation-timing-function: cubic-bezier(0.3, 0, 0.4, 1), cubic-bezier(0.35, 0, 0.3, 1); }
 /* Landing squash — a separate wrapper animates the flattening so the
    arc/spin transforms never fight each other, plus a tiny settle wobble. */
 .toss-coin-wrap {
@@ -333,9 +332,20 @@
   97% { transform: translateY(-8px); }
   100% { transform: translateY(0) scale(1); }
 }
-@keyframes toss-spin {
-  from { transform: rotateX(0deg); }
-  to { transform: rotateX(var(--spin-turns, 1800deg)); }
+/* Merged toss+spin — transform is animated exactly once, so the final
+   frame is deterministic: the coin reaches --spin-end minus a half-turn
+   at first contact, bounces in translateY, and rests exactly on
+   --spin-end — the true result face. rotateX interpolates monotonically
+   between keyframes, so the tumble looks identical to before. */
+@keyframes toss-toss {
+  0% { transform: translateY(0) rotateX(0deg) scale(1); }
+  12% { transform: translateY(-14px) rotateX(calc(var(--spin-end, 10800deg) - 900deg)) scale(1.02); }
+  50% { transform: translateY(-150px) rotateX(calc(var(--spin-end, 10800deg) - 450deg)) scale(1.12); }
+  82% { transform: translateY(0) rotateX(calc(var(--spin-end, 10800deg) - 180deg)) scale(1); }
+  88% { transform: translateY(-26px) rotateX(calc(var(--spin-end, 10800deg) - 90deg)) scale(1.01); }
+  94% { transform: translateY(0) rotateX(var(--spin-end, 10800deg)) scale(1); }
+  97% { transform: translateY(-8px) rotateX(var(--spin-end, 10800deg)); }
+  100% { transform: translateY(0) rotateX(var(--spin-end, 10800deg)) scale(1); }
 }
 @keyframes toss-shadow {
   0% { opacity: 0.55; transform: translateX(-50%) scale(1); }

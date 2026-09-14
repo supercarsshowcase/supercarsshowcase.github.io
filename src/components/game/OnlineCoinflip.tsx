@@ -378,7 +378,7 @@ export function OnlineCoinflip({ state, dispatch }: { state: GameState; dispatch
           <div className="flex w-full flex-col items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-6 py-8">
             <div className="toss-stage">
               <div key={phase.tossKey} className="toss-coin-wrap">
-                <div className="toss-coin" style={{ "--spin-turns": `${Math.min(tossedIds.current.size, 4) * 1800 + 720}deg` } as React.CSSProperties}>
+                <div className="toss-coin" style={{ "--spin-end": `${Math.min(tossedIds.current.size, 4) * 1800 + 720}deg` } as React.CSSProperties}>
                   <div className="coin-face coin-heads"><Crown className="size-12 text-amber-900 drop-shadow-lg" /><div className="coin-sheen" /></div>
                   <div className="coin-face coin-tails"><Star className="size-12 text-gray-800 drop-shadow-lg" /><div className="coin-sheen" /></div>
                   <div className="coin-edge" />

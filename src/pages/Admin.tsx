@@ -134,9 +134,7 @@ function OwnerSettingsGrid() {
   const users = useQuery(api.site.listUsers);
   const settings = useQuery(api.site.getSiteSettings);
   const setUserRole = useMutation(api.site.setUserRole);
-  const deleteUser = useMutation(api.site.deleteUser);
   const updateSettings = useMutation(api.site.updateSiteSettings);
-  const [armedDelete, setArmedDelete] = useArmConfirm();
 
   const ownerCount = users?.filter((u) => u.role === "owner").length ?? 0;
   const adminCount = users?.filter((u) => u.role === "admin").length ?? 0;
@@ -324,49 +322,6 @@ function OwnerSettingsGrid() {
                       Owner
                     </option>
                   </select>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      // Two-click confirm (window.confirm is blocked in the
-                      // sandboxed preview iframe — it never shows).
-                      if (armedDelete !== u._id) {
-                        setArmedDelete(u._id);
-                        return;
-                      }
-                      setArmedDelete(null);
-                      void deleteUser({ userId: u._id }).then(
-                        (res) => {
-                          if (res?.ok)
-                            toast.success(`Deleted ${u.name}'s account`);
-                          else
-                            toast.error(
-                              res?.reason ?? "Could not delete user",
-                            );
-                        },
-                        (e: unknown) => {
-                          toast.error(
-                            e instanceof Error
-                              ? e.message
-                              : "Could not delete user",
-                          );
-                        },
-                      );
-                    }}
-                    aria-label={`Delete ${u.name}'s account`}
-                    title={
-                      armedDelete === u._id
-                        ? "Click again to confirm deletion"
-                        : "Click twice to delete"
-                    }
-                    className={cn(
-                      "inline-flex size-7 items-center justify-center rounded-md border transition-colors",
-                      armedDelete === u._id
-                        ? "animate-pulse border-apex-red bg-apex-red/20 text-apex-red"
-                        : "border-white/15 text-white/40 hover:border-apex-red hover:text-apex-red",
-                    )}
-                  >
-                    <Trash2 className="size-3.5" />
-                  </button>
                 </div>
               </li>
             ))}
@@ -375,8 +330,8 @@ function OwnerSettingsGrid() {
         {users && users.length > 0 && (
           <p className="px-5 py-3 text-[11px] text-white/30">
             Roles: user → moderator → admin → owner. Only the owner can promote
-            to owner; the last owner can never be demoted or deleted. The owner
-            can always manage admins and mods.
+            to owner; the last owner can never be demoted. The owner can always
+            manage admins and mods.
           </p>
         )}
       </CollapsibleSection>

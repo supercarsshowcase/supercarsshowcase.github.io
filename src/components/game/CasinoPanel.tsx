@@ -435,7 +435,7 @@ function CoinflipGame({ state, dispatch }: { state: GameState; dispatch: React.D
         <div className="toss-stage toss-stage-lg" style={{ "--toss-ms": `${OFFLINE_TOSS_MS}ms` } as React.CSSProperties}>
           {toss && !settled ? (
             <div key={toss.key} className="toss-coin-wrap">
-              <div className="toss-coin" style={{ "--spin-turns": `${5 * 1800 + (toss.result === "tails" ? 180 : 0)}deg` } as React.CSSProperties}>
+              <div className="toss-coin" style={{ "--spin-end": toss.result === "tails" ? "10890deg" : "10800deg" } as React.CSSProperties}>
                 <div className="coin-face coin-heads"><Crown className="size-14 text-amber-900 drop-shadow-lg" /><div className="coin-sheen" /></div>
                 <div className="coin-face coin-tails"><Star className="size-14 text-gray-800 drop-shadow-lg" /><div className="coin-sheen" /></div>
                 <div className="coin-edge" />
