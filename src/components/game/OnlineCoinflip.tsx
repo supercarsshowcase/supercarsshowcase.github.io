@@ -267,6 +267,7 @@ export function OnlineCoinflip({ state, dispatch }: { state: GameState; dispatch
       if (m.status === "live" && !tossedIds.current.has(m._id)) {
         tossedIds.current.add(m._id);
         clearTimers();
+        finalizeAttempts.current = 0; // fresh budget per match, not per session
         const iAmCreator = m.iAmCreator;
         // Both clients get the same "match found" beat (the subscription
         // delivers the live row at join time), then toss, then reveal.

@@ -217,17 +217,19 @@
   width: 190px;
   perspective: 700px;
 }
-/* Bigger stage for the offline coinflip (kept as a modifier). */
-.toss-stage-lg {
+/* Bigger stage for the offline coinflip (kept as a modifier). The shadow
+   override needs higher specificity than the base `.toss-stage::after`
+   rule that follows it in this file. */
+.toss-stage.toss-stage-lg {
   height: 240px;
   width: 240px;
 }
-.toss-stage-lg .toss-coin {
+.toss-stage.toss-stage-lg .toss-coin {
   width: 156px;
   height: 156px;
   margin: -78px 0 0 -78px;
 }
-.toss-stage-lg::after {
+.toss-stage.toss-stage-lg::after {
   width: 124px;
   height: 22px;
 }
@@ -284,11 +286,13 @@
   88% { transform: scale(0.96, 1.05); }      /* rebound */
   94%, 100% { transform: scale(1, 1); }      /* settle */
 }
-/* Settled-face pop — tiny bounce when the static result face appears. */
+/* Settled-face pop — tiny bounce when the static result face appears.
+   Scale/opacity ONLY: the element is centered by Tailwind's `translate`
+   property, and a transform translate here would double the offset. */
 @keyframes coin-pop {
-  0% { transform: translate(-50%, -50%) scale(0.6); opacity: 0; }
-  60% { transform: translate(-50%, -50%) scale(1.06); opacity: 1; }
-  100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  0% { transform: scale(0.6); opacity: 0; }
+  60% { transform: scale(1.06); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
 }
 /* Sheen sweep — a highlight gliding across the face on landing. */
 .coin-sheen {
