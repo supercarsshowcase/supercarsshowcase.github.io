@@ -344,8 +344,17 @@ function CoinflipGame({ state, dispatch }: { state: GameState; dispatch: React.D
   const [selectedCar, setSelectedCar] = useState<string | null>(null);
   const [wonCar, setWonCar] = useState<string | null>(null);
   const [lostCar, setLostCar] = useState<string | null>(null);
+  // After the 3D wobble settles, swap in a STATIC flat face — the 3D coin's
+  // final frame can render edge-on (gold edge instead of the silver tails
+  // face). The static face is unmistakable; the payout still happens at
+  // touchdown (OFFLINE_TOSS_MS), not when this swap renders.
+  const [settled, setSettled] = useState(false);
   const flipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => () => { if (flipTimer.current) clearTimeout(flipTimer.current); }, []);
+  const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (flipTimer.current) clearTimeout(flipTimer.current);
+    if (settleTimer.current) clearTimeout(settleTimer.current);
+  }, []);
 
   const gambleCars = useMemo(() =>
     Object.keys(state.ownedCars).filter((id) => id !== state.activeCarId).map((id) => GAME_CAR_MAP[id]).filter(Boolean),
@@ -360,9 +369,11 @@ function CoinflipGame({ state, dispatch }: { state: GameState; dispatch: React.D
     // true face — the coin honestly shows the result it lands on, and the
     // reveal happens at touchdown, not via a mid-air face swap.
     const r: "heads" | "tails" = Math.random() < 0.5 ? "heads" : "tails";
+    setSettled(false);
     setToss({ key: Date.now(), result: r });
     sfx.whoosh();
     if (flipTimer.current) clearTimeout(flipTimer.current);
+    if (settleTimer.current) clearTimeout(settleTimer.current);
     flipTimer.current = setTimeout(() => {
       sfx.land();
       setResult(r); const wonGame = r === pick;      setWon(wonGame);
@@ -400,6 +411,8 @@ function CoinflipGame({ state, dispatch }: { state: GameState; dispatch: React.D
       }
       setSpinning(false);
     }, OFFLINE_TOSS_MS);
+    // 3D toss arc (3s) + squash/wobble tail (~0.7s) → then the static face.
+    settleTimer.current = setTimeout(() => setSettled(true), OFFLINE_TOSS_MS + 700);
   }, [mode, bet, pick, selectedCar, state.cash, state.ownedCars, dispatch]);
 
   return (
@@ -416,16 +429,28 @@ function CoinflipGame({ state, dispatch }: { state: GameState; dispatch: React.D
           ))}
         </div>
 
-        {/* The real 3D two-faced coin — launched into the air, spinning ~5
-            turns for 3s, landing (squash + wobble + sheen) on the true face. */}
+        {/* The real 3D two-faced coin — launched into the air, spinning ~9
+            turns for 3s, landing (squash + wobble + sheen) on the true face,
+            then settling into a static flat face that can't render edge-on. */}
         <div className="toss-stage toss-stage-lg" style={{ "--toss-ms": `${OFFLINE_TOSS_MS}ms` } as React.CSSProperties}>
-          {toss ? (
+          {toss && !settled ? (
             <div key={toss.key} className="toss-coin-wrap">
               <div className="toss-coin" style={{ "--spin-turns": `${5 * 1800 + (toss.result === "tails" ? 180 : 0)}deg` } as React.CSSProperties}>
                 <div className="coin-face coin-heads"><Crown className="size-14 text-amber-900 drop-shadow-lg" /><div className="coin-sheen" /></div>
                 <div className="coin-face coin-tails"><Star className="size-14 text-gray-800 drop-shadow-lg" /><div className="coin-sheen" /></div>
                 <div className="coin-edge" />
               </div>
+            </div>
+          ) : toss && settled ? (
+            /* Settled: flat 2D face — silver for tails, gold for heads. */
+            <div className={cn("absolute left-1/2 top-1/2 flex size-40 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-4 transition-transform",
+              toss.result === "tails"
+                ? "border-gray-400 bg-gradient-to-br from-gray-200 via-gray-400 to-gray-600 shadow-lg shadow-gray-400/30"
+                : "border-amber-500 bg-gradient-to-br from-amber-300 via-amber-500 to-amber-700 shadow-lg shadow-amber-500/30")}
+              style={{ animation: "coin-pop 0.35s ease-out" }}>
+              {toss.result === "tails"
+                ? <Star className="size-16 fill-gray-700 text-gray-800 drop-shadow-lg" />
+                : <Crown className="size-16 text-amber-900 drop-shadow-lg" />}
             </div>
           ) : (
             <div className="absolute inset-0 flex items-center justify-center">

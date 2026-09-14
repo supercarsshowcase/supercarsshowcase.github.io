@@ -284,6 +284,12 @@
   88% { transform: scale(0.96, 1.05); }      /* rebound */
   94%, 100% { transform: scale(1, 1); }      /* settle */
 }
+/* Settled-face pop — tiny bounce when the static result face appears. */
+@keyframes coin-pop {
+  0% { transform: translate(-50%, -50%) scale(0.6); opacity: 0; }
+  60% { transform: translate(-50%, -50%) scale(1.06); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
 /* Sheen sweep — a highlight gliding across the face on landing. */
 .coin-sheen {
   position: absolute;

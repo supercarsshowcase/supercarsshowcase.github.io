@@ -92,6 +92,7 @@ function RarityBadge({ rarity }: { rarity: Rarity }) {
 function SpinPanel({ state, dispatch }: { state: GameState; dispatch: any }) {
   const [rotation, setRotation] = useState(0);
   const [spinning, setSpinning] = useState(false);
+  const [snapping, setSnapping] = useState(false);
   const [result, setResult] = useState<SpinResult | null>(null);
   const now = Date.now();
   const readyAt = spinReadyAt(state);
@@ -131,6 +132,7 @@ function SpinPanel({ state, dispatch }: { state: GameState; dispatch: any }) {
     if (!canSpin || spinning) return;
     const res = rollSpin(state, Date.now());
     settledRef.current = false;
+    setSnapping(false);
     setResult(res);
     setSpinning(true);
     const targetMod = (360 - (res.slice * or2 + or2 / 2)) % 360;
@@ -149,7 +151,9 @@ function SpinPanel({ state, dispatch }: { state: GameState; dispatch: any }) {
 
   const skipSpin = useCallback(() => {
     if (!result || !spinning) return;
-    // Snap the wheel to the winning slice (no extra full turn) as it stops.
+    // Snap the wheel to the winning slice with a SHORT transition — a new
+    // target with the normal 4.5s transition would just keep spinning.
+    setSnapping(true);
     const targetMod = (360 - (result.slice * or2 + or2 / 2)) % 360;
     setRotation((prev) => {
       const currentMod = (prev % 360 + 360) % 360;
@@ -177,7 +181,9 @@ function SpinPanel({ state, dispatch }: { state: GameState; dispatch: any }) {
           <Ge.div className="absolute inset-0 rounded-full border-[3px] border-[#3a3a40]"
             style={{ background: "conic-gradient(" + stops + ")" }}
             animate={{ rotate: rotation }}
-            transition={{ duration: 4.5, ease: [0.12, 0.75, 0.2, 1] }}
+            transition={snapping
+              ? { duration: 0.25, ease: "easeOut" }
+              : { duration: 4.5, ease: [0.12, 0.75, 0.2, 1] }}
             onAnimationComplete={settleSpin}>
             {[{ car: previewCar, si: 0 }, { car: previewCar01, si: 4 }, { car: previewCar001, si: 8 }].map(({ car, si }) => {
               if (!car) return null;
