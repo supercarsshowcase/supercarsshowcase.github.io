@@ -4,7 +4,7 @@
  */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // @ts-nocheck
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { motion as Ge, AnimatePresence as ts } from "framer-motion";
 import { toast as ye } from "sonner";
 import {
@@ -121,9 +121,16 @@ function SpinPanel({ state, dispatch }: { state: GameState; dispatch: any }) {
     return parts.join(" ");
   }, [swapCountdown]);
 
+  // Settle-guard: the reward is paid exactly once, by whichever happens
+  // first — the animation completing OR the player skipping. Without this
+  // the skip path paid once, then onAnimationComplete paid AGAIN (double
+  // reward). settleRef flips before the dispatch in both paths.
+  const settledRef = useRef(false);
+
   const spin = useCallback(() => {
     if (!canSpin || spinning) return;
     const res = rollSpin(state, Date.now());
+    settledRef.current = false;
     setResult(res);
     setSpinning(true);
     const targetMod = (360 - (res.slice * or2 + or2 / 2)) % 360;
@@ -133,11 +140,23 @@ function SpinPanel({ state, dispatch }: { state: GameState; dispatch: any }) {
     });
   }, [canSpin, spinning, state]);
 
-  const skipSpin = useCallback(() => {
-    if (!result || !spinning) return;
+  const settleSpin = useCallback(() => {
+    if (!result || settledRef.current) return;
+    settledRef.current = true;
     dispatch({ type: 'SPIN', now: Date.now(), result });
     setSpinning(false);
-  }, [result, spinning]);
+  }, [result, dispatch]);
+
+  const skipSpin = useCallback(() => {
+    if (!result || !spinning) return;
+    // Snap the wheel to the winning slice (no extra full turn) as it stops.
+    const targetMod = (360 - (result.slice * or2 + or2 / 2)) % 360;
+    setRotation((prev) => {
+      const currentMod = (prev % 360 + 360) % 360;
+      return prev + ((targetMod - currentMod + 360) % 360);
+    });
+    settleSpin();
+  }, [result, spinning, settleSpin]);
 
   const wonCar = result?.kind === 'car' && result.carId ? Te[result.carId] : null;
   const stops = U9.map((c, i) => c + " " + (i * or2).toFixed(1) + "deg " + ((i + 1) * or2).toFixed(1) + "deg").join(", ");
@@ -159,7 +178,7 @@ function SpinPanel({ state, dispatch }: { state: GameState; dispatch: any }) {
             style={{ background: "conic-gradient(" + stops + ")" }}
             animate={{ rotate: rotation }}
             transition={{ duration: 4.5, ease: [0.12, 0.75, 0.2, 1] }}
-            onAnimationComplete={() => { if (result) { dispatch({ type: "SPIN", now: Date.now(), result }); setSpinning(false); } }}>
+            onAnimationComplete={settleSpin}>
             {[{ car: previewCar, si: 0 }, { car: previewCar01, si: 4 }, { car: previewCar001, si: 8 }].map(({ car, si }) => {
               if (!car) return null;
               const meta = Oy[si];

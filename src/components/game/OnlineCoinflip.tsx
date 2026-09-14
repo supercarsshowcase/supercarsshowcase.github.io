@@ -51,6 +51,7 @@ function setMuted(next: boolean) {
   muted = next;
   localStorage.setItem("coinflip-muted", next ? "1" : "0");
 }
+void setMuted; // reserved for programmatic muting (e.g. future settings menu)
 
 export interface Sfx {
   matchFound(): void;
