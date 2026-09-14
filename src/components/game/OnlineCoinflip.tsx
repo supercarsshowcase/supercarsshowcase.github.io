@@ -35,9 +35,29 @@ type Side = "heads" | "tails";
 let audioCtx: AudioContext | null = null;
 let muted = localStorage.getItem("coinflip-muted") === "1";
 
+/** Is sound currently muted? (shared with the offline coinflip UI) */
+export function isMuted() {
+  return muted;
+}
+
+/** Flip the shared mute state. Returns the new value. */
+export function toggleMuted() {
+  muted = !muted;
+  localStorage.setItem("coinflip-muted", muted ? "1" : "0");
+  return muted;
+}
+
 function setMuted(next: boolean) {
   muted = next;
   localStorage.setItem("coinflip-muted", next ? "1" : "0");
+}
+
+export interface Sfx {
+  matchFound(): void;
+  whoosh(): void;
+  land(): void;
+  win(): void;
+  lose(): void;
 }
 
 function ac(): AudioContext | null {
@@ -70,7 +90,8 @@ function tone(freq: number, start: number, dur: number, type: OscillatorType = "
   osc.stop(ctx.currentTime + start + dur + 0.05);
 }
 
-const sfx = {
+export const sfx: Sfx = {
+  // Online matches get a match-found chime; the offline flip never calls it.
   matchFound() {
     tone(660, 0, 0.14, "square", 0.06);
     tone(880, 0.12, 0.2, "square", 0.06);

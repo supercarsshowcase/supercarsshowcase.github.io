@@ -35,7 +35,7 @@ import { useQuery, useMutation } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
-import { OnlineCoinflip as OnlineCoinflipReal } from "@/components/game/OnlineCoinflip";
+import { OnlineCoinflip as OnlineCoinflipReal, sfx } from "@/components/game/OnlineCoinflip";
 
 /* ── Types ─────────────────────────────────────────────────────────────── */
 type GameId =
@@ -329,17 +329,23 @@ function GameLayout({ title, icon, children }: { title: string; icon: React.Reac
 /* ══════════════════════════════════════════════════════════════════════════ */
 /*  COINFLIP                                                                 */
 /* ══════════════════════════════════════════════════════════════════════════ */
+/** Offline toss duration — must match the CSS --toss-ms passed to the stage. */
+const OFFLINE_TOSS_MS = 3000;
+
 function CoinflipGame({ state, dispatch }: { state: GameState; dispatch: React.Dispatch<Action> }) {
   const [mode, setMode] = useState<"cash" | "car">("cash");
   const [bet, setBet] = useState(10000);
   const [pick, setPick] = useState<"heads" | "tails">("heads");
   const [result, setResult] = useState<"heads" | "tails" | null>(null);
   const [spinning, setSpinning] = useState(false);
+  const [toss, setToss] = useState<{ key: number; result: "heads" | "tails" } | null>(null);
   const [won, setWon] = useState<boolean | null>(null);
   const [carPrize, setCarPrize] = useState<string | null>(null);
   const [selectedCar, setSelectedCar] = useState<string | null>(null);
   const [wonCar, setWonCar] = useState<string | null>(null);
   const [lostCar, setLostCar] = useState<string | null>(null);
+  const flipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (flipTimer.current) clearTimeout(flipTimer.current); }, []);
 
   const gambleCars = useMemo(() =>
     Object.keys(state.ownedCars).filter((id) => id !== state.activeCarId).map((id) => GAME_CAR_MAP[id]).filter(Boolean),
@@ -350,9 +356,17 @@ function CoinflipGame({ state, dispatch }: { state: GameState; dispatch: React.D
     if (mode === "cash") { if (state.cash < bet) return toast.error("Not enough cash!"); }
     else { if (!selectedCar) return toast.error("Select a car to gamble!"); }
     setSpinning(true); setResult(null); setWon(null); setCarPrize(null); setWonCar(null); setLostCar(null);
-    setTimeout(() => {
-      const r: "heads" | "tails" = Math.random() < 0.5 ? "heads" : "tails";
+    // Decide the flip UPFRONT so the 3D spin's final rotation lands on the
+    // true face — the coin honestly shows the result it lands on, and the
+    // reveal happens at touchdown, not via a mid-air face swap.
+    const r: "heads" | "tails" = Math.random() < 0.5 ? "heads" : "tails";
+    setToss({ key: Date.now(), result: r });
+    sfx.whoosh();
+    if (flipTimer.current) clearTimeout(flipTimer.current);
+    flipTimer.current = setTimeout(() => {
+      sfx.land();
       setResult(r); const wonGame = r === pick;      setWon(wonGame);
+      if (wonGame) sfx.win(); else sfx.lose();
       if (mode === "cash") {
         if (wonGame) {
           dispatch({ type: "ADD_CASH", amount: bet });
@@ -385,7 +399,7 @@ function CoinflipGame({ state, dispatch }: { state: GameState; dispatch: React.D
         }
       }
       setSpinning(false);
-    }, 1500);
+    }, OFFLINE_TOSS_MS);
   }, [mode, bet, pick, selectedCar, state.cash, state.ownedCars, dispatch]);
 
   return (
@@ -402,20 +416,29 @@ function CoinflipGame({ state, dispatch }: { state: GameState; dispatch: React.D
           ))}
         </div>
 
-        <motion.div
-          animate={spinning ? { rotateY: [0, 1800] } : result === "heads" ? { rotateY: 0 } : result === "tails" ? { rotateY: 180 } : {}}
-          transition={{ duration: 1.5, ease: "easeInOut" }} className="perspective-800">
-          <div className={cn("size-48 lg:size-56 rounded-full border-4 flex items-center justify-center shadow-2xl transition-all duration-500",
-            spinning ? "animate-pulse border-amber-400 bg-gradient-to-br from-amber-300 to-amber-500"
-            : result === "heads" ? "border-amber-500 bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 shadow-amber-500/40"
-            : result === "tails" ? "border-gray-400 bg-gradient-to-br from-gray-300 via-gray-400 to-gray-500 shadow-gray-400/40"
-            : "border-amber-500 bg-gradient-to-br from-amber-400 to-amber-600")}>
-            {spinning ? <CircleDot className="size-16 text-amber-900 animate-spin" />
-            : result === "heads" ? <Crown className="size-16 text-amber-900 drop-shadow-lg" />
-            : result === "tails" ? <Circle className="size-16 text-gray-800 drop-shadow-lg fill-gray-700" />
-            : <span className="text-5xl font-display font-black text-amber-900">?</span>}
-          </div>
-        </motion.div>
+        {/* The real 3D two-faced coin — launched into the air, spinning ~5
+            turns for 3s, landing (squash + wobble + sheen) on the true face. */}
+        <div className="toss-stage toss-stage-lg" style={{ "--toss-ms": `${OFFLINE_TOSS_MS}ms` } as React.CSSProperties}>
+          {toss ? (
+            <div key={toss.key} className="toss-coin-wrap">
+              <div className="toss-coin" style={{ "--spin-turns": `${5 * 1800 + (toss.result === "tails" ? 180 : 0)}deg` } as React.CSSProperties}>
+                <div className="coin-face coin-heads"><Crown className="size-14 text-amber-900 drop-shadow-lg" /><div className="coin-sheen" /></div>
+                <div className="coin-face coin-tails"><Star className="size-14 text-gray-800 drop-shadow-lg" /><div className="coin-sheen" /></div>
+                <div className="coin-edge" />
+              </div>
+            </div>
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="relative size-36">
+                <div className="coin-face coin-heads"><Crown className="size-14 text-amber-900 drop-shadow-lg" /></div>
+              </div>
+            </div>
+          )}
+        </div>
+        <p className={cn("-mt-3 font-display text-xs font-bold uppercase tracking-[0.25em]",
+          spinning ? "animate-pulse text-white/40" : result ? "text-white/60" : "text-white/25")}>
+          {spinning ? "The coin is in the air…" : result ? `Landed on ${result}!` : "Call it — heads or tails"}
+        </p>
 
         <div className="flex gap-6">
           {(["heads", "tails"] as const).map((s) => (
