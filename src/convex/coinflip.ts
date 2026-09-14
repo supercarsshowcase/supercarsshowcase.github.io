@@ -128,6 +128,27 @@ export const listMyRecent = query({
         createdAt: m.createdAt,
       }));
 
+    // Live matches I'm part of (either side) — lets BOTH clients run the
+    // synchronized "match found → toss → reveal" sequence off the same row.
+    const liveAll = await ctx.db
+      .query("coinflipMatches")
+      .withIndex("by_status", (q) => q.eq("status", "live"))
+      .collect();
+    const liveRows = liveAll
+      .filter((m) => m.creatorId === userId || m.opponentId === userId)
+      .slice(0, 2)
+      .map((m) => ({
+        _id: m._id,
+        status: "live" as const,
+        bet: m.bet,
+        won: false,
+        iAmCreator: m.creatorId === userId,
+        myPick: (m.creatorId === userId ? m.creatorPick : (m.opponentPick ?? "heads")) as "heads" | "tails",
+        winnerSide: m.creatorPick,
+        opponentName: m.creatorId === userId ? (m.opponentName ?? "Player") : m.creatorName,
+        createdAt: m.createdAt,
+      }));
+
     const refunded = cancelledMine
       .filter((m) => m.creatorId === userId)
       .slice(0, 5)
@@ -143,7 +164,7 @@ export const listMyRecent = query({
         createdAt: m.createdAt,
       }));
 
-    return [...openRows, ...settled, ...refunded];
+    return [...liveRows, ...openRows, ...settled, ...refunded];
   },
 });
 
@@ -195,8 +216,10 @@ export const cancel = mutation({
 });
 
 /**
- * Join an open match — THE FLIP HAPPENS HERE, SERVER-SIDE. Both clients
- * subscribe to listMyRecent and see the same settled row arrive.
+ * Join an open match — THE FLIP IS DECIDED HERE, SERVER-SIDE, but hidden:
+ * the match goes to "live" and the result is sealed until finalize().
+ * Both players get the same "match found" beat, then a synchronized toss
+ * revealed simultaneously by finalize — no client knows the coin early.
  */
 export const join = mutation({
   args: { matchId: v.id("coinflipMatches") },
@@ -212,28 +235,114 @@ export const join = mutation({
       throw new ConvexError("Match expired.");
     }
 
-    // Server-side coin: authoritative for both players.
+    // Server-side coin: authoritative for both players, sealed until finalize.
     const flip = Math.random() < 0.5 ? "heads" : "tails";
     const creatorWon = flip === m.creatorPick;
     const opponentPick = m.creatorPick === "heads" ? "tails" : "heads";
 
     await ctx.db.patch(args.matchId, {
-      status: "done",
+      status: "live",
       opponentId: userId,
       opponentName: name,
       opponentPick,
       winnerId: creatorWon ? m.creatorId : userId,
+      winnerName: creatorWon ? m.creatorName : name,
       winnerSide: flip,
       flippedAt: Date.now(),
     });
 
     return {
-      flip,
-      youWon: !creatorWon,
+      flip: null as "heads" | "tails" | null,
+      youWon: null as boolean | null,
       creatorName: m.creatorName,
       bet: m.bet,
       winnerPayout: m.bet * 2,
     };
+  },
+});
+
+/**
+ * Reveal phase — anyone (both match players) can pull the sealed result.
+ * Called after the shared "match found" suspense so both clients flip
+ * together on the same authoritative row.
+ */
+export const finalize = mutation({
+  args: { matchId: v.id("coinflipMatches") },
+  handler: async (ctx, args) => {
+    const { userId } = await requireUser(ctx);
+    const m = await ctx.db.get(args.matchId);
+    if (!m) throw new ConvexError("Match not found.");
+    if (m.status === "live" && m.flippedAt && Date.now() - m.flippedAt < 900) {
+      throw new ConvexError("The coin is still in the air.");
+    }
+    if (m.status !== "live" && m.status !== "done") {
+      throw new ConvexError("This match isn't being flipped.");
+    }
+    const isPlayer = m.creatorId === userId || m.opponentId === userId;
+    if (!isPlayer) throw new ConvexError("You're not in this match.");
+
+    // First reveal call promotes live → done (visible to the feed).
+    if (m.status === "live") {
+      await ctx.db.patch(args.matchId, { status: "done" });
+    }
+    return {
+      flip: m.winnerSide ?? ("heads" as const),
+      youWon: m.winnerId === userId,
+      creatorName: m.creatorName,
+      opponentName: m.opponentName ?? "Player",
+      creatorPick: m.creatorPick,
+      opponentPick: m.opponentPick ?? ("heads" as const),
+      bet: m.bet,
+      winnerPayout: m.bet * 2,
+      winnerName: m.winnerName ?? "",
+    };
+  },
+});
+
+/** Recent settled flips, freshest first — the global live feed. */
+export const recentFlips = query({
+  args: {},
+  handler: async (ctx) => {
+    const done = await ctx.db
+      .query("coinflipMatches")
+      .withIndex("by_status", (q) => q.eq("status", "done"))
+      .order("desc")
+      .take(12);
+    return done.map((m) => ({
+      _id: m._id,
+      winnerName: m.winnerName ?? "Player",
+      loserName:
+        m.winnerId === m.creatorId ? (m.opponentName ?? "Player") : m.creatorName,
+      winnerSide: m.winnerSide ?? ("heads" as const),
+      bet: m.bet,
+      flippedAt: m.flippedAt ?? m.createdAt,
+    }));
+  },
+});
+
+/** My lifetime coinflip record + wagered/won totals. */
+export const myStats = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return { flips: 0, wins: 0, losses: 0, wagered: 0, netWon: 0 };
+
+    const done = await ctx.db
+      .query("coinflipMatches")
+      .withIndex("by_status", (q) => q.eq("status", "done"))
+      .order("desc")
+      .take(200);
+
+    let flips = 0, wins = 0, losses = 0, wagered = 0, netWon = 0;
+    for (const m of done) {
+      const mine = m.creatorId === userId || m.opponentId === userId;
+      if (!mine) continue;
+      flips += 1;
+      wagered += m.bet;
+      if (m.winnerId === userId) { wins += 1; netWon += m.bet; }
+      else { losses += 1; netWon -= m.bet; }
+    }
+    return { flips, wins, losses, wagered, netWon };
   },
 });
 

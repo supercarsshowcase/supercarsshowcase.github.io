@@ -206,6 +206,9 @@ const schema = defineSchema(
     coinflipMatches: defineTable({
       status: v.union(
         v.literal("open"),
+        // "live" = both players staked, toss in progress. The result is
+        // decided server-side at this moment, but hidden until finalize.
+        v.literal("live"),
         v.literal("done"),
         v.literal("cancelled"),
       ),
@@ -217,6 +220,7 @@ const schema = defineSchema(
       opponentName: v.optional(v.string()),
       opponentPick: v.optional(v.union(v.literal("heads"), v.literal("tails"))),
       winnerId: v.optional(v.id("users")),
+      winnerName: v.optional(v.string()),
       winnerSide: v.optional(v.union(v.literal("heads"), v.literal("tails"))),
       createdAt: v.number(),
       flippedAt: v.optional(v.number()),
