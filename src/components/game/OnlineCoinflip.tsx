@@ -196,10 +196,12 @@ export function OnlineCoinflip({ state, dispatch }: { state: GameState; dispatch
     setIsMutedState(!isMuted);
   };
 
+  const finalizeAttempts = useRef(0);
   /** Shared reveal: pull the sealed coin, show it, pay the joiner. */
   const revealMatch = useCallback((matchId: string, iAmJoiner: boolean) => {
     finalizeMatch({ matchId: matchId as never })
       .then((r) => {
+        finalizeAttempts.current = 0;
         sfx.land();
         setPhase({
           kind: "reveal",
@@ -224,7 +226,14 @@ export function OnlineCoinflip({ state, dispatch }: { state: GameState; dispatch
         }
       })
       .catch(() => {
-        // Retry once shortly after — the row may not be finalizable yet.
+        // Bounded retry — the row may not be finalizable yet (the 900ms
+        // seal window) or the network hiccuped. Never tight-loop forever.
+        if (finalizeAttempts.current >= 5) {
+          toast.error("Couldn't load the flip result — try reopening the casino.");
+          setPhase(null);
+          return;
+        }
+        finalizeAttempts.current += 1;
         addTimer(() => revealMatch(matchId, iAmJoiner), 1500);
       });
   }, [finalizeMatch, dispatch, addTimer]);

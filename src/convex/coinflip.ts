@@ -361,6 +361,12 @@ export const settleCreator = mutation({
       return { already: true, pending: false, payout: 0, refunded: false, won: null };
     }
 
+    if (m.status === "live") {
+      const won = m.winnerId === userId;
+      await ctx.db.patch(args.matchId, { creatorSettled: true });
+      // Win: stake back + opponent's stake. Loss: nothing back (stake lost).
+      return { already: false, pending: false, payout: won ? m.bet * 2 : 0, refunded: false, won };
+    }
     if (m.status === "done") {
       const won = m.winnerId === userId;
       await ctx.db.patch(args.matchId, { creatorSettled: true });
