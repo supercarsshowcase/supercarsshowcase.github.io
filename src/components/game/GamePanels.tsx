@@ -93,6 +93,13 @@ function SpinPanel({ state, dispatch }: { state: GameState; dispatch: any }) {
   const [rotation, setRotation] = useState(0);
   const [spinning, setSpinning] = useState(false);
   const [snapping, setSnapping] = useState(false);
+  // spinKey remounts the wheel: on SKIP the running 4.5s animation is
+  // destroyed outright (interrupting it was unreliable — it kept spinning)
+  // and the fresh element renders frozen on the winning slice. On a new
+  // spin the remount starts from startRotation === the previous final
+  // angle, so the wheel continues seamlessly into the next 5 turns.
+  const [spinKey, setSpinKey] = useState(0);
+  const [startRotation, setStartRotation] = useState(0);
   const [result, setResult] = useState<SpinResult | null>(null);
   const now = Date.now();
   const readyAt = spinReadyAt(state);
@@ -133,14 +140,14 @@ function SpinPanel({ state, dispatch }: { state: GameState; dispatch: any }) {
     const res = rollSpin(state, Date.now());
     settledRef.current = false;
     setSnapping(false);
+    setStartRotation(rotation);
+    setSpinKey((k) => k + 1);
     setResult(res);
     setSpinning(true);
     const targetMod = (360 - (res.slice * or2 + or2 / 2)) % 360;
-    setRotation((prev) => {
-      const currentMod = (prev % 360 + 360) % 360;
-      return prev + (targetMod - currentMod + 360) % 360 + 360 * 5;
-    });
-  }, [canSpin, spinning, state]);
+    const currentMod = (rotation % 360 + 360) % 360;
+    setRotation(rotation + (targetMod - currentMod + 360) % 360 + 360 * 5);
+  }, [canSpin, spinning, state, rotation]);
 
   const settleSpin = useCallback(() => {
     if (!result || settledRef.current) return;
@@ -151,16 +158,17 @@ function SpinPanel({ state, dispatch }: { state: GameState; dispatch: any }) {
 
   const skipSpin = useCallback(() => {
     if (!result || !spinning) return;
-    // Snap the wheel to the winning slice with a SHORT transition — a new
-    // target with the normal 4.5s transition would just keep spinning.
+    // Freeze on the winner: remount with start === end so NO animation
+    // runs at all — the running spin is killed, the wheel just stops.
     setSnapping(true);
     const targetMod = (360 - (result.slice * or2 + or2 / 2)) % 360;
-    setRotation((prev) => {
-      const currentMod = (prev % 360 + 360) % 360;
-      return prev + ((targetMod - currentMod + 360) % 360);
-    });
+    const currentMod = (rotation % 360 + 360) % 360;
+    const final = rotation + (targetMod - currentMod + 360) % 360;
+    setStartRotation(final);
+    setRotation(final);
+    setSpinKey((k) => k + 1);
     settleSpin();
-  }, [result, spinning, settleSpin]);
+  }, [result, spinning, rotation, settleSpin]);
 
   const wonCar = result?.kind === 'car' && result.carId ? Te[result.carId] : null;
   const stops = U9.map((c, i) => c + " " + (i * or2).toFixed(1) + "deg " + ((i + 1) * or2).toFixed(1) + "deg").join(", ");
@@ -178,11 +186,12 @@ function SpinPanel({ state, dispatch }: { state: GameState; dispatch: any }) {
               <circle cx="17" cy="8" r="3" fill="#0b0b0c" />
             </svg>
           </div>
-          <Ge.div className="absolute inset-0 rounded-full border-[3px] border-[#3a3a40]"
+          <Ge.div key={spinKey} className="absolute inset-0 rounded-full border-[3px] border-[#3a3a40]"
             style={{ background: "conic-gradient(" + stops + ")" }}
+            initial={{ rotate: startRotation }}
             animate={{ rotate: rotation }}
             transition={snapping
-              ? { duration: 0.25, ease: "easeOut" }
+              ? { duration: 0 }
               : { duration: 4.5, ease: [0.12, 0.75, 0.2, 1] }}
             onAnimationComplete={settleSpin}>
             {[{ car: previewCar, si: 0 }, { car: previewCar01, si: 4 }, { car: previewCar001, si: 8 }].map(({ car, si }) => {
