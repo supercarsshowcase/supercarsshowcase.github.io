@@ -86,13 +86,29 @@ export function AnnouncementOverlay() {
     });
   }, [latest]);
 
-  // Periodically prune messages whose time is up.
+  // Prune expired messages — WITHOUT a permanent 500ms loop. The old timer
+  // re-armed forever even when the stack was empty/idle (a setTimeout chain
+  // re-rendering the overlay twice a second all session). Now the timer is
+  // armed ONLY while something is actually expiring: one timeout set to the
+  // nearest expiry does the same job with zero idle churn. The 2s failsafe
+  // keeps stale items from ever sticking if an expiry was mis-set.
   useEffect(() => {
     if (stack.length === 0) return;
-    const timer = setTimeout(() => {
+    const now = Date.now();
+    const nextExpiry = Math.min(...stack.map((item) => item.expiresAt));
+    if (nextExpiry > now) {
+      // Wake exactly when the soonest message expires (bounded sanity cap).
+      const wait = Math.min(nextExpiry - now, 2000);
+      const timer = setTimeout(() => {
+        setStack((prev) => prev.filter((item) => item.expiresAt > Date.now()));
+      }, wait);
+      return () => clearTimeout(timer);
+    }
+    // Something already expired — prune immediately on the next frame.
+    const raf = requestAnimationFrame(() => {
       setStack((prev) => prev.filter((item) => item.expiresAt > Date.now()));
-    }, 500);
-    return () => clearTimeout(timer);
+    });
+    return () => cancelAnimationFrame(raf);
   }, [stack]);
 
   return (

@@ -66,6 +66,9 @@ const Oy: Record<number, any> = {
 };
 const B9: Record<string, any> = { crate: Package, crate2: Gem, crate3: Sparkles, crate4: Crown, crate5: Star, default: Package };
 const SLICE_CASH = [1, 2, 3, 5, 6, 7, 9, 10, 11];
+/** Wall-clock cap for a spin round: the 4.5s animation plus a small grace
+ *  window. If the round hasn't settled by then, the backup timer does it. */
+const SPIN_SETTLE_GRACE_MS = 5400;
 
 function SectionHeader({ eyebrow, title, hint }: { eyebrow: string; title: string; hint?: string }) {
   return (
@@ -134,6 +137,19 @@ function SpinPanel({ state, dispatch }: { state: GameState; dispatch: any }) {
   // the skip path paid once, then onAnimationComplete paid AGAIN (double
   // reward). settleRef flips before the dispatch in both paths.
   const settledRef = useRef(false);
+  // FREEZE KILL-SWITCH: framer-motion's onAnimationComplete can silently
+  // never fire (backgrounded tab throttles rAF, GPU stall, HMR remount) —
+  // the wheel then shows "Spinning…" forever and the whole page feels dead.
+  // A wall-clock backup settles the round shortly after the animation
+  // SHOULD have finished. It's idempotent with settleRef, so it can't
+  // double-pay; it only rescues rounds the callback missed.
+  const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (settleTimerRef.current) clearTimeout(settleTimerRef.current);
+    },
+    [],
+  );
 
   const spin = useCallback(() => {
     if (!canSpin || spinning) return;
@@ -147,14 +163,24 @@ function SpinPanel({ state, dispatch }: { state: GameState; dispatch: any }) {
     const targetMod = (360 - (res.slice * or2 + or2 / 2)) % 360;
     const currentMod = (rotation % 360 + 360) % 360;
     setRotation(rotation + (targetMod - currentMod + 360) % 360 + 360 * 5);
+    if (settleTimerRef.current) clearTimeout(settleTimerRef.current);
+    settleTimerRef.current = setTimeout(settleSpinRef.current, SPIN_SETTLE_GRACE_MS);
   }, [canSpin, spinning, state, rotation]);
 
   const settleSpin = useCallback(() => {
+    if (settleTimerRef.current) {
+      clearTimeout(settleTimerRef.current);
+      settleTimerRef.current = null;
+    }
     if (!result || settledRef.current) return;
     settledRef.current = true;
     dispatch({ type: 'SPIN', now: Date.now(), result });
     setSpinning(false);
   }, [result, dispatch]);
+
+  // Stable handle for the backup timer, which is armed before result exists.
+  const settleSpinRef = useRef(settleSpin);
+  settleSpinRef.current = settleSpin;
 
   const skipSpin = useCallback(() => {
     if (!result || !spinning) return;

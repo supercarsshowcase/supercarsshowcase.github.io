@@ -180,6 +180,10 @@ export function GameMain({
   const lastClickAt = useRef(0);
   const clickTimestamps = useRef<number[]>([]);
   const [clickBlocked, setClickBlocked] = useState(false);
+  // The block is also readable synchronously inside handleClick — state can
+  // lag a frame, which let a few extra (unpaid but state-spinning) clicks
+  // slip through during the lockout window.
+  const clickBlockedRef = useRef(false);
   // The burst-penalty unlock timer must be cancelled on unmount — a bare
   // setTimeout fires after the game page is gone (React no-ops the setState,
   // but the timer keeps the component closure alive for its full duration).
@@ -247,6 +251,7 @@ export function GameMain({
     clickTimestamps.current = clickTimestamps.current.filter((t) => now - t < BURST_WINDOW_MS);
     if (clickTimestamps.current.length >= BURST_THRESHOLD) {
       clickTimestamps.current = [];
+      clickBlockedRef.current = true;
       setClickBlocked(true);
       toast.error("Too fast! Auto-clicking detected. Clicking paused.", {
         duration: BURST_PENALTY_MS,
@@ -254,12 +259,16 @@ export function GameMain({
       });
       if (burstTimerRef.current !== null) window.clearTimeout(burstTimerRef.current);
       burstTimerRef.current = window.setTimeout(() => {
+        clickBlockedRef.current = false;
         setClickBlocked(false);
         clickTimestamps.current = [];
         burstTimerRef.current = null;
       }, BURST_PENALTY_MS);
       return;
     }
+    // Honor the active lockout synchronously — no dispatches, no popup churn
+    // while clicking is paused (the visible state was already updated).
+    if (clickBlockedRef.current) return;
 
     const crit = Math.random() < critChance(state);
     const amount = Math.round(perClick * (crit ? 5 : 1));
@@ -1318,15 +1327,25 @@ function WeeklyChallenges({
   currentMonday.setDate(currentMonday.getDate() - d + (d === 0 ? -6 : 1));
   currentMonday.setHours(0, 0, 0, 0);
   const currentMondayStr = currentMonday.toISOString().split("T")[0];
+  const playerLevel = levelFrom(state);
   // The WEEKLY_CHECK itself is guarded in the reducer; the effect only needs
   // to fire when the stored week/level actually disagrees with reality —
   // including a raw `now` (changes every ms) re-ran it every single render.
-  const playerLevel = levelFrom(state);
+  //
+  // FREEZE GUARD: with (weekly.genLevel, playerLevel) in the deps, a
+  // level-up burst dispatches WEEKLY_CHECK every render until the state
+  // catches up — hundreds of reducer passes a frame on high level-up
+  // spikes, which froze the whole page. The ref latch fires at most once
+  // per (week, level) signature; a genuine week rollover or level change
+  // still re-fires because the reducer resolves the signature.
+  const weeklyLatchRef = useRef<string | null>(null);
+  const weeklySignature = `${weekly.weekStart}:${weekly.genLevel}:${playerLevel}`;
   useEffect(() => {
-    if (weekly.weekStart !== currentMondayStr || weekly.genLevel !== playerLevel) {
-      dispatch({ type: "WEEKLY_CHECK", now: Date.now() });
-    }
-  }, [weekly.weekStart, weekly.genLevel, currentMondayStr, playerLevel, dispatch]);
+    if (weekly.weekStart === currentMondayStr && weekly.genLevel === playerLevel) return;
+    if (weeklyLatchRef.current === weeklySignature) return;
+    weeklyLatchRef.current = weeklySignature;
+    dispatch({ type: "WEEKLY_CHECK", now: Date.now() });
+  }, [weeklySignature, weekly.weekStart, weekly.genLevel, currentMondayStr, playerLevel, dispatch]);
 
   return (
     <div>
