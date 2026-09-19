@@ -101,6 +101,24 @@ describe("gameReducer", () => {
     expect(s.cash).toBe(3); // 20 ticks × 0.15 = $3.00 exactly
   });
 
+  it("earnCarry persists through save/load round-trip", () => {
+    // Sub-$1 earnings must survive the cloud-save/load cycle, not reset to 0.
+    let s = make();
+    for (let i = 0; i < 3; i++) s = gameReducer(s, { type: "TICK", now: s.lastTick + 1000 });
+    const expectedCarry = s.earnCarry; // 3 × 0.15 = 0.45 earned, $0 paid yet
+    expect(s.cash).toBe(0);
+    expect(expectedCarry).toBeCloseTo(0.45, 5);
+    // Simulate the save/load path (normalize merges a partial save).
+    const loaded = gameReducer(initialGameState(), {
+      type: "LOAD",
+      state: { ...s },
+    });
+    expect(loaded.earnCarry).toBeCloseTo(expectedCarry, 5);
+    // Continued idling banks the carried fraction.
+    const after = gameReducer(loaded, { type: "TICK", now: loaded.lastTick + 4000 });
+    expect(after.cash).toBe(1); // 0.45 + 4×0.15 = 1.05 → $1, $0.05 carried
+  });
+
   it("TICK adds passive income", () => {
     const s = make({ totalEarned: 50_000 });
     const next = gameReducer(s, {

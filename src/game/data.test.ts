@@ -1,6 +1,23 @@
 import { describe, expect, test } from "bun:test";
-import { CRATES, GAME_CAR_MAP, gameCarImage, questUnit, generateWeeklyChallenges } from "./data";
+import { CRATES, GAME_CAR_MAP, gameCarImage, questUnit, generateWeeklyChallenges, fmtMoney } from "./data";
 import { crateCost } from "./engine";
+
+describe("fmtMoney display", () => {
+  test("keeps cents for sub-$10 rates so car income never reads $0", () => {
+    // THE twice-shipped bug class: rounding $0.15 to "$0" made cars look dead.
+    expect(fmtMoney(0.15)).toBe("$0.15");
+    expect(fmtMoney(0.78)).toBe("$0.78");
+    expect(fmtMoney(6)).toBe("$6.00");
+    expect(fmtMoney(9.99)).toBe("$9.99");
+    // Whole dollars and up: no cents noise.
+    expect(fmtMoney(10)).toBe("$10");
+    expect(fmtMoney(999)).toBe("$999");
+    expect(fmtMoney(10_000)).toBe("$10K");
+    // Zero is zero; nothing else regressed.
+    expect(fmtMoney(0)).toBe("$0");
+    expect(fmtMoney(1_234_567)).toBe("$1.2M");
+  });
+});
 
 describe("game car images", () => {
   test("resolves a real photo for archive-covered cars", () => {
