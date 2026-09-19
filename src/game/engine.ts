@@ -21,7 +21,7 @@ const SAVE_KEY = "supercars.game.v1";
 const STORAGE_VERSION = 2;
 
 /** The Lucky Spin wheel is free once every 15 minutes. */
-export const SPIN_COOLDOWN_MS = 15 * 60_000;
+export const SPIN_COOLDOWN_MS = 30 * 60_000;
 /** Chance the wheel lands on a supercar (0.3%). */
 export const SPIN_CAR_CHANCE = 0.003;
 /**
@@ -29,15 +29,15 @@ export const SPIN_CAR_CHANCE = 0.003;
  * (0.000025/s ≈ 9% of the car's value per hour — a mid garage pays for the
  * next car in an evening, so BUYING CARS is the core progression, not quests).
  */
-export const CAR_PASSIVE_RATE = 0.000025;
+export const CAR_PASSIVE_RATE = 0.00002;
 /** Upgrade costs: ~12x base so early upgrades cost minutes of income, not days. */
-const UPGRADE_COST_MULT = 12;
+const UPGRADE_COST_MULT = 16;
 /** Upgrade effects run at half the designed strength. */
 const UPGRADE_EFFECT_MULT = 0.5;
 /** Crate costs are only mildly inflated above their (now scaled) base. */
 const CRATE_COST_MULT = 3;
 /** Spin cash rewards: slices scale with level, this keeps them a snack. */
-const SPIN_REWARD_MULT = 0.15;
+const SPIN_REWARD_MULT = 0.05;
 /**
  * Base cost to fully refuel any car, before level scaling (fuel is a mild
  * tax, not a wall). Scales with level so it never becomes pocket change
@@ -222,7 +222,7 @@ export function clickValue(state: GameState): number {
   const mults = carUpgradeMults(state, state.activeCarId);
   // A click pays ~40 seconds of that car's passive income — active play is
   // meaningfully faster than idling, and better cars click for more.
-  const base = def.value * 0.001;
+  const base = def.value * 0.0008;
   return Math.max(1, Math.round(base * (1 + mults.clickMult) * condMult * clickMultiplier(state)));
 }
 
@@ -447,7 +447,7 @@ export function dailyReward(state: GameState, now: number): number {
       : 1;
   const mult = Math.min(streak, 14);
   // Scales with the economy via questUnit — a real login hook at every level.
-  return Math.round(questUnit(levelFrom(state)) * 0.3 * Math.pow(1.1, mult - 1) * (1 + state.prestigeLevel * 0.1));
+  return Math.round(questUnit(levelFrom(state)) * 0.15 * Math.pow(1.1, mult - 1) * (1 + state.prestigeLevel * 0.1));
 }
 
 // ── Achievements ──────────────────────────────────────────────────────────────
@@ -803,7 +803,8 @@ export function gameReducer(prevState: GameState, action: Action): GameState {
       if (!state.ownedCars[action.id]) return state;
       if (isSecretCar(action.id)) return state; // trophies can't be cashed out
       if (Object.keys(state.ownedCars).length <= 1) return state;
-      const gain = Math.round(carValue(state, action.id) * 0.35);
+      // Resale value: cars depreciate hard — a third of current value.
+      const gain = Math.round(carValue(state, action.id) * 0.3);
       const ownedCars = { ...state.ownedCars };
       delete ownedCars[action.id];
       const activeCarId =
@@ -937,7 +938,8 @@ export function gameReducer(prevState: GameState, action: Action): GameState {
       };
     }
     case "PRESTIGE": {
-      const requirement = 5000 * (state.prestigeLevel + 1);
+      // Prestige costs scale so each loop demands a bigger grind.
+      const requirement = 8000 * (state.prestigeLevel + 1);
       if (state.reputation < requirement) return state;
       const weeklyP = trackWeekly(state, "prestiges", 1);
       return normalize(state, {

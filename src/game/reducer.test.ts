@@ -26,7 +26,7 @@ function rich(): GameState {
   return {
     ...initialGameState(),
     cash: 100_000_000,
-    totalEarned: 50_000, // level 2
+    totalEarned: 120_000, // level 2 (120K per level²)
     achievements: ["first-click", "first-car"],
   };
 }
@@ -139,13 +139,13 @@ describe("reducer: buying and selling", () => {
     expect(next.ownedCars["rusty-hatch-91"]).toBeDefined();
   });
 
-  test("SELL_CAR pays 35% of current value and removes the car", () => {
+  test("SELL_CAR pays 30% of current value and removes the car", () => {
     let s = rich();
     s = gameReducer(s, { type: "BUY_CAR", id: "civic-lx-95" });
     const cashBefore = s.cash;
     const next = gameReducer(s, { type: "SELL_CAR", id: "civic-lx-95" });
     expect(next.ownedCars["civic-lx-95"]).toBeUndefined();
-    expect(next.cash).toBe(cashBefore + Math.round(carValue(s, "civic-lx-95") * 0.35));
+    expect(next.cash).toBe(cashBefore + Math.round(carValue(s, "civic-lx-95") * 0.3));
   });
 });
 
@@ -212,7 +212,7 @@ describe("reducer: tick and prestige", () => {
 
     const ready: GameState = {
       ...s,
-      reputation: 5000,
+      reputation: 8000, // prestige requirement: 8000 × (level+1)
       achievements: ["first-click"],
       totalEarned: 90_000,
       cash: 500_000,

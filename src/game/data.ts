@@ -785,7 +785,7 @@ const CHALLENGE_TEMPLATES: ChallengeTemplate[] = [
     maxTarget: 400,
     // 0.2% of a quest unit per click — comparable to what those clicks
     // actually pay, plus a small bonus.
-    reward: (lvl, t) => Math.round(t * questUnit(lvl) * 0.002),
+    reward: (lvl, t) => Math.round(t * questUnit(lvl) * 0.0015),
   },
   {
     nameFmt: (t) => `Buy ${t} new car${t === 1 ? "" : "s"}`,
@@ -796,7 +796,7 @@ const CHALLENGE_TEMPLATES: ChallengeTemplate[] = [
     // Half a quest unit (~a mid car's 1.2h income) per required car — buying
     // cars already pays for itself via passive income, so this is a rebate,
     // not the profit center.
-    reward: (lvl, t) => Math.round(t * questUnit(lvl) * 0.5),
+    reward: (lvl, t) => Math.round(t * questUnit(lvl) * 0.25),
     minLevel: 8,
   },
   {
@@ -816,14 +816,14 @@ const CHALLENGE_TEMPLATES: ChallengeTemplate[] = [
     // The wheel is free every 15 min → ≤15 spins/week is always completable.
     target: (lvl) => Math.min(3 + Math.floor((lvl - 1) / 10), 15),
     maxTarget: 15,
-    reward: (lvl, t) => Math.round(t * questUnit(lvl) * 0.1),
+    reward: (lvl, t) => Math.round(t * questUnit(lvl) * 0.06),
   },
   {
     nameFmt: () => "Prestige once",
     descFmt: () => "Prestige at least once this week.",
     metric: "prestiges",
     target: () => 1,
-    reward: (lvl) => Math.round(questUnit(lvl) * 8),
+    reward: (lvl) => Math.round(questUnit(lvl) * 6),
     minLevel: 60,
   },
 ];
@@ -944,7 +944,8 @@ export function initialWeeklyState(now: number, level = 1): WeeklyState {
 
 /** Player level, derived from total lifetime earnings. */
 export function levelFrom(s: { totalEarned: number; prestigeLevel: number }): number {
-  const base = 1 + Math.floor(Math.sqrt(Math.max(s.totalEarned, 0) / 50000));
+  // 120K per level² — levels are a long-game meter, not a per-session event.
+  const base = 1 + Math.floor(Math.sqrt(Math.max(s.totalEarned, 0) / 120_000));
   return base + s.prestigeLevel * 1;
 }
 /** Index of the rarity (0 = common … 8 = ultimate). */
