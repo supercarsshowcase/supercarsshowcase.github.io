@@ -1,5 +1,5 @@
 import { describe, test as it, expect } from "bun:test";
-import { gameReducer, clickValue, passivePerSec, initialGameState, upgradeCost, carIncomePerSec, fuelCost, spinCashSlices, buyPrice, carValue, FUEL_MAX, FUEL_COST } from "./engine";
+import { gameReducer, clickValue, passivePerSec, initialGameState, upgradeCost, carIncomePerSec, fuelCost, spinCashSlices, buyPrice, carValue, dailyReward, FUEL_MAX, FUEL_COST } from "./engine";
 import { STARTER_ID, GAME_CAR_MAP, levelFrom } from "./data";
 import type { GameState } from "./types";
 
@@ -302,6 +302,32 @@ describe("hard balance invariants", () => {
     expect(rejected.prestigeLevel).toBe(0);
     const ready = gameReducer(make({ reputation: 8_000 }), { type: "PRESTIGE" });
     expect(ready.prestigeLevel).toBe(1);
+  });
+
+  it("daily pays what the garage earns, not what the level implies", () => {
+    const now = Date.now();
+    // Fresh account, no streak: exactly the $500 floor.
+    const fresh = make({});
+    expect(dailyReward(fresh, now)).toBe(500);
+    // THE reported bug: level-rushed save (level 10+ earned) with one cheap
+    // car paid ~$55K. Income is what scales the daily now — level can't.
+    const rushed = make({ totalEarned: 500_000 }); // level 11, starter only
+    expect(dailyReward(rushed, now)).toBe(500);
+    // A real garage pays ~15 min of its actual income.
+    const supra = make({ ownedCars: { "supra-mk3-88": { upgrades: {}, fuel: FUEL_MAX, clicksSinceFuel: 0 } } });
+    expect(dailyReward(supra, now)).toBe(Math.round(passivePerSec(supra) * 900));
+  });
+
+  it("daily streak bonus is gentle and caps at +65%", () => {
+    const now = Date.now();
+    const supra = make({ ownedCars: { "supra-mk3-88": { upgrades: {}, fuel: FUEL_MAX, clicksSinceFuel: 0 } } });
+    const base = passivePerSec(supra) * 900;
+    // Streak mid-way: 14 days → 1 + 0.05×13 = 1.65×.
+    const streak14 = { ...supra, daily: { nextClaimAt: 0, lastClaimAt: now, streak: 13 } };
+    expect(dailyReward(streak14, now)).toBe(Math.round(base * 1.65));
+    // Streak beyond the cap doesn't grow further.
+    const streak99 = { ...supra, daily: { nextClaimAt: 0, lastClaimAt: now, streak: 99 } };
+    expect(dailyReward(streak99, now)).toBe(Math.round(base * 1.65));
   });
 });
 
