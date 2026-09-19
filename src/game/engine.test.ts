@@ -89,9 +89,10 @@ describe("gameReducer", () => {
   });
 
   it("TICK pays sub-$1/s cars via fractional carry (no eternal $0)", () => {
-    // Starter earns $0.15/s: 7 ticks of 1s = $1.05 → $1 paid, $0.05 carried.
-    // The old floor-per-tick paid $0 forever until income hit $1/s.
-    let s = make();
+    // A Golf Mk3 at base condition earns exactly $0.15/s: 7 ticks of 1s =
+    // $1.05 → $1 paid, $0.05 carried. The old floor-per-tick paid $0 forever
+    // until income hit $1/s.
+    let s = make({ ownedCars: { "golf-mk3-94": { upgrades: {}, fuel: FUEL_MAX, clicksSinceFuel: 0 } } });
     for (let i = 0; i < 7; i++) s = gameReducer(s, { type: "TICK", now: s.lastTick + 1000 });
     expect(s.cash).toBe(1);
     expect(s.totalEarned).toBe(1);
@@ -103,7 +104,7 @@ describe("gameReducer", () => {
 
   it("earnCarry persists through save/load round-trip", () => {
     // Sub-$1 earnings must survive the cloud-save/load cycle, not reset to 0.
-    let s = make();
+    let s = make({ ownedCars: { "golf-mk3-94": { upgrades: {}, fuel: FUEL_MAX, clicksSinceFuel: 0 } } });
     for (let i = 0; i < 3; i++) s = gameReducer(s, { type: "TICK", now: s.lastTick + 1000 });
     const expectedCarry = s.earnCarry; // 3 × 0.15 = 0.45 earned, $0 paid yet
     expect(s.cash).toBe(0);
@@ -120,12 +121,12 @@ describe("gameReducer", () => {
   });
 
   it("TICK adds passive income", () => {
-    const s = make({ totalEarned: 50_000 });
+    const s = make({ totalEarned: 50_000, ownedCars: { "golf-mk3-94": { upgrades: {}, fuel: FUEL_MAX, clicksSinceFuel: 0 } } });
     const next = gameReducer(s, {
       type: "TICK",
       now: s.lastTick + 10_000,
     });
-    expect(next.totalEarned).toBeGreaterThanOrEqual(s.totalEarned);
+    expect(next.totalEarned).toBeGreaterThan(s.totalEarned);
   });
 
   it("OPEN_CRATE deducts cost", () => {
@@ -140,9 +141,21 @@ describe("gameReducer", () => {
 });
 
 describe("clickValue", () => {
-  it("returns positive for starter car", () => {
+  it("fresh account: the starter pays EXACTLY $1 per click and $0 per second", () => {
+    // THE new-account contract the user demanded: start at 0/s and $1/click.
     const s = make();
-    expect(clickValue(s)).toBeGreaterThan(0);
+    expect(clickValue(s)).toBe(1);
+    expect(passivePerSec(s)).toBe(0);
+  });
+
+  it("starter stays pinned to $1/click through upgrades, condition and prestige", () => {
+    // The $1 anchor must not drift: upgrades, full restoration and prestige
+    // can never inflate the starter's click value.
+    const s = make({
+      ownedCars: { [STARTER_ID]: { upgrades: { condition: 6, turbo: 6 }, fuel: FUEL_MAX, clicksSinceFuel: 0 } },
+      prestigeLevel: 3,
+    });
+    expect(clickValue(s)).toBe(1);
   });
 });
 
@@ -252,24 +265,27 @@ describe("upgradeCost", () => {
 });
 
 describe("car income balance", () => {
-  it("every owned car pays $/sec proportional to its value", () => {
+  it("every owned car pays $/sec proportional to its value (starter is click-only)", () => {
     // THE reported bug: cars generated $0/sec. Every non-secret car must
-    // generate income, and pricier cars must pay strictly more.
+    // generate income, and pricier cars must pay strictly more. The starter
+    // is the one deliberate exception: it earns $0/s (new-account contract).
     const owned = {
-      "rusty-hatch-91": { upgrades: {}, fuel: FUEL_MAX, clicksSinceFuel: 0 },
+      "golf-mk3-94": { upgrades: {}, fuel: FUEL_MAX, clicksSinceFuel: 0 },
       "civic-lx-95": { upgrades: {}, fuel: FUEL_MAX, clicksSinceFuel: 0 },
       "ferrari-458-12": { upgrades: {}, fuel: FUEL_MAX, clicksSinceFuel: 0 },
       "chiron-17": { upgrades: {}, fuel: FUEL_MAX, clicksSinceFuel: 0 },
     };
     const s = make({ ownedCars: owned, totalEarned: 500_000_000 });
-    const starter = carIncomePerSec(s, "rusty-hatch-91");
-    expect(starter).toBeGreaterThan(0);
-    expect(carIncomePerSec(s, "civic-lx-95")).toBeGreaterThan(starter);
-    expect(carIncomePerSec(s, "ferrari-458-12")).toBeGreaterThan(carIncomePerSec(s, "civic-lx-95"));
+    expect(carIncomePerSec(s, "rusty-hatch-91")).toBe(0); // the click-only starter
+    const golf = carIncomePerSec(s, "golf-mk3-94");
+    expect(golf).toBeGreaterThan(0);
+    // With the repriced ladder the Golf ($15K) out-earns the Civic ($3.9K).
+    expect(carIncomePerSec(s, "civic-lx-95")).toBeLessThan(golf);
+    expect(carIncomePerSec(s, "ferrari-458-12")).toBeGreaterThan(golf);
     expect(carIncomePerSec(s, "chiron-17")).toBeGreaterThan(carIncomePerSec(s, "ferrari-458-12"));
     // Income scales linearly with value (same rate for every car).
-    const ratio = carIncomePerSec(s, "chiron-17") / starter;
-    const valueRatio = GAME_CAR_MAP["chiron-17"].value / GAME_CAR_MAP["rusty-hatch-91"].value;
+    const ratio = carIncomePerSec(s, "chiron-17") / golf;
+    const valueRatio = GAME_CAR_MAP["chiron-17"].value / GAME_CAR_MAP["golf-mk3-94"].value;
     expect(Math.abs(ratio - valueRatio)).toBeLessThan(valueRatio * 0.01);
   });
 
@@ -291,9 +307,9 @@ describe("car income balance", () => {
 
   it("an empty tank stops that car's income", () => {
     const s = make({
-      ownedCars: { "rusty-hatch-91": { upgrades: {}, fuel: 0, clicksSinceFuel: 0 } },
+      ownedCars: { "civic-lx-95": { upgrades: {}, fuel: 0, clicksSinceFuel: 0 } },
     });
-    expect(carIncomePerSec(s, "rusty-hatch-91")).toBe(0);
+    expect(carIncomePerSec(s, "civic-lx-95")).toBe(0);
   });
 
   it("clicks pay more in better cars", () => {
@@ -311,7 +327,10 @@ describe("hard balance invariants", () => {
   it("the spin wheel stays a snack, never an income strategy", () => {
     // Free spin every 30 min must pay far less than 30 min of car income,
     // so idling/spamming the wheel can't out-earn owning cars.
-    const s = make({ totalEarned: 5_000 * 100 }); // level 11
+    const s = make({
+      totalEarned: 5_000 * 100, // level 11
+      ownedCars: { "supra-mk3-88": { upgrades: {}, fuel: FUEL_MAX, clicksSinceFuel: 0 } },
+    });
     const avgSpin = spinCashSlices(s).reduce((a, b) => a + b, 0) / 9;
     const income30min = passivePerSec(s) * 1800;
     expect(avgSpin).toBeGreaterThan(0);

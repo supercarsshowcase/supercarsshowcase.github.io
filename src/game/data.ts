@@ -88,15 +88,20 @@ function car(s: CarSpec): GameCarDef {
 
 const rawCars: CarSpec[] = [
   // ── Level 1–8 · beaters & daily drivers ──
-  ["rusty-hatch-91", "Rust City", "Rust Bucket Hatchback", 1991, "", 62, 132, 16.2, 500, "common", 1, "used", 0],
-  ["beater-sedan-87", "Rust City", "Scrapyard Sedan", 1987, "", 85, 155, 13.5, 850, "common", 1, "used", 0],
-  ["farm-pickup-80", "Rust City", "Farm Pickup", 1980, "", 105, 148, 14.1, 1250, "common", 1, "used", 0],
-  ["civic-lx-95", "Honda", "Civic LX", 1995, "", 106, 180, 10.8, 2600, "common", 2, "used", 1],
-  ["corolla-se-97", "Toyota", "Corolla SE", 1997, "", 105, 178, 10.9, 4000, "common", 2, "used", 1],
-  ["golf-mk3-94", "Volkswagen", "Golf Mk3", 1994, "", 115, 185, 10.2, 6200, "uncommon", 3, "used", 1],
-  ["mx5-nb-00", "Mazda", "MX-5 NB", 2000, "", 140, 196, 8.1, 12000, "uncommon", 5, "used", 2],
-  ["gti-mk2-90", "Volkswagen", "Golf GTI Mk2", 1990, "", 112, 180, 9.8, 9500, "uncommon", 4, "used", 2],
-  ["civic-si-99", "Honda", "Civic Si", 1999, "", 160, 208, 7.9, 14000, "uncommon", 5, "used", 2],
+  // EARLY LADDER (repriced for the $1/click start): a fresh account earns
+  // exactly $1 per click and $0 per second, so the first cars must cost an
+  // afternoon of clicking, not a trust fund. Effective prices (raw × 30):
+  // starter $2.55K (engine pins it to $1/click, $0/s) → $600 → $1.5K →
+  // $3.9K → $7.8K → $15K → $24K → $39K → $60K, then the ×30 ladder resumes.
+  ["rusty-hatch-91", "Rust City", "Rust Bucket Hatchback", 1991, "", 62, 132, 16.2, 85, "common", 1, "used", 0],
+  ["beater-sedan-87", "Rust City", "Scrapyard Sedan", 1987, "", 85, 155, 13.5, 20, "common", 1, "used", 0],
+  ["farm-pickup-80", "Rust City", "Farm Pickup", 1980, "", 105, 148, 14.1, 50, "common", 1, "used", 0],
+  ["civic-lx-95", "Honda", "Civic LX", 1995, "", 106, 180, 10.8, 130, "common", 2, "used", 1],
+  ["corolla-se-97", "Toyota", "Corolla SE", 1997, "", 105, 178, 10.9, 260, "common", 2, "used", 1],
+  ["golf-mk3-94", "Volkswagen", "Golf Mk3", 1994, "", 115, 185, 10.2, 500, "uncommon", 3, "used", 1],
+  ["mx5-nb-00", "Mazda", "MX-5 NB", 2000, "", 140, 196, 8.1, 1300, "uncommon", 5, "used", 2],
+  ["gti-mk2-90", "Volkswagen", "Golf GTI Mk2", 1990, "", 112, 180, 9.8, 800, "uncommon", 4, "used", 2],
+  ["civic-si-99", "Honda", "Civic Si", 1999, "", 160, 208, 7.9, 2000, "uncommon", 5, "used", 2],
   ["supra-mk3-88", "Toyota", "Supra Mk3", 1988, "", 200, 224, 7.1, 24000, "rare", 7, "budget", 2],
   ["skyline-gts-92", "Nissan", "Skyline GTS", 1992, "", 190, 216, 7.5, 28000, "rare", 8, "budget", 2],
   ["brz-13", "Subaru", "BRZ", 2013, "", 200, 226, 6.9, 32000, "rare", 9, "budget", 2],
@@ -751,9 +756,10 @@ function cappedLevel(level: number): number {
 /**
  * ECONOMY REFERENCE for quest & bonus rewards — every cash reward is a small
  * multiple of `questUnit(level)`: the passive income one mid-range car for
- * that level generates over ~2.5 hours. Level L unlocks cars worth roughly
- * $15K × L² (see the car ladder), which at CAR_PASSIVE_RATE (0.00002/s)
- * earns 15_000 × L² × 0.00002 × 9000s ≈ 2.7K × L².
+ * that level generates over ~2.5 hours. From the mid-game on, level L unlocks
+ * cars worth roughly $15K × L² (see the car ladder; the first few used cars
+ * are click-anchored so a $1/click start can afford them), which at
+ * CAR_PASSIVE_RATE (0.00002/s) earns 15_000 × L² × 0.00002 × 9000s ≈ 2.7K × L².
  * Under the rebalanced economy a full quest board lands near ~15% of the
  * week's car income — a bonus for playing, never the money printer that paid
  * a level-3 player $498K for 389 clicks.

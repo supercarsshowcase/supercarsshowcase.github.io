@@ -26,10 +26,17 @@ export const SPIN_COOLDOWN_MS = 30 * 60_000;
 export const SPIN_CAR_CHANCE = 0.003;
 /**
  * Passive income: each owned car generates value × CAR_PASSIVE_RATE per second
- * (0.000025/s ≈ 9% of the car's value per hour — a mid garage pays for the
+ * (0.00002/s ≈ 7.2% of the car's value per hour — a mid garage pays for the
  * next car in an evening, so BUYING CARS is the core progression, not quests).
  */
 export const CAR_PASSIVE_RATE = 0.00002;
+/**
+ * The starter hatchback is a hands-on bucket of bolts: it earns NOTHING
+ * passively (fresh accounts start at exactly $0/s) and its click value is
+ * pinned to exactly $1 (fresh accounts start at exactly $1/click). Restoring
+ * it via the condition upgrade is the intended early loop, not income math.
+ */
+const STARTER_CLICK_VALUE = 1;
 /** Upgrade costs: ~12x base so early upgrades cost minutes of income, not days. */
 const UPGRADE_COST_MULT = 16;
 /** Upgrade effects run at half the designed strength. */
@@ -218,6 +225,11 @@ export function clickValue(state: GameState): number {
   // Car stops earning when fuel is empty
   const fuel = state.ownedCars[state.activeCarId]?.fuel;
   if (fuel !== undefined && fuel <= 0) return 0;
+  // THE NEW-ACCOUNT CONTRACT: the starter hatchback always pays exactly $1
+  // per click, regardless of condition, upgrades or prestige. The engine
+  // deliberately ignores its list value here so upgrades can't inflate the
+  // anchor and the displayed click value can never drift off $1.
+  if (state.activeCarId === STARTER_ID) return STARTER_CLICK_VALUE;
   const cond = conditionOf(state, state.activeCarId);
   const condMult = 0.5 + 0.5 * cond;
   const mults = carUpgradeMults(state, state.activeCarId);
@@ -231,6 +243,10 @@ export function clickValue(state: GameState): number {
 export function carIncomePerSec(state: GameState, carId: string): number {
   const def = GAME_CAR_MAP[carId];
   if (!def || def.secret) return 0; // secret cars never generate income
+  // THE NEW-ACCOUNT CONTRACT: the starter is click-only — it never drips
+  // passive cash, so a fresh account sits at exactly $0/s until the first
+  // real car is bought.
+  if (carId === STARTER_ID) return 0;
   const fuel = state.ownedCars[carId]?.fuel;
   if (fuel !== undefined && fuel <= 0) return 0; // empty tank earns nothing
   const cond = conditionOf(state, carId);
@@ -1072,6 +1088,11 @@ export function gameReducer(prevState: GameState, action: Action): GameState {
       // "can't claim" bug — was worse than topping the garage back up with
       // the starter, so hand one back and pay out.
       if (Object.keys(ownedCars).length === 0) {
+        // Guard the new-account contract: the reseeded starter is click-only
+        // and $1/click, so a claim can never mint passive income. (A $600
+        // value reseed that quietly paid ~$0.3/s would be a small printer:
+        // claim → sell starter → claim → …) Only reseed when the player has
+        // NO OTHER CAR to fall back on, which by construction here is true.
         ownedCars[STARTER_ID] = { upgrades: {}, fuel: FUEL_MAX, clicksSinceFuel: 0 };
       }
       const activeCarId =

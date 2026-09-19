@@ -193,7 +193,12 @@ describe("reducer: crates", () => {
 
 describe("reducer: tick and prestige", () => {
   test("TICK adds passive income capped at 8 hours", () => {
-    const s = { ...initialGameState(), lastTick: T0 };
+    // Own a real car — the starter alone is click-only ($0/s).
+    const s = {
+      ...initialGameState(),
+      lastTick: T0,
+      ownedCars: { "golf-mk3-94": { upgrades: {}, fuel: 100, clicksSinceFuel: 0 } },
+    };
     const next = gameReducer(s, { type: "TICK", now: T0 + 100_000 * 1000 });
     expect(next.cash).toBeGreaterThan(s.cash);
     expect(next.lastTick).toBe(T0 + 100_000 * 1000);
