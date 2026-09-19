@@ -201,7 +201,7 @@ function SpinPanel({ state, dispatch }: { state: GameState; dispatch: any }) {
 
   return (
     <div>
-      <SectionHeader eyebrow="Lucky Spin" title="SPIN THE WHEEL" hint="Free every 15 minutes. Admin can grant bonus spins. Three car tiers rotate hourly." />
+      <SectionHeader eyebrow="Lucky Spin" title="SPIN THE WHEEL" hint="Free every 30 minutes. Admin can grant bonus spins. Three car tiers rotate hourly." />
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1.15fr_1fr]">
         <div className="relative mx-auto aspect-square w-full max-w-[600px]">
           <div className="absolute left-1/2 top-0 z-20 -translate-x-1/2 -translate-y-1/2">

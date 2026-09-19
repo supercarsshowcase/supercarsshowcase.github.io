@@ -107,6 +107,7 @@ export function initialGameState(): GameState {
     dealerStock,
     daily: { nextClaimAt: 0, lastClaimAt: 0, streak: 0 },
     clicksOnStarter: 0,
+    earnCarry: 0,
     lastTick: now,
     lastSpinAt: 0,
     freeSpins: 0,
@@ -766,15 +767,19 @@ export function gameReducer(prevState: GameState, action: Action): GameState {
     }
     case "TICK": {
       const dt = Math.min(28_800, Math.max(0, (action.now - state.lastTick) / 1000));
-      const raw = passivePerSec(state) * dt;
       const mult = action.globalMultiplier ?? 1;
-      const gain = Math.floor(raw * mult);
-      if (gain <= 0) return { ...state, lastTick: action.now };
+      // Fractional carry: early cars earn < $1/s, so flooring each 1s tick
+      // minted $0 forever. Accumulate the remainder in state instead.
+      const raw = passivePerSec(state) * dt * mult + (state.earnCarry ?? 0);
+      const gain = Math.floor(raw);
+      const carry = raw - gain;
+      if (gain <= 0) return { ...state, lastTick: action.now, earnCarry: carry };
       const weekly = trackWeekly(state, "earned", gain);
       return applyAchievements({
         ...state,
         cash: state.cash + gain,
         totalEarned: state.totalEarned + gain,
+        earnCarry: carry,
         lastTick: action.now,
         weekly,
       });

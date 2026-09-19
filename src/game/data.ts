@@ -752,8 +752,8 @@ function cappedLevel(level: number): number {
  * ECONOMY REFERENCE for quest & bonus rewards — every cash reward is a small
  * multiple of `questUnit(level)`: the passive income one mid-range car for
  * that level generates over ~2.5 hours. Level L unlocks cars worth roughly
- * $15K × L² (see the car ladder), which at CAR_PASSIVE_RATE (0.000025/s)
- * earns 15_000 × L² × 0.000025 × 9000s ≈ 3.4K × L².
+ * $15K × L² (see the car ladder), which at CAR_PASSIVE_RATE (0.00002/s)
+ * earns 15_000 × L² × 0.00002 × 9000s ≈ 2.7K × L².
  * Under the rebalanced economy a full quest board lands near ~15% of the
  * week's car income — a bonus for playing, never the money printer that paid
  * a level-3 player $498K for 389 clicks.

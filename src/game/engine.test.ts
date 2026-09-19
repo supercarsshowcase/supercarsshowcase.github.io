@@ -71,6 +71,19 @@ describe("gameReducer", () => {
     expect(neg.lastTick).toBe(s.lastTick + 1000);
   });
 
+  it("TICK pays sub-$1/s cars via fractional carry (no eternal $0)", () => {
+    // Starter earns $0.15/s: 7 ticks of 1s = $1.05 → $1 paid, $0.05 carried.
+    // The old floor-per-tick paid $0 forever until income hit $1/s.
+    let s = make();
+    for (let i = 0; i < 7; i++) s = gameReducer(s, { type: "TICK", now: s.lastTick + 1000 });
+    expect(s.cash).toBe(1);
+    expect(s.totalEarned).toBe(1);
+    expect(s.earnCarry).toBeCloseTo(0.05, 5);
+    // And it keeps accumulating across more ticks.
+    for (let i = 0; i < 13; i++) s = gameReducer(s, { type: "TICK", now: s.lastTick + 1000 });
+    expect(s.cash).toBe(3); // 20 ticks × 0.15 = $3.00 exactly
+  });
+
   it("TICK adds passive income", () => {
     const s = make({ totalEarned: 50_000 });
     const next = gameReducer(s, {

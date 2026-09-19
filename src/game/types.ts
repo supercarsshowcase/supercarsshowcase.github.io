@@ -140,7 +140,7 @@ export interface GameState {
    *  Early cars earn < $1/s; without this, Math.floor mints $0 every tick. */
   earnCarry: number;
   lastTick: number;
-  /** Timestamp of the last Lucky Spin; the wheel is free every 15 minutes. */
+  /** Timestamp of the last Lucky Spin; the wheel is free every 30 minutes. */
   lastSpinAt: number;
   /** Bonus spins granted by admin that skip the cooldown. */
   freeSpins: number;
