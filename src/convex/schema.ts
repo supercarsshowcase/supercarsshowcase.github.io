@@ -179,7 +179,10 @@ const schema = defineSchema(
       carCount: v.number(),
       lastUpdated: v.number(),
     }).index("by_cash", ["cash"])
-      .index("by_user", ["userId"]),
+      .index("by_user", ["userId"])
+      .index("by_totalEarned", ["totalEarned"])
+      .index("by_level", ["level"])
+      .index("by_carCount", ["carCount"]),
 
     // Game saves — per-user cloud save for cross-device sync.
     gameSaves: defineTable({

@@ -733,7 +733,7 @@ export function GamePanels({ tab, state, dispatch }: { tab: string; state: GameS
     case "achievements": return <AchievementsPanel state={state} />;
     case "prestige": return <PrestigePanel state={state} dispatch={dispatch} />;
     case "casino": return <CasinoPanel state={state} dispatch={dispatch} />;
-    case "leaderboard": return <LeaderboardPanel />;
+    case "leaderboard": return <LeaderboardPanel state={state} />;
     case "wanted": return <WantedPanel state={state} dispatch={dispatch} />;
     default: return <GaragePanel state={state} dispatch={dispatch} />;
   }
