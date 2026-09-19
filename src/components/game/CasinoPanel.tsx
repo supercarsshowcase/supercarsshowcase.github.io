@@ -244,6 +244,11 @@ function TradeCarsPanel({ state, dispatch }: { state: GameState; dispatch: React
   const trade = (carId: string) => {
     const car = GAME_CAR_MAP[carId];
     if (!car) return;
+    // Guard BEFORE paying: REMOVE_CAR refuses to strip the last car, so the
+    // old order paid +70% value while the car stayed — an infinite printer.
+    if (Object.keys(state.ownedCars).length <= 1) {
+      return toast.error("You can't trade your last car!");
+    }
     const chipValue = Math.floor(car.value * 0.7);
     dispatch({ type: "REMOVE_CAR", carId });
     dispatch({ type: "ADD_CASH", amount: chipValue });
@@ -542,6 +547,8 @@ type BetType = { kind: "number"; value: number } | { kind: "color"; value: "red"
 function RouletteGame({ state, dispatch }: { state: GameState; dispatch: React.Dispatch<Action> }) {
   const [bet, setBet] = useState(10000);
   const [currentBet, setCurrentBet] = useState<BetType | null>(null);
+  const rouletteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (rouletteTimer.current) clearTimeout(rouletteTimer.current); }, []);
   const [spinning, setSpinning] = useState(false);
   const [landing, setLanding] = useState<number | null>(null);
   const [won, setWon] = useState<boolean | null>(null);
@@ -555,7 +562,7 @@ function RouletteGame({ state, dispatch }: { state: GameState; dispatch: React.D
     if (!currentBet) return toast.error("Place a bet first!");
     if (state.cash < bet) return toast.error("Not enough cash!");
     dispatch({ type: "ADD_CASH", amount: -bet }); setSpinning(true); setWon(null); setCarPrize(null);
-    setTimeout(() => {
+    rouletteTimer.current = setTimeout(() => {
       const num = ROULETTE_NUMS[Math.floor(Math.random() * ROULETTE_NUMS.length)]; setLanding(num);
       const color = num === 0 ? "green" : RED_NUMS.has(num) ? "red" : "black";
       let wonGame = false; let multiplier = 0; const b = currentBet!;
@@ -1006,15 +1013,25 @@ function JackpotGame({ state, dispatch }: { state: GameState; dispatch: React.Di
 
   const [showCarPicker, setShowCarPicker] = useState(false);
   const addCar = useCallback((carId: string) => {
-    const car = GAME_CAR_MAP[carId]; if (!car) return; dispatch({ type: "REMOVE_CAR", carId: car.id });
+    const car = GAME_CAR_MAP[carId]; if (!car) return;
+    // Never wager the last car — REMOVE_CAR would silently refuse it while
+    // the pot still counts it, letting the draw pay a car you kept.
+    if (Object.keys(state.ownedCars).length <= 1) return toast.error("Keep at least one car!");
+    dispatch({ type: "REMOVE_CAR", carId: car.id });
     setPool((p) => [...p, { type: "car", value: car.value, label: `${car.brand} ${car.name}` }]); toast.success(`Added ${car.brand} ${car.name} ($${car.value.toLocaleString()}) to pool`); setShowCarPicker(false);
-  }, [dispatch]);
+  }, [state.ownedCars, dispatch]);
 
   const gambleCars = useMemo(() => Object.keys(state.ownedCars).filter((id) => id !== state.activeCarId).map((id) => GAME_CAR_MAP[id]).filter(Boolean), [state.ownedCars, state.activeCarId]);
 
+  const drawTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (drawTimer.current) clearTimeout(drawTimer.current); }, []);
   const draw = useCallback(() => {
     if (pool.length === 0) return toast.error("Pool is empty!"); setSpinning(true); setWinner(null); setCarPrize(null);
-    setTimeout(() => { const playerWins = Math.random() < 0.4; if (playerWins) { dispatch({ type: "ADD_CASH", amount: totalPool }); const hasCars = pool.some((e) => e.type === "car"); if (hasCars) { const cp = checkCasinoPrize(dispatch); if (cp) { setCarPrize(cp); } } setWinner("YOU WON THE JACKPOT!"); } else { setWinner("House wins the jackpot"); } setPool([]); setSpinning(false); }, 3000);
+    // LOST cars must leave the garage when the draw resolves: they were
+    // removed at add time but only 40% of draws pay the pot — the other 60%
+    // used to hand every wagered car back for free (pot/garage desync).
+    const carsInPool = pool.filter((p) => p.type === "car").map((p) => p.label);
+    drawTimer.current = setTimeout(() => { const playerWins = Math.random() < 0.4; if (playerWins) { dispatch({ type: "ADD_CASH", amount: totalPool }); const hasCars = pool.some((e) => e.type === "car"); if (hasCars) { const cp = checkCasinoPrize(dispatch); if (cp) { setCarPrize(cp); } } setWinner("YOU WON THE JACKPOT!"); } else { for (const label of carsInPool) { const def = Object.values(GAME_CAR_MAP).find((c) => `${c.brand} ${c.name}` === label); if (def) dispatch({ type: "ADD_CAR", carId: def.id }); } setWinner("House wins the jackpot"); } setPool([]); setSpinning(false); }, 3000);
   }, [pool, totalPool, dispatch]);
 
   return (
@@ -1084,10 +1101,12 @@ function OnlineCoinflip({ state, dispatch }: { state: GameState; dispatch: React
   const [finding, setFinding] = useState(false);
   const [result, setResult] = useState<{ myPick: string; oppPick: string; won: boolean } | null>(null);
   const [carPrize, setCarPrize] = useState<string | null>(null);
+  const matchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (matchTimer.current) clearTimeout(matchTimer.current); }, []);
 
   const findMatch = useCallback(() => {
     if (state.cash < bet) return toast.error("Not enough cash!"); setFinding(true); setResult(null); setCarPrize(null);
-    setTimeout(() => {
+    matchTimer.current = setTimeout(() => {
       const coinFlipResult = Math.random() < 0.5 ? "heads" : "tails"; const won = coinFlipResult === pick; if (won) { dispatch({ type: "ADD_CASH", amount: bet }); } else { dispatch({ type: "ADD_CASH", amount: -bet }); }
       setResult({ myPick: pick, oppPick: coinFlipResult, won }); setFinding(false);
       // Car prizes only available when gambling cars, not cash
@@ -1139,13 +1158,15 @@ function OnlineJackpot({ state, dispatch }: { state: GameState; dispatch: React.
   const [round, setRound] = useState(false);
   const [winner, setWinner] = useState<string | null>(null);
   const [carPrize, setCarPrize] = useState<string | null>(null);
+  const roundTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (roundTimer.current) clearTimeout(roundTimer.current); }, []);
 
   const join = useCallback(() => {
     if (state.cash < bet) return toast.error("Not enough cash!"); dispatch({ type: "ADD_CASH", amount: -bet });
     const names = ["PHANTOM", "BLITZ", "VORTEX", "STORM", "NITRO", "APEX", "DRIFT", "HEX"];
     const opps = Array.from({ length: 2 + Math.floor(Math.random() * 4) }, () => ({ name: names[Math.floor(Math.random() * names.length)], amount: Math.floor(Math.random() * 1000000) + 10000 }));
     setPlayers([...opps, { name: "YOU", amount: bet }]); setRound(true); setWinner(null);
-    setTimeout(() => { const all = [...opps, { name: "YOU", amount: bet }]; const total = all.reduce((s, p) => s + p.amount, 0);
+    roundTimer.current = setTimeout(() => { const all = [...opps, { name: "YOU", amount: bet }]; const total = all.reduce((s, p) => s + p.amount, 0);
       const w = all[Math.floor(Math.random() * all.length)]; if (w.name === "YOU") { dispatch({ type: "ADD_CASH", amount: total }); toast.success(`JACKPOT! Won $${total.toLocaleString()}!`); }
       else { toast.error(`${w.name} won $${total.toLocaleString()}`); } setWinner(w.name); setRound(false); }, 4000);
   }, [bet, state.cash, dispatch]);
