@@ -204,8 +204,10 @@ export function GameMain({
   const active = GAME_CAR_MAP[state.activeCarId] ?? GAME_CAR_MAP[STARTER_ID];
   const level = levelFrom(state);
   const cash = state.cash;
-  const income = Math.round(passivePerSec(state) * globalMultiplier);
-  const perClick = Math.round(clickValue(state) * globalMultiplier);
+  // Keep sub-$1 precision — early-game rates ($0.15/s) must not round to $0.
+  // fmtMoney adds cents under $10, so pass the raw rate through.
+  const income = passivePerSec(state) * globalMultiplier;
+  const perClick = clickValue(state) * globalMultiplier;
   const rarityMeta = RARITY_META[active.rarity];
   const condition = (state.ownedCars[state.activeCarId]?.upgrades.condition ?? 0) / 6;
   const now = state.lastTick;

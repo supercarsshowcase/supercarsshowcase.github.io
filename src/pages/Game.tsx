@@ -274,7 +274,7 @@ export default function Game() {
           <OfflineEarningsModal
             amount={offline.amount}
             awayMs={offline.awayMs}
-            perSec={Math.round(passivePerSec(bootStateRef.current))}
+            perSec={passivePerSec(bootStateRef.current)}
             onClose={() => setOffline(null)}
           />
         )}

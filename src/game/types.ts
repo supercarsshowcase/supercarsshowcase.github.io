@@ -136,6 +136,9 @@ export interface GameState {
   dealerStock: Record<string, string[]>;
   daily: { nextClaimAt: number; lastClaimAt: number; streak: number };
   clicksOnStarter: number;
+  /** Fractional second-tick earnings carried forward until they round to $1.
+   *  Early cars earn < $1/s; without this, Math.floor mints $0 every tick. */
+  earnCarry: number;
   lastTick: number;
   /** Timestamp of the last Lucky Spin; the wheel is free every 15 minutes. */
   lastSpinAt: number;

@@ -47,12 +47,9 @@ const Kx = carIncomePerSec;
 const Wy = RefreshCw;
 
 function Ie(v: number): string {
-  if (v >= 1e15) return "$" + (v / 1e15).toFixed(v >= 1e16 ? 0 : 1) + "Qa";
-  if (v >= 1e12) return "$" + (v / 1e12).toFixed(v >= 1e13 ? 0 : 1) + "T";
-  if (v >= 1e9) return "$" + (v / 1e9).toFixed(v >= 1e10 ? 0 : 1) + "B";
-  if (v >= 1e6) return "$" + (v / 1e6).toFixed(v >= 1e7 ? 0 : 1) + "M";
-  if (v >= 1e4) return "$" + Math.round(v / 1e3) + "K";
-  return "$" + Math.round(v).toLocaleString();
+  // Delegate to the cents-aware formatter: garage/dealer "+$/sec" cards show
+  // sub-$1 rates ($0.15/s) instead of the "$0/sec" that Math.round produced.
+  return fmtMoney(v);
 }
 function Qi(v: number): string { return Math.round(v).toLocaleString(); }
 const Ur = carValue;
