@@ -196,12 +196,16 @@ export default function Game() {
   }, [gifts, claimGift]);
 
   // Persist every few seconds and on tab hide/unload.
+  // Cloud writes are 6× rarer than local ones: every cloud write also
+  // invalidates the gameSaves.load query, which re-rendered the whole game
+  // tree on top of the per-second TICK renders — a visible lag source.
   useEffect(() => {
+    let ticks = 0;
     const id = window.setInterval(() => {
-      if (stateRef.current) {
-        saveGame(stateRef.current);
-        saveCloudRef.current();
-      }
+      if (!stateRef.current) return;
+      saveGame(stateRef.current);
+      ticks += 1;
+      if (ticks % 6 === 0) saveCloudRef.current(); // ~every 30s
     }, SAVE_INTERVAL_MS);
     const onVisibility = () => {
       if (document.visibilityState === "hidden" && stateRef.current) {

@@ -1084,7 +1084,10 @@ function EarnStat({ value, label, accent }: { value: string; label: string; acce
  */
 function MobileChatSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { user, isAuthenticated } = useAuth();
-  const messages = useQuery(api.chat.getMessages) ?? [];
+  // Skip the subscription while closed — the sheet is always mounted, and an
+  // always-live duplicate of the rail's chat query re-rendered the whole game
+  // on every chat message.
+  const messages = useQuery(api.chat.getMessages, open ? {} : "skip") ?? [];
   const sendMessage = useMutation(api.chat.sendMessage);
   const deleteMessage = useMutation(api.chat.deleteMessage);
   const [text, setText] = useState("");
