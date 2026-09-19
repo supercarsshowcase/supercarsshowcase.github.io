@@ -445,9 +445,13 @@ export function dailyReward(state: GameState, now: number): number {
     state.daily.lastClaimAt > 0 && now - state.daily.lastClaimAt <= 86_400_000
       ? state.daily.streak + 1
       : 1;
-  const mult = Math.min(streak, 14);
-  // Scales with the economy via questUnit — a real login hook at every level.
-  return Math.round(questUnit(levelFrom(state)) * 0.15 * Math.pow(1.1, mult - 1) * (1 + state.prestigeLevel * 0.1));
+  // Anchored to the garage you actually OWN: 15 minutes of real passive
+  // income (was questUnit = level², which minted $55K dailies for level-
+  // rushed accounts with one cheap car). $500 floor keeps day-one accounts
+  // playing; streak bonus is a gentle +5%/day capped at +65%.
+  const base = Math.max(500, passivePerSec(state) * 900);
+  const streakMult = 1 + 0.05 * (Math.min(streak, 14) - 1);
+  return Math.round(base * streakMult * (1 + state.prestigeLevel * 0.1));
 }
 
 // ── Achievements ──────────────────────────────────────────────────────────────
