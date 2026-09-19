@@ -118,23 +118,23 @@ describe("fuelCost level scaling", () => {
     expect(levelFrom(lvl1)).toBe(1);
     expect(fuelCost(lvl1, STARTER_ID)).toBe(Math.max(FUEL_COST, Math.round(3400 * 0.06)));
     // Level 3 needs totalEarned = 4×50K = 200K (levelFrom = 1+floor(√(e/50K))):
-    // questUnit(3)=30,600 → 6% = $1,836. Level 3 needs 4×120K = 480K earned.
-    const lvl3 = mk(480_000);
+    // questUnit(3)=30,600 → 6% = $1,836. Level 3 needs 4×5K = 20K earned.
+    const lvl3 = mk(20_000);
     expect(levelFrom(lvl3)).toBe(3);
     expect(fuelCost(lvl3, STARTER_ID)).toBe(Math.round(3_400 * 9 * 0.06));
     // Empty tank → partial costs proportional to missing fuel.
-    const half = mk(480_000, FUEL_MAX / 2);
+    const half = mk(20_000, FUEL_MAX / 2);
     expect(fuelCost(half, STARTER_ID)).toBe(Math.round(3_400 * 9 * 0.06 * 0.5));
     // Full tank → $0; not owned → $0.
-    const full = mk(480_000, FUEL_MAX);
+    const full = mk(20_000, FUEL_MAX);
     expect(fuelCost(full, STARTER_ID)).toBe(0);
-    expect(fuelCost(mk(480_000), "not-a-car")).toBe(0);
+    expect(fuelCost(mk(20_000), "not-a-car")).toBe(0);
   });
 
   it("BUY_FUEL charges the level-scaled price and fills the tank", () => {
     const s = initialGameState();
     s.ownedCars[STARTER_ID] = { upgrades: {}, fuel: 0, clicksSinceFuel: 0 };
-    s.totalEarned = 480_000; // level 3
+    s.totalEarned = 20_000; // level 3
     s.cash = 10_000;
     const expected = fuelCost(s, STARTER_ID);
     const next = gameReducer(s, { type: "BUY_FUEL", carId: STARTER_ID });
@@ -148,7 +148,7 @@ describe("fuelCost level scaling", () => {
   it("BUY_FUEL is rejected when cash is short — no partial fill", () => {
     const s = initialGameState();
     s.ownedCars[STARTER_ID] = { upgrades: {}, fuel: 0, clicksSinceFuel: 0 };
-    s.totalEarned = 480_000; // level 3 → $1,836 refuel
+    s.totalEarned = 20_000; // level 3 → $1,836 refuel
     s.cash = 10; // far short of the price
     const next = gameReducer(s, { type: "BUY_FUEL", carId: STARTER_ID });
     expect(next.cash).toBe(10);
@@ -263,7 +263,7 @@ describe("hard balance invariants", () => {
   it("the spin wheel stays a snack, never an income strategy", () => {
     // Free spin every 30 min must pay far less than 30 min of car income,
     // so idling/spamming the wheel can't out-earn owning cars.
-    const s = make({ totalEarned: 120_000 * 100 }); // level 11
+    const s = make({ totalEarned: 5_000 * 100 }); // level 11
     const avgSpin = spinCashSlices(s).reduce((a, b) => a + b, 0) / 9;
     const income30min = passivePerSec(s) * 1800;
     expect(avgSpin).toBeGreaterThan(0);
@@ -287,9 +287,12 @@ describe("hard balance invariants", () => {
     expect(gained).toBeLessThan(buyPrice("civic-lx-95") * 0.5); // no buy→sell arbitrage
   });
 
-  it("levels demand a long grind: level 10 needs ~9.7M earned, not ~4.5M", () => {
-    expect(levelFrom({ totalEarned: 120_000 * 81 - 1, prestigeLevel: 0 })).toBe(9);
-    expect(levelFrom({ totalEarned: 120_000 * 81, prestigeLevel: 0 })).toBe(10);
+  it("levels start fast and steepen: 2@5K, 3@20K, 10@405K", () => {
+    expect(levelFrom({ totalEarned: 4_999, prestigeLevel: 0 })).toBe(1);
+    expect(levelFrom({ totalEarned: 5_000, prestigeLevel: 0 })).toBe(2);
+    expect(levelFrom({ totalEarned: 19_999, prestigeLevel: 0 })).toBe(2);
+    expect(levelFrom({ totalEarned: 20_000, prestigeLevel: 0 })).toBe(3);
+    expect(levelFrom({ totalEarned: 405_000, prestigeLevel: 0 })).toBe(10);
   });
 
   it("prestige reputation cost is 8000 × (level + 1)", () => {
@@ -309,7 +312,7 @@ describe("economy migration v1 → v2", () => {
       ...initialGameState(),
       version: 1,
       cash: 12_345,
-      totalEarned: 250_000, // level 3 (√(250K/50K)+1)
+      totalEarned: 20_000, // level 3 (√(20K/5K)+1)
       weekly: {
         weekStart: "2001-01-01",
         genLevel: 3,

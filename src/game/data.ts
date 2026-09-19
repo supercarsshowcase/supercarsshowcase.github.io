@@ -944,8 +944,10 @@ export function initialWeeklyState(now: number, level = 1): WeeklyState {
 
 /** Player level, derived from total lifetime earnings. */
 export function levelFrom(s: { totalEarned: number; prestigeLevel: number }): number {
-  // 120K per level² — levels are a long-game meter, not a per-session event.
-  const base = 1 + Math.floor(Math.sqrt(Math.max(s.totalEarned, 0) / 120_000));
+  // Early levels are cheap on purpose (level 2 at $5K, 3 at $20K) so the
+  // first hour unlocks cars + quests; the curve steepens from there — level
+  // 10 costs ~$4.9M, 15 ~$11M, 20 ~$19M. A long-game meter, not a wall.
+  const base = 1 + Math.floor(Math.sqrt(Math.max(s.totalEarned, 0) / 5_000));
   return base + s.prestigeLevel * 1;
 }
 /** Index of the rarity (0 = common … 8 = ultimate). */
@@ -958,6 +960,8 @@ export function fmtMoney(n: number): string {
   if (n >= 1e9) return `$${(n / 1e9).toFixed(n >= 1e10 ? 0 : 1)}B`;
   if (n >= 1e6) return `$${(n / 1e6).toFixed(n >= 1e7 ? 0 : 1)}M`;
   if (n >= 1e4) return `$${Math.round(n / 1e3)}K`;
+  // Sub-$10K keeps cents so tiny rates (car $/sec) never display as $0.
+  if (n > 0 && n < 10) return `$${n.toFixed(2)}`;
   return `$${Math.round(n).toLocaleString()}`;
 }
 
