@@ -71,6 +71,23 @@ describe("gameReducer", () => {
     expect(neg.lastTick).toBe(s.lastTick + 1000);
   });
 
+  it("CLAIM_DAILY resets streak after a missed day and clamps bogus rewards", () => {
+    const now = Date.now();
+    const s = make({ daily: { nextClaimAt: 0, lastClaimAt: now - 3 * 86_400_000, streak: 9 } });
+    const next = gameReducer(s, { type: "CLAIM_DAILY", reward: 500, now });
+    expect(next.daily.streak).toBe(1); // gap > 24h broke the streak
+    expect(next.daily.nextClaimAt).toBe(now + 12 * 3_600_000);
+    expect(next.cash).toBe(500);
+    // Negative / NaN rewards never drain cash.
+    const evil = gameReducer(next, { type: "CLAIM_DAILY", reward: -9_999, now: next.daily.nextClaimAt });
+    expect(evil.cash).toBe(next.cash); // clamped to +0
+    const nan = gameReducer(next, { type: "CLAIM_DAILY", reward: Number.NaN, now: next.daily.nextClaimAt });
+    expect(nan.cash).toBe(next.cash);
+    // Claiming again inside the 12h window is rejected outright.
+    const early = gameReducer(next, { type: "CLAIM_DAILY", reward: 500, now: next.daily.nextClaimAt - 1 });
+    expect(early.cash).toBe(next.cash);
+  });
+
   it("TICK pays sub-$1/s cars via fractional carry (no eternal $0)", () => {
     // Starter earns $0.15/s: 7 ticks of 1s = $1.05 → $1 paid, $0.05 carried.
     // The old floor-per-tick paid $0 forever until income hit $1/s.

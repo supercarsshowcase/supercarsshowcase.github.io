@@ -886,13 +886,15 @@ export function gameReducer(prevState: GameState, action: Action): GameState {
     case "CLAIM_DAILY": {
       const now = action.now ?? Date.now();
       if (now < state.daily.nextClaimAt) return state;
+      // Clamp the reward: a negative/NaN amount must never drain cash.
+      const reward = Number.isFinite(action.reward) ? Math.max(0, Math.floor(action.reward)) : 0;
       const streak =
         state.daily.lastClaimAt > 0 && now - state.daily.lastClaimAt <= 86_400_000
           ? state.daily.streak + 1
           : 1;
       return {
         ...state,
-        cash: state.cash + action.reward,
+        cash: state.cash + reward,
         daily: {
           nextClaimAt: now + 12 * 3_600_000,
           lastClaimAt: now,
