@@ -38,7 +38,11 @@ const UPGRADE_EFFECT_MULT = 0.5;
 const CRATE_COST_MULT = 3;
 /** Spin cash rewards: slices scale with level, this keeps them a snack. */
 const SPIN_REWARD_MULT = 0.15;
-/** Flat cost to fully refuel any car (fuel is a mild tax, not a wall). */
+/**
+ * Base cost to fully refuel any car, before level scaling (fuel is a mild
+ * tax, not a wall). Scales with level so it never becomes pocket change
+ * (see fuelCost).
+ */
 export const FUEL_COST = 200;
 /** Maximum fuel level. */
 export const FUEL_MAX = 100;
@@ -600,12 +604,22 @@ export function canCompleteBounty(state: GameState, bounty: WantedBounty): boole
   });
 }
 
-/** Fuel cost to fully refuel a car. */
+/**
+ * Fuel cost to fully refuel a car, scaled by player level.
+ *
+ * Anchored to questUnit(level) = max(250, 3400 × lvl²) — the economy's level
+ * yardstick — so fuel stays the same *fraction* of earning power at every
+ * stage: a full tank costs 6% of a quest unit (0.06 × max(250, 3400·lvl²),
+ * floored at FUEL_COST), i.e. ~$204 at level 1, ~$1.8K at level 3, ~$138K at
+ * level 26. Prosperity alone can't make refueling free, but the tax never
+ * outpaces income either.
+ */
 export function fuelCost(state: GameState, carId: string): number {
   const owned = state.ownedCars[carId];
   if (!owned) return 0;
   const missing = FUEL_MAX - (owned.fuel ?? FUEL_MAX);
-  return missing > 0 ? Math.round(FUEL_COST * (missing / FUEL_MAX)) : 0;
+  const unitPrice = Math.max(FUEL_COST, Math.round(questUnit(levelFrom(state)) * 0.06));
+  return missing > 0 ? Math.max(1, Math.round(unitPrice * (missing / FUEL_MAX))) : 0;
 }
 
 /** Track a weekly metric and update challenge progress. */

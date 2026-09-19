@@ -1,6 +1,6 @@
 import { describe, test as it, expect } from "bun:test";
-import { gameReducer, clickValue, passivePerSec, initialGameState, upgradeCost, carIncomePerSec, FUEL_MAX } from "./engine";
-import { STARTER_ID, GAME_CAR_MAP } from "./data";
+import { gameReducer, clickValue, passivePerSec, initialGameState, upgradeCost, carIncomePerSec, fuelCost, FUEL_MAX, FUEL_COST } from "./engine";
+import { STARTER_ID, GAME_CAR_MAP, levelFrom } from "./data";
 import type { GameState } from "./types";
 
 function make(overrides: Partial<GameState> = {}): GameState {
@@ -105,7 +105,56 @@ describe("passivePerSec", () => {
   });
 });
 
-describe("CLICK fuel gating", () => {
+describe("fuelCost level scaling", () => {
+  it("costs the FUEL_COST floor at level 1 and scales with level at higher levels", () => {
+    const mk = (totalEarned: number, fuel = 0) => {
+      const s = initialGameState();
+      s.ownedCars[STARTER_ID] = { upgrades: {}, fuel, clicksSinceFuel: 0 };
+      s.totalEarned = totalEarned; // levelFrom is driven by totalEarned
+      return s;
+    };
+    // Level 1: questUnit(1)=3400 → 3400*0.06=204 → floor max(200,204)=204.
+    const lvl1 = mk(0);
+    expect(levelFrom(lvl1)).toBe(1);
+    expect(fuelCost(lvl1, STARTER_ID)).toBe(Math.max(FUEL_COST, Math.round(3400 * 0.06)));
+    // Level 3 needs totalEarned = 4×50K = 200K (levelFrom = 1+floor(√(e/50K))):
+    // questUnit(3)=30,600 → 6% = $1,836.
+    const lvl3 = mk(200_000);
+    expect(levelFrom(lvl3)).toBe(3);
+    expect(fuelCost(lvl3, STARTER_ID)).toBe(Math.round(3_400 * 9 * 0.06));
+    // Empty tank → partial costs proportional to missing fuel.
+    const half = mk(200_000, FUEL_MAX / 2);
+    expect(fuelCost(half, STARTER_ID)).toBe(Math.round(3_400 * 9 * 0.06 * 0.5));
+    // Full tank → $0; not owned → $0.
+    const full = mk(200_000, FUEL_MAX);
+    expect(fuelCost(full, STARTER_ID)).toBe(0);
+    expect(fuelCost(mk(200_000), "not-a-car")).toBe(0);
+  });
+
+  it("BUY_FUEL charges the level-scaled price and fills the tank", () => {
+    const s = initialGameState();
+    s.ownedCars[STARTER_ID] = { upgrades: {}, fuel: 0, clicksSinceFuel: 0 };
+    s.totalEarned = 200_000; // level 3
+    s.cash = 10_000;
+    const expected = fuelCost(s, STARTER_ID);
+    const next = gameReducer(s, { type: "BUY_FUEL", carId: STARTER_ID });
+    expect(next.cash).toBe(10_000 - expected);
+    expect(next.ownedCars[STARTER_ID].fuel).toBe(FUEL_MAX);
+    // Idempotent at full tank.
+    const again = gameReducer(next, { type: "BUY_FUEL", carId: STARTER_ID });
+    expect(again.cash).toBe(next.cash);
+  });
+
+  it("BUY_FUEL is rejected when cash is short — no partial fill", () => {
+    const s = initialGameState();
+    s.ownedCars[STARTER_ID] = { upgrades: {}, fuel: 0, clicksSinceFuel: 0 };
+    s.totalEarned = 200_000; // level 3 → $1,836 refuel
+    s.cash = 10; // far short of the price
+    const next = gameReducer(s, { type: "BUY_FUEL", carId: STARTER_ID });
+    expect(next.cash).toBe(10);
+    expect(next.ownedCars[STARTER_ID].fuel).toBe(0);
+  });
+
   it("pays $0 when the active car is out of fuel (no $1 clamp drip)", () => {
     const s = make({
       activeCarId: STARTER_ID,
