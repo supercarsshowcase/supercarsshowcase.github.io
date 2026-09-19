@@ -9,6 +9,7 @@ import {
   SECRET_CAR_ID,
   UPGRADE_MAP,
   levelFrom,
+  questUnit,
   rarityIndex,
   challengeMetric,
   generateWeeklyChallenges,
@@ -17,24 +18,28 @@ import {
 import type { CrateResult, DealerDef, GameCarDef, GameState, SpinResult, WeeklyState, WeeklyChallenge, WantedBounty } from "./types";
 
 const SAVE_KEY = "supercars.game.v1";
-const STORAGE_VERSION = 1;
+const STORAGE_VERSION = 2;
 
 /** The Lucky Spin wheel is free once every 15 minutes. */
 export const SPIN_COOLDOWN_MS = 15 * 60_000;
 /** Chance the wheel lands on a supercar (0.3%). */
 export const SPIN_CAR_CHANCE = 0.003;
-/** 97.8% income nerf applied globally to all cars. */
-const INCOME_NERF = 0.022;
-/** Upgrade costs are 80x more expensive. */
-const UPGRADE_COST_MULT = 80;
-/** Upgrade effects are 20x weaker. */
-const UPGRADE_EFFECT_MULT = 0.05;
-/** Crate costs are 50x more expensive. */
-const CRATE_COST_MULT = 50;
-/** Spin cash rewards are 3% of original (10x nerf). */
-const SPIN_REWARD_MULT = 0.03;
-/** Fuel cost to refuel a car. */
-export const FUEL_COST = 500;
+/**
+ * Passive income: each owned car generates value × CAR_PASSIVE_RATE per second
+ * (0.000025/s ≈ 9% of the car's value per hour — a mid garage pays for the
+ * next car in an evening, so BUYING CARS is the core progression, not quests).
+ */
+export const CAR_PASSIVE_RATE = 0.000025;
+/** Upgrade costs: ~12x base so early upgrades cost minutes of income, not days. */
+const UPGRADE_COST_MULT = 12;
+/** Upgrade effects run at half the designed strength. */
+const UPGRADE_EFFECT_MULT = 0.5;
+/** Crate costs are only mildly inflated above their (now scaled) base. */
+const CRATE_COST_MULT = 3;
+/** Spin cash rewards: slices scale with level, this keeps them a snack. */
+const SPIN_REWARD_MULT = 0.15;
+/** Flat cost to fully refuel any car (fuel is a mild tax, not a wall). */
+export const FUEL_COST = 200;
 /** Maximum fuel level. */
 export const FUEL_MAX = 100;
 /** Fuel drains 1 unit every N clicks. */
@@ -211,22 +216,28 @@ export function clickValue(state: GameState): number {
   const cond = conditionOf(state, state.activeCarId);
   const condMult = 0.5 + 0.5 * cond;
   const mults = carUpgradeMults(state, state.activeCarId);
-  const base = def.value * 0.0003 * INCOME_NERF;
+  // A click pays ~40 seconds of that car's passive income — active play is
+  // meaningfully faster than idling, and better cars click for more.
+  const base = def.value * 0.001;
   return Math.max(1, Math.round(base * (1 + mults.clickMult) * condMult * clickMultiplier(state)));
+}
+
+/** Per-second income for ONE owned car (before the global passive multiplier). */
+export function carIncomePerSec(state: GameState, carId: string): number {
+  const def = GAME_CAR_MAP[carId];
+  if (!def || def.secret) return 0; // secret cars never generate income
+  const fuel = state.ownedCars[carId]?.fuel;
+  if (fuel !== undefined && fuel <= 0) return 0; // empty tank earns nothing
+  const cond = conditionOf(state, carId);
+  const condMult = 0.5 + 0.5 * cond;
+  const mults = carUpgradeMults(state, carId);
+  return def.value * CAR_PASSIVE_RATE * (1 + mults.passiveMult) * condMult;
 }
 
 export function passivePerSec(state: GameState): number {
   let base = 0;
   for (const carId of Object.keys(state.ownedCars)) {
-    const def = GAME_CAR_MAP[carId];
-    if (!def || def.secret) continue; // secret cars never generate income
-    // Car stops earning when fuel is empty
-    const fuel = state.ownedCars[carId]?.fuel;
-    if (fuel !== undefined && fuel <= 0) continue;
-    const cond = conditionOf(state, carId);
-    const condMult = 0.5 + 0.5 * cond;
-    const mults = carUpgradeMults(state, carId);
-    base += def.value * 0.000003 * INCOME_NERF * (1 + mults.passiveMult) * condMult;
+    base += carIncomePerSec(state, carId);
   }
   return base * passiveMultiplier(state);
 }
@@ -274,6 +285,25 @@ const CRATE_CAR_CHANCE: Record<string, number> = {
   vault: 0.12,
 };
 
+/**
+ * Cash consolation for a "cash" crate roll: 1–2× the crate's base cost.
+ * At CRATE_COST_MULT=3 that refunds 33–67% of what you paid — never profit
+ * on its own, but never pocket change either.
+ */
+export function crateCashRefund(crateId: string): number {
+  const crate = CRATE_MAP[crateId];
+  if (!crate) return 0;
+  return Math.round(crate.cost * (1 + Math.random()));
+}
+
+/** Payout when you receive a car you already own (crate or spin). Must stay
+ *  well below 100% of value: otherwise opening cheap crates until you hit a
+ *  mega-value duplicate is a money printer (old 20% paid $600M for a vault
+ *  crate that costs $75M). Capped so the refund never dwarfs the crate cost. */
+export function dupCarRefund(carValue: number): number {
+  return Math.min(2_500_000, Math.round(carValue * 0.05));
+}
+
 export function rollCrate(state: GameState, crateId: string): CrateResult {
   const crate = CRATE_MAP[crateId];
   if (!crate) return { kind: "cash", cash: 0 };
@@ -297,14 +327,18 @@ export function rollCrate(state: GameState, crateId: string): CrateResult {
     if (picked) return { kind: "part", partId: picked.id };
   }
 
-  const cash = Math.round(crate.cashMin + Math.random() * (crate.cashMax - crate.cashMin));
+  // Cash consolation refunds 1–2× the crate's base cost (33–67% of what you
+  // paid at ×3) — a "cash" roll is a partial refund, never pocket change.
+  const cash = crateCashRefund(crateId);
   return { kind: "cash", cash };
 }
 
 // ── Lucky Spin wheel ──────────────────────────────────────────────────────────
 
-/** Cash values on the wheel, growing with player level (slice 0 is the car). */
-const SPIN_CASH_BASE = [2, 5, 10, 20, 40, 80, 160, 300, 500];
+/** Cash values on the wheel, growing with player level (slice 0 is the car).
+ *  At level 1 the average slice ≈ 30 min of starter-garage income — the free
+ *  15-min spin is a snack on top of car income, never the main course. */
+const SPIN_CASH_BASE = [60, 150, 300, 600, 1100, 1800, 3000, 5000, 8000];
 
 export function spinCashSlices(state: GameState): number[] {
   const scale = 1 + (levelFrom(state) - 1) * 0.15;
@@ -408,7 +442,8 @@ export function dailyReward(state: GameState, now: number): number {
       ? state.daily.streak + 1
       : 1;
   const mult = Math.min(streak, 14);
-  return Math.round(100 * Math.pow(1.1, mult - 1) * (1 + state.prestigeLevel * 0.2));
+  // Scales with the economy via questUnit — a real login hook at every level.
+  return Math.round(questUnit(levelFrom(state)) * 0.3 * Math.pow(1.1, mult - 1) * (1 + state.prestigeLevel * 0.1));
 }
 
 // ── Achievements ──────────────────────────────────────────────────────────────
@@ -796,7 +831,7 @@ export function gameReducer(prevState: GameState, action: Action): GameState {
       if (r.kind === "car" && r.carId) {
         const def = GAME_CAR_MAP[r.carId];
         if (def && ownedCars[r.carId]) {
-          cash += Math.round(def.value * 0.2);
+          cash += dupCarRefund(def.value);
         } else if (def) {
           ownedCars = { ...ownedCars, [r.carId]: { upgrades: {}, fuel: FUEL_MAX, clicksSinceFuel: 0 } };
         }
@@ -853,7 +888,7 @@ export function gameReducer(prevState: GameState, action: Action): GameState {
         if (state.ownedCars[r.carId]) {
           return applyAchievements({
             ...state,
-            cash: state.cash + Math.round(def.value * 0.2),
+            cash: state.cash + dupCarRefund(def.value),
             lastSpinAt: action.now,
             freeSpins: nextFreeSpins,
             weekly: weeklySpin,
@@ -1069,6 +1104,16 @@ function normalize(current: GameState, loaded: Partial<GameState>): GameState {
     wantedBounties: loaded.wantedBounties ?? current.wantedBounties ?? [],
     wantedRefreshAt: loaded.wantedRefreshAt ?? current.wantedRefreshAt ?? 0,
   };
+  // ECONOMY MIGRATION (v1 → v2): pre-rebalance saves carry weekly quests with
+  // wildly overstated lvl² rewards ("$498K for 389 clicks" at level 3) and a
+  // 15-minute spin cooldown that no longer matches the new payout scale.
+  // Regenerate the board at the player's real level and clear the spin timer
+  // so the rebalanced wheel is immediately playable. Cash/cars are kept.
+  if ((base.version ?? 1) < 2) {
+    base.weekly = initialWeeklyState(Date.now(), levelFrom(base));
+    base.lastSpinAt = 0;
+    base.version = STORAGE_VERSION;
+  }
   // Ensure all owned cars have fuel fields (for old saves)
   const ownedCars: Record<string, { upgrades: Record<string, number>; fuel: number; clicksSinceFuel: number }> = {};
   for (const [id, owned] of Object.entries(base.ownedCars)) {

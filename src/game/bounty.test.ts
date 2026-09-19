@@ -94,7 +94,9 @@ describe("weekly challenge scaling", () => {
   });
 
   test("earn targets are a reachable week of play (~1–8x weekly income)", () => {
-    // Weekly income ≈ totalEarned × 4%, totalEarned ≈ 50K × (lvl−1)².
+    // Rebalanced economy: passive income ≈ garage value × 0.09/hr, so a
+    // week of car income ≈ 15 × the value of one level-appropriate car
+    // ($15K × lvl²). Targets are 40K × lvl² — well inside that envelope.
     for (const lvl of [10, 50, 100]) {
       let sum = 0;
       let n = 0;
@@ -110,16 +112,16 @@ describe("weekly challenge scaling", () => {
         }
       }
       const avg = sum / n;
-      const weeklyIncome = 50_000 * (lvl - 1) * (lvl - 1) * 0.04;
+      const weeklyIncome = 15 * 15_000 * (lvl - 1) * (lvl - 1);
       const ratio = avg / weeklyIncome;
-      expect(ratio, `level ${lvl} ratio ${ratio.toFixed(1)} must be playable`).toBeGreaterThan(0.5);
+      expect(ratio, `level ${lvl} ratio ${ratio.toFixed(1)} must be playable`).toBeGreaterThan(0.1);
       expect(ratio).toBeLessThan(20);
     }
   });
 
   test("rewards stay proportional to targets at high levels (no runaway)", () => {
-    // A full board is a big bonus but stays within a sane multiple of weekly
-    // income — completing challenges pays, but playing the game pays more.
+    // A full board is a bonus that scales with the economy (questUnit), never
+    // a level² money printer disconnected from what the player actually earns.
     let sum = 0;
     for (let w = 0; w < 52; w++) {
       const week = new Date(Date.UTC(2026, 0, 5) + w * 7 * 86_400_000)
@@ -128,9 +130,9 @@ describe("weekly challenge scaling", () => {
       for (const ch of generateWeeklyChallenges(week, 200)) sum += ch.rewardCash;
     }
     const avgBoard = sum / 52;
-    const weeklyIncome = 50_000 * 199 * 199 * 0.04;
-    expect(avgBoard).toBeGreaterThan(weeklyIncome * 5); // generous, per request
-    expect(avgBoard).toBeLessThan(weeklyIncome * 200); // still level-bounded
+    const weeklyIncome = 15 * 15_000 * 199 * 199;
+    expect(avgBoard).toBeGreaterThan(weeklyIncome * 0.01); // still a real bonus
+    expect(avgBoard).toBeLessThan(weeklyIncome * 0.5); // but never the main course
   });
 
   test("board reroll costs the greater of a 5% cash slice and a level floor", () => {
@@ -165,7 +167,7 @@ describe("weekly challenge scaling", () => {
         if (ch.metric === "spins") expect(ch.target).toBeLessThanOrEqual(15);
         if (ch.metric === "cratesOpened") expect(ch.target).toBeLessThanOrEqual(10);
         if (ch.metric === "carsBought") expect(ch.target).toBeLessThanOrEqual(5);
-        if (ch.metric === "clicks") expect(ch.target).toBeLessThanOrEqual(800);
+        if (ch.metric === "clicks") expect(ch.target).toBeLessThanOrEqual(400);
         if (ch.metric === "earned") expect(ch.target).toBeLessThanOrEqual(1.5e9);
       }
     }

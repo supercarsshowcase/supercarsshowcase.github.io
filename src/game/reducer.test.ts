@@ -4,6 +4,7 @@ import {
   buyPrice,
   carValue,
   crateCost,
+  dupCarRefund,
   gameReducer,
   hourlySupercar,
   initialGameState,
@@ -173,7 +174,7 @@ describe("reducer: crates", () => {
     expect(next.cratesOpened).toBe(1);
   });
 
-  test("a duplicate car drop pays 20% of its value", () => {
+  test("a duplicate car drop pays a capped 5% of its value", () => {
     const s: GameState = {
       ...rich(),
       cash: 100_000_000,
@@ -186,7 +187,7 @@ describe("reducer: crates", () => {
       crateId: "scrapyard",
       result: { kind: "car", carId: "civic-lx-95" },
     });
-    expect(next.cash).toBe(100_000_000 - cost + Math.round(carVal * 0.2));
+    expect(next.cash).toBe(100_000_000 - cost + dupCarRefund(carVal));
   });
 });
 

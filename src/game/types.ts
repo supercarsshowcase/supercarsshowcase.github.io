@@ -79,8 +79,6 @@ export interface CrateDef {
   weights: Partial<Record<Rarity, number>>;
   /** Highest crate tier of cars that can drop. */
   maxTier: number;
-  cashMin: number;
-  cashMax: number;
 }
 
 export interface AchievementDef {

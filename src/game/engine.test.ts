@@ -1,5 +1,5 @@
 import { describe, test as it, expect } from "bun:test";
-import { gameReducer, clickValue, passivePerSec, initialGameState, upgradeCost, FUEL_MAX } from "./engine";
+import { gameReducer, clickValue, passivePerSec, initialGameState, upgradeCost, carIncomePerSec, FUEL_MAX } from "./engine";
 import { STARTER_ID, GAME_CAR_MAP } from "./data";
 import type { GameState } from "./types";
 
@@ -151,5 +151,111 @@ describe("upgradeCost", () => {
     const cost = upgradeCost(s, STARTER_ID, "condition");
     expect(cost).toBeGreaterThan(0);
     expect(cost).toBeLessThan(Infinity);
+  });
+});
+
+describe("car income balance", () => {
+  it("every owned car pays $/sec proportional to its value", () => {
+    // THE reported bug: cars generated $0/sec. Every non-secret car must
+    // generate income, and pricier cars must pay strictly more.
+    const owned = {
+      "rusty-hatch-91": { upgrades: {}, fuel: FUEL_MAX, clicksSinceFuel: 0 },
+      "civic-lx-95": { upgrades: {}, fuel: FUEL_MAX, clicksSinceFuel: 0 },
+      "ferrari-458-12": { upgrades: {}, fuel: FUEL_MAX, clicksSinceFuel: 0 },
+      "chiron-17": { upgrades: {}, fuel: FUEL_MAX, clicksSinceFuel: 0 },
+    };
+    const s = make({ ownedCars: owned, totalEarned: 500_000_000 });
+    const starter = carIncomePerSec(s, "rusty-hatch-91");
+    expect(starter).toBeGreaterThan(0);
+    expect(carIncomePerSec(s, "civic-lx-95")).toBeGreaterThan(starter);
+    expect(carIncomePerSec(s, "ferrari-458-12")).toBeGreaterThan(carIncomePerSec(s, "civic-lx-95"));
+    expect(carIncomePerSec(s, "chiron-17")).toBeGreaterThan(carIncomePerSec(s, "ferrari-458-12"));
+    // Income scales linearly with value (same rate for every car).
+    const ratio = carIncomePerSec(s, "chiron-17") / starter;
+    const valueRatio = GAME_CAR_MAP["chiron-17"].value / GAME_CAR_MAP["rusty-hatch-91"].value;
+    expect(Math.abs(ratio - valueRatio)).toBeLessThan(valueRatio * 0.01);
+  });
+
+  it("pays back a level-appropriate car in hours, not weeks", () => {
+    // A level-10 car (supra-mk3-88, $720K at ×30) must repay itself in about
+    // a day at half condition (22h), ~11h fully restored — the core loop is
+    // buy → earn → buy bigger.
+    const car = GAME_CAR_MAP["supra-mk3-88"];
+    const s = make({ ownedCars: { "supra-mk3-88": { upgrades: {}, fuel: FUEL_MAX, clicksSinceFuel: 0 } } });
+    const paybackHours = car.value / carIncomePerSec(s, "supra-mk3-88") / 3600;
+    expect(paybackHours).toBeGreaterThan(1); // not instant — a real purchase decision
+    expect(paybackHours).toBeLessThan(24);
+  });
+
+  it("secret cars still earn nothing", () => {
+    const s = make({ ownedCars: { "ghost-prototype": { upgrades: {}, fuel: FUEL_MAX, clicksSinceFuel: 0 } } });
+    expect(carIncomePerSec(s, "ghost-prototype")).toBe(0);
+  });
+
+  it("an empty tank stops that car's income", () => {
+    const s = make({
+      ownedCars: { "rusty-hatch-91": { upgrades: {}, fuel: 0, clicksSinceFuel: 0 } },
+    });
+    expect(carIncomePerSec(s, "rusty-hatch-91")).toBe(0);
+  });
+
+  it("clicks pay more in better cars", () => {
+    const starter = make();
+    const rich = make({
+      totalEarned: 500_000_000,
+      ownedCars: { "chiron-17": { upgrades: {}, fuel: FUEL_MAX, clicksSinceFuel: 0 } },
+      activeCarId: "chiron-17",
+    });
+    expect(clickValue(rich)).toBeGreaterThan(clickValue(starter) * 100);
+  });
+});
+
+describe("economy migration v1 → v2", () => {
+  it("a pre-rebalance save regenerates its quest board and keeps cash/cars", () => {
+    // The old board carried lvl² rewards like "$498K for 389 clicks".
+    const oldSave = {
+      ...initialGameState(),
+      version: 1,
+      cash: 12_345,
+      totalEarned: 250_000, // level 3 (√(250K/50K)+1)
+      weekly: {
+        weekStart: "2001-01-01",
+        genLevel: 3,
+        weeklyEarned: 0,
+        weeklyClicks: 0,
+        weeklyCarsBought: 0,
+        weeklyCratesOpened: 0,
+        weeklySpins: 0,
+        weeklyPrestiges: 0,
+        challenges: [
+          {
+            id: "weekly-2001-0",
+            name: "Click your car 389 times",
+            desc: "x",
+            metric: "clicks" as const,
+            target: 389,
+            progress: 389,
+            rewardCash: 498_000, // the bug
+            rewardRep: 55,
+            claimed: false,
+          },
+        ],
+      },
+    };
+    const loaded = gameReducer(initialGameState(), { type: "LOAD", state: oldSave });
+    expect(loaded.cash).toBe(12_345); // money kept
+    expect(loaded.version).toBe(2);
+    expect(loaded.weekly.weekStart).not.toBe("2001-01-01"); // board regenerated
+    for (const ch of loaded.weekly.challenges) {
+      expect(ch.rewardCash, `${ch.name}`).toBeLessThan(50_000);
+      expect(ch.claimed).toBe(false); // old overpaid claims are not preserved
+    }
+  });
+
+  it("a current save loads untouched", () => {
+    const current = { ...initialGameState(), version: 2, cash: 999 };
+    const loaded = gameReducer(initialGameState(), { type: "LOAD", state: current });
+    expect(loaded.cash).toBe(999);
+    expect(loaded.weekly).toEqual(initialGameState().weekly);
   });
 });

@@ -10,7 +10,7 @@ import { toast as ye } from "sonner";
 import {
   rollSpin, spinReadyAt, spinCashSlices, hourlySupercar, hourlySupercar01,
   hourlySupercar001, nextSupercarSwapAt, rollCrate, saveGame, initialGameState,
-  passivePerSec, clickValue, dailyReward, carValue, carPower,
+  passivePerSec, clickValue, dailyReward, carValue, carPower, carIncomePerSec,
   buyPrice as calcBuyPrice, rollDealerStock, upgradeCost as calcUpgradeCost,
   crateCost as calcCrateCost, spinSupercarPool, gameReducer, critChance,
   wantedRefreshCost,
@@ -43,6 +43,7 @@ const v1 = CRATES;
 const D1 = calcBuyPrice;
 const pp = rollDealerStock;
 const c9 = rollCrate;
+const Kx = carIncomePerSec;
 const Wy = RefreshCw;
 
 function Ie(v: number): string {
@@ -353,8 +354,8 @@ function GaragePanel({ state, dispatch }: { state: GameState; dispatch: any }) {
                   <h4 className="mt-0.5 font-display text-lg font-black tracking-tight text-white">{car.name}</h4>
                   <div className="mt-3 flex items-center justify-between text-[12px]">
                     <span className="text-white/40"><span className="font-display font-black text-apex-red">{Ie(Ur(state, car.id))}</span> {" "}value</span>
+                    <span className="text-white/40"><span className="font-display font-black text-green-400">{Ie(Kx(state, car.id))}</span>/sec</span>
                     <span className="text-white/40"><span className="font-display font-black text-white">{Qi(T1(state, car.id))}</span> {" "}hp</span>
-                    <span className="text-white/40">{ups} upgrades</span>
                   </div>
                   <div className="mt-3 flex gap-2">
                     {!active && <button type="button" onClick={() => dispatch({ type: "SET_ACTIVE", id: car.id })}
@@ -417,6 +418,7 @@ function DealerPanel({ state, dispatch }: { state: GameState; dispatch: any }) {
                           <p className="truncate font-display text-sm font-black text-white">{car.name}</p>
                           <div className="mt-1.5 flex items-center justify-between">
                             <span className="font-display text-xs font-black text-apex-red">{Ie(price)}</span>
+                            <span className="font-display text-[10px] font-black text-green-400">+{Ie(Kx(state, carId))}/sec</span>
                             <button type="button" disabled={owned || !unlocked || state.cash < price}
                               onClick={() => dispatch({ type: "BUY_CAR", id: carId })}
                               className="rounded-md bg-apex-red px-2 py-1 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-white transition-colors hover:bg-apex-red/80 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/30">

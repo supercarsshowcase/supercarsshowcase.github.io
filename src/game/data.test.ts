@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { CRATES, GAME_CAR_MAP, gameCarImage } from "./data";
+import { CRATES, GAME_CAR_MAP, gameCarImage, questUnit, generateWeeklyChallenges } from "./data";
+import { crateCost } from "./engine";
 
 describe("game car images", () => {
   test("resolves a real photo for archive-covered cars", () => {
@@ -62,12 +63,69 @@ describe("game car images", () => {
 });
 
 describe("crate economy", () => {
-  test("every crate's expected cash payout is below its cost", () => {
+  test("a cash roll refunds 33–67% of the real crate cost — never profit", () => {
     for (const crate of CRATES) {
-      const avg = (crate.cashMin + crate.cashMax) / 2;
-      expect(avg, `${crate.id} expected cash ${avg} < cost ${crate.cost}`).toBeLessThan(
-        crate.cost,
-      );
+      const paid = crateCost(crate.id); // base × CRATE_COST_MULT
+      // crateCashRefund is random (1–2× base); pin the bounds via base cost.
+      expect(crate.cost, `${crate.id} refund floor < paid ${paid}`).toBeLessThan(paid);
+      expect(2 * crate.cost, `${crate.id} refund ceiling below paid ${paid}`).toBeLessThan(paid);
+    }
+  });
+
+  test("crate costs stay affordable relative to the quest economy", () => {
+    // The scrapyard crate (the entry crate) must cost less than ONE full
+    // quest board at level 1 — crates are a hobby, quests a real bonus.
+    const lvl1Board = 4 * questUnit(1); // rough upper bound on a full board
+    expect(crateCost("scrapyard")).toBeLessThan(lvl1Board);
+    // And the priciest crate must cost less than 10 questUnits at level 200.
+    expect(crateCost("vault")).toBeLessThan(10 * questUnit(200));
+  });
+});
+
+describe("quest reward balance", () => {
+  test("no early-game quest pays more than ~2 hours of mid-car income", () => {
+    // THE reported bug: level 3 player claimed $498K for 389 clicks. Under the
+    // rebalanced economy every single reward stays within ~2 quest units
+    // (questUnit ≈ a mid-range car's passive income for 2.5h), so quests are
+    // a hours-scale bonus — never a car purchase.
+    for (let lvl = 1; lvl <= 5; lvl++) {
+      for (let w = 0; w < 16; w++) {
+        const week = new Date(Date.UTC(2026, 0, 5) + w * 7 * 86_400_000)
+          .toISOString()
+          .split("T")[0];
+        const gen = generateWeeklyChallenges(week, lvl);
+        for (const ch of gen) {
+          expect(ch.rewardCash, `${ch.name} (lvl ${lvl})`).toBeLessThan(2 * questUnit(lvl));
+        }
+      }
+    }
+    // And concretely: a level-3 board can never again pay half a million.
+    for (let w = 0; w < 16; w++) {
+      const week = new Date(Date.UTC(2026, 0, 5) + w * 7 * 86_400_000)
+        .toISOString()
+        .split("T")[0];
+      for (const ch of generateWeeklyChallenges(week, 3)) {
+        expect(ch.rewardCash).toBeLessThan(50_000);
+      }
+    }
+  });
+
+  test("quest rewards grow with level but stay proportional to income", () => {
+    const unit = (l: number) => questUnit(l);
+    expect(unit(10)).toBeGreaterThan(unit(1));
+    expect(unit(100)).toBeGreaterThan(unit(10));
+    // A full board ≈ 1.5–3 quest units at any level.
+    for (const lvl of [5, 50, 500]) {
+      let sum = 0;
+      for (let w = 0; w < 16; w++) {
+        const week = new Date(Date.UTC(2026, 0, 5) + w * 7 * 86_400_000)
+          .toISOString()
+          .split("T")[0];
+        for (const ch of generateWeeklyChallenges(week, lvl)) sum += ch.rewardCash;
+      }
+      const avg = sum / 16;
+      expect(avg, `lvl ${lvl} board avg ${avg}`).toBeGreaterThan(unit(lvl) * 1.2);
+      expect(avg, `lvl ${lvl} board avg ${avg}`).toBeLessThan(unit(lvl) * 10);
     }
   });
 });

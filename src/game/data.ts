@@ -455,8 +455,6 @@ export const CRATES: CrateDef[] = [
     desc: "Mystery junk. Sometimes a miracle.",
     weights: { common: 75, uncommon: 20, rare: 4, epic: 1 },
     maxTier: 2,
-    cashMin: 3,
-    cashMax: 20,
   },
   {
     id: "import",
@@ -467,8 +465,6 @@ export const CRATES: CrateDef[] = [
     desc: "Unclaimed cargo from across the sea.",
     weights: { common: 25, uncommon: 42, rare: 24, epic: 8, legendary: 1 },
     maxTier: 3,
-    cashMin: 20,
-    cashMax: 250,
   },
   {
     id: "dealer",
@@ -479,8 +475,6 @@ export const CRATES: CrateDef[] = [
     desc: "Dealer plates included. No questions asked.",
     weights: { rare: 28, epic: 46, legendary: 20, exotic: 6 },
     maxTier: 4,
-    cashMin: 100,
-    cashMax: 1200,
   },
   {
     id: "exotic",
@@ -491,8 +485,6 @@ export const CRATES: CrateDef[] = [
     desc: "Carbon, titanium and attitude.",
     weights: { epic: 28, legendary: 44, exotic: 22, hyper: 6 },
     maxTier: 6,
-    cashMin: 800,
-    cashMax: 10000,
   },
   {
     id: "mythic",
@@ -503,8 +495,6 @@ export const CRATES: CrateDef[] = [
     desc: "The collection agency keeps asking.",
     weights: { legendary: 18, exotic: 36, hyper: 34, mythic: 11, ultimate: 1 },
     maxTier: 8,
-    cashMin: 12000,
-    cashMax: 120000,
   },
   {
     id: "vault",
@@ -515,8 +505,6 @@ export const CRATES: CrateDef[] = [
     desc: "One of one. Maybe two.",
     weights: { hyper: 35, mythic: 50, ultimate: 15 },
     maxTier: 10,
-    cashMin: 200000,
-    cashMax: 2000000,
   },
 ];
 
@@ -760,25 +748,44 @@ function cappedLevel(level: number): number {
   return Math.max(1, Math.min(Math.floor(level) || 1, CHALLENGE_LEVEL_CAP));
 }
 
+/**
+ * ECONOMY REFERENCE for quest & bonus rewards — every cash reward is a small
+ * multiple of `questUnit(level)`: the passive income one mid-range car for
+ * that level generates over ~2.5 hours. Level L unlocks cars worth roughly
+ * $15K × L² (see the car ladder), which at CAR_PASSIVE_RATE (0.000025/s)
+ * earns 15_000 × L² × 0.000025 × 9000s ≈ 3.4K × L².
+ * Under the rebalanced economy a full quest board lands near ~15% of the
+ * week's car income — a bonus for playing, never the money printer that paid
+ * a level-3 player $498K for 389 clicks.
+ */
+export function questUnit(level: number): number {
+  const lvl = Math.max(1, level);
+  return Math.max(250, Math.round(3_400 * lvl * lvl));
+}
+
 const CHALLENGE_TEMPLATES: ChallengeTemplate[] = [
   {
     nameFmt: (t) => `Earn ${fmtMoney(t)} this week`,
     descFmt: (t) => `Earn ${fmtMoney(t)} in total this week.`,
     metric: "earned",
-    // Weekly income ≈ totalEarned × 4%; ~2.5× that is a solid week's goal.
-    // Caps at $1.25B so mega-level saves get a human target, not quintillions.
-    target: (lvl) => 5_000 * lvl * lvl,
-    // 60% of what you had to earn — a fat payout for the main grind.
-    reward: (_lvl, t) => Math.round(t * 0.6),
+    // Car income now dominates earnings: a garage of ~2 level-appropriate
+    // cars passes this target in under a day of play. Capped so mega-level
+    // saves get a human target.
+    target: (lvl) => 40_000 * lvl * lvl,
+    maxTarget: 1_500_000_000,
+    // 10% of what you had to EARN — car income did the heavy lifting.
+    reward: (_lvl, t) => Math.round(t * 0.1),
   },
   {
     nameFmt: (t) => `Click your car ${fmtNum(t)} times`,
     descFmt: (t) => `Click your car ${fmtNum(t)} times this week.`,
     metric: "clicks",
-    // Grows to a hard cap of 800 clicks — always a few casual sessions.
-    target: (lvl) => Math.min(300 + 12 * (lvl - 1), 800),
-    maxTarget: 800,
-    reward: (lvl, t) => Math.round(t * 5 * lvl * lvl),
+    // Hard cap of 400 clicks — a few casual sessions.
+    target: (lvl) => Math.min(150 + 8 * (lvl - 1), 400),
+    maxTarget: 400,
+    // 0.2% of a quest unit per click — comparable to what those clicks
+    // actually pay, plus a small bonus.
+    reward: (lvl, t) => Math.round(t * questUnit(lvl) * 0.002),
   },
   {
     nameFmt: (t) => `Buy ${t} new car${t === 1 ? "" : "s"}`,
@@ -786,7 +793,10 @@ const CHALLENGE_TEMPLATES: ChallengeTemplate[] = [
     metric: "carsBought",
     target: (lvl) => Math.min(2 + Math.floor((lvl - 1) / 7), 5),
     maxTarget: 5,
-    reward: (lvl, t) => Math.round(t * 150 * lvl * lvl),
+    // Half a quest unit (~a mid car's 1.2h income) per required car — buying
+    // cars already pays for itself via passive income, so this is a rebate,
+    // not the profit center.
+    reward: (lvl, t) => Math.round(t * questUnit(lvl) * 0.5),
     minLevel: 8,
   },
   {
@@ -795,7 +805,9 @@ const CHALLENGE_TEMPLATES: ChallengeTemplate[] = [
     metric: "cratesOpened",
     target: (lvl) => Math.min(2 + Math.floor((lvl - 1) / 5), 10),
     maxTarget: 10,
-    reward: (lvl, t) => Math.round(t * 200 * lvl * lvl),
+    // Crates have real EV now (cash rolls refund 33–67% of cost, cars are
+    // the real prize), so the quest rebate is deliberately small.
+    reward: (lvl, t) => Math.round(t * questUnit(lvl) * 0.2),
   },
   {
     nameFmt: (t) => `Spin the wheel ${t} time${t === 1 ? "" : "s"}`,
@@ -804,14 +816,14 @@ const CHALLENGE_TEMPLATES: ChallengeTemplate[] = [
     // The wheel is free every 15 min → ≤15 spins/week is always completable.
     target: (lvl) => Math.min(3 + Math.floor((lvl - 1) / 10), 15),
     maxTarget: 15,
-    reward: (lvl, t) => Math.round(t * 100 * lvl * lvl),
+    reward: (lvl, t) => Math.round(t * questUnit(lvl) * 0.1),
   },
   {
     nameFmt: () => "Prestige once",
     descFmt: () => "Prestige at least once this week.",
     metric: "prestiges",
     target: () => 1,
-    reward: (lvl) => Math.round(10_000 * lvl * lvl),
+    reward: (lvl) => Math.round(questUnit(lvl) * 8),
     minLevel: 60,
   },
 ];
