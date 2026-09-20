@@ -29,7 +29,7 @@ import {
 import type { GameState } from "@/game/types";
 import type { Action } from "@/game/engine";
 import { GAME_CAR_MAP } from "@/game/data";
-import { minesMultiplier } from "@/game/casino-math";
+import { minesMultiplier, pickWeighted } from "@/game/casino-math";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useQuery, useMutation } from "convex/react";
@@ -1172,9 +1172,10 @@ function OnlineJackpot({ state, dispatch }: { state: GameState; dispatch: React.
     const opps = Array.from({ length: 2 + Math.floor(Math.random() * 4) }, () => ({ name: names[Math.floor(Math.random() * names.length)], amount: Math.floor(Math.random() * 1000000) + 10000 }));
     setPlayers([...opps, { name: "YOU", amount: bet }]); setRound(true); setWinner(null);
     roundTimer.current = setTimeout(() => { const all = [...opps, { name: "YOU", amount: bet }]; const total = all.reduce((s, p) => s + p.amount, 0);
-      let roll = Math.random() * total; let w = all[all.length - 1];
-      for (const p of all) { roll -= p.amount; if (roll <= 0) { w = p; break; } } if (w.name === "YOU") { dispatch({ type: "ADD_CASH", amount: total }); toast.success(`JACKPOT! Won $${total.toLocaleString()}!`); }
-      else { toast.error(`${w.name} won $${total.toLocaleString()}`); } setWinner(w.name); setRound(false); }, 4000);
+      // Winner drawn weighted by contribution (see pickWeighted) — the old
+      // uniform pick over players was a massive positive-EV printer.
+      const w = pickWeighted(all); if (w && w.name === "YOU") { dispatch({ type: "ADD_CASH", amount: total }); toast.success(`JACKPOT! Won ${total.toLocaleString()}!`); }
+      else if (w) { toast.error(`${w.name} won ${total.toLocaleString()}`); } setWinner(w ? w.name : null); setRound(false); }, 4000);
   }, [bet, state.cash, dispatch]);
 
   return (
