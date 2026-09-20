@@ -28,7 +28,7 @@ import {
 } from "lucide-react";
 import type { GameState } from "@/game/types";
 import type { Action } from "@/game/engine";
-import { GAME_CAR_MAP, GAME_CARS } from "@/game/data";
+import { GAME_CAR_MAP } from "@/game/data";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useQuery, useMutation } from "convex/react";
@@ -1190,8 +1190,8 @@ function OnlineJackpot({ state, dispatch }: { state: GameState; dispatch: React.
           <>
             <p className="font-display text-xs font-bold uppercase tracking-wider text-white/40">Players in pool</p>
             <div className="flex flex-wrap justify-center gap-2">
-              {players.map((p) => (
-                <div key={p.name} className={cn("inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold",
+              {players.map((p, i) => (
+                <div key={`${p.name}-${i}`} className={cn("inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold",
                   p.name === "YOU" ? "border-apex-red bg-apex-red/20 text-apex-red" : "border-white/15 bg-white/5 text-white/50")}>
                   {p.name === "YOU" ? <Crown className="size-3" /> : <Circle className="size-3" />}{p.name} — ${p.amount.toLocaleString()}
                 </div>
