@@ -391,6 +391,7 @@ export function OnlineCoinflip({ state, dispatch }: { state: GameState; dispatch
 
         {/* ── Phase: REVEAL ──────────────────────────────────────────── */}
         {isAuthenticated && phase?.kind === "reveal" && (
+          
           <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
             className={cn("flex w-full flex-col items-center gap-4 rounded-xl border px-6 py-6",
               phase.won ? "border-emerald-500/40 bg-emerald-500/5" : "border-white/10 bg-white/[0.03]")}>
@@ -407,10 +408,16 @@ export function OnlineCoinflip({ state, dispatch }: { state: GameState; dispatch
               </div>
               <div className="text-center"><p className="mb-1 text-xs text-white/30">{phase.opponent || "Opponent"}</p><CoinIcon side={phase.oppPick} size="lg" /></div>
             </div>
-            <button type="button" onClick={() => setPhase(null)}
-              className="mt-1 cursor-pointer rounded-lg border border-white/15 px-5 py-1.5 text-xs font-bold uppercase tracking-wider text-white/60 transition-colors hover:border-apex-red/50 hover:text-white">
-              Done
-            </button>
+            <div className="mt-1 flex items-center gap-3">
+              <button type="button" onClick={() => setPhase(null)}
+                className="cursor-pointer rounded-lg border border-white/15 px-5 py-1.5 text-xs font-bold uppercase tracking-wider text-white/60 transition-colors hover:border-apex-red/50 hover:text-white disabled:cursor-not-allowed disabled:opacity-40">
+                Done
+              </button>
+              <button type="button" onClick={() => { setPhase(null); void postMatch(); }} disabled={busy || state.cash < bet || Boolean(myOpenMatch)}
+                className="cursor-pointer rounded-lg border border-blue-500/50 bg-blue-500/10 px-5 py-1.5 text-xs font-bold uppercase tracking-wider text-blue-300 transition-colors hover:bg-blue-500/20 disabled:cursor-not-allowed disabled:opacity-40">
+                Play Again
+              </button>
+            </div>
           </motion.div>
         )}
 

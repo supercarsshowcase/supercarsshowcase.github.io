@@ -25,6 +25,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Circle,
+  RotateCcw,
 } from "lucide-react";
 import type { GameState } from "@/game/types";
 import type { Action } from "@/game/engine";
@@ -150,6 +151,16 @@ function ResultBadge({ won, children }: { won: boolean; children: React.ReactNod
       {won ? <Trophy className="size-8 shrink-0" /> : <XCircle className="size-8 shrink-0" />}
       {children}
     </motion.div>
+  );
+}
+
+/* ── Shared: Play Again ─────────────────────────────────────── */
+function PlayAgainButton({ onClick, disabled, label = "Play Again" }: { onClick: () => void; disabled?: boolean; label?: string }) {
+  return (
+    <button type="button" onClick={onClick} disabled={disabled}
+      className="inline-flex cursor-pointer items-center gap-2 rounded-2xl border-2 border-amber-500/60 bg-amber-500/10 px-8 py-4 font-display text-base font-black uppercase tracking-wider text-amber-300 transition-all hover:bg-amber-500/20 hover:scale-105 active:scale-105 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100">
+      <RotateCcw className="size-5" />{label}
+    </button>
   );
 }
 
@@ -517,6 +528,20 @@ function CoinflipGame({ state, dispatch }: { state: GameState; dispatch: React.D
             : won ? "You got a new car!" : `Your car is gone! ${lostCar}`}
           </ResultBadge>
         )}
+        {won !== null && !spinning && (
+          <PlayAgainButton
+            label={mode === "cash" ? undefined : "Pick Another Car"}
+            onClick={() => {
+              if (mode === "car") {
+                setSelectedCar(null); setWonCar(null); setLostCar(null);
+                setToss(null); setResult(null); setWon(null); setSettled(false);
+                return;
+              }
+              play();
+            }}
+            disabled={mode === "cash" ? state.cash < bet : false}
+          />
+        )}
         {wonCar && (
           <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="flex items-center gap-4 rounded-2xl border-2 border-green-500/50 bg-green-500/15 px-8 py-6">
             <Trophy className="size-8 text-green-400 shrink-0" />
@@ -642,6 +667,9 @@ function RouletteGame({ state, dispatch }: { state: GameState; dispatch: React.D
           {spinning ? "Spinning..." : "Bet"}
         </button>
         {won !== null && !spinning && <ResultBadge won={won}>{won ? `+$${winAmount.toLocaleString()}!` : `-$${bet.toLocaleString()}!`}</ResultBadge>}
+        {won !== null && !spinning && (
+          <PlayAgainButton onClick={spin} disabled={state.cash < bet} />
+        )}
         {carPrize && (
           <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="flex items-center gap-3 rounded-2xl border-2 border-amber-500/50 bg-amber-500/15 px-8 py-6">
             <Award className="size-8 text-amber-400 shrink-0" />
@@ -901,7 +929,7 @@ function CrashGame({ state, dispatch }: { state: GameState; dispatch: React.Disp
           <TrendingUp className="size-6" />
           {cooldown > 0
             ? `Next round in ${cooldown}s`
-            : `${crashed ? "Play Again" : "Start"} — $${bet.toLocaleString()}`}
+            : `${crashed || cashedOut ? "Play Again" : "Start"} — $${bet.toLocaleString()}`}
         </button>
       )}
       {cashedOut && <ResultBadge won={true}>Cashed out at {cashedAt.toFixed(2)}× — +${winAmount.toLocaleString()}</ResultBadge>}
@@ -990,6 +1018,9 @@ function MinesGame({ state, dispatch }: { state: GameState; dispatch: React.Disp
           </button>
         )}
         {won !== null && gameOver && <ResultBadge won={won > 0}>{won > 0 ? `+$${won.toLocaleString()}!` : `-$${Math.abs(won).toLocaleString()}!`}</ResultBadge>}
+        {won !== null && gameOver && (
+          <PlayAgainButton onClick={start} disabled={state.cash < bet} />
+        )}
         {carPrize && (
           <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="flex items-center gap-4 rounded-2xl border-2 border-amber-500/50 bg-amber-500/15 px-8 py-6">
             <Award className="size-8 text-amber-400 shrink-0" /><div><p className="text-sm font-bold uppercase tracking-wider text-amber-400">Casino Prize Won!</p><p className="mt-1 font-display text-2xl font-black text-white">{carPrize}</p></div>
@@ -1087,6 +1118,12 @@ function JackpotGame({ state, dispatch }: { state: GameState; dispatch: React.Di
           </div>
         )}
         {winner && <ResultBadge won={winner.includes("YOU")}>{winner}</ResultBadge>}
+        {winner && !spinning && (
+          <PlayAgainButton
+            onClick={() => { setWinner(null); setCarPrize(null); addCash(); }}
+            disabled={state.cash < bet}
+          />
+        )}
         {carPrize && (
           <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="flex items-center gap-3 rounded-xl border border-amber-500/50 bg-amber-500/20 px-6 py-4">
             <Award className="size-6 text-amber-400 shrink-0" /><div><p className="text-xs font-bold uppercase tracking-wider text-amber-400">Casino Prize Won!</p><p className="mt-1 font-display text-lg font-black text-white">{carPrize}</p></div>
@@ -1207,6 +1244,9 @@ function OnlineJackpot({ state, dispatch }: { state: GameState; dispatch: React.
           </>
         )}
         {winner && <ResultBadge won={winner === "YOU"}>{winner === "YOU" ? "You Won the Jackpot!" : `${winner} won!`}</ResultBadge>}
+        {winner && !round && (
+          <PlayAgainButton onClick={join} disabled={state.cash < bet} />
+        )}
         {carPrize && (
           <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="flex items-center gap-3 rounded-xl border border-amber-500/50 bg-amber-500/20 px-6 py-4">
             <Award className="size-6 text-amber-400 shrink-0" /><div><p className="text-xs font-bold uppercase tracking-wider text-amber-400">Casino Prize Won!</p><p className="mt-1 font-display text-lg font-black text-white">{carPrize}</p></div>
