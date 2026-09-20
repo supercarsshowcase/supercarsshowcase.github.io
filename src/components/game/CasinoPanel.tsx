@@ -912,6 +912,17 @@ function CrashGame({ state, dispatch }: { state: GameState; dispatch: React.Disp
 /* ══════════════════════════════════════════════════════════════════════════ */
 /*  MINES                                                                    */
 /* ══════════════════════════════════════════════════════════════════════════ */
+/** Fair-mines payout: C(25,k)/C(25−m,k) with a 3% house edge. The old
+ *  linear formula (1 + k/safe × m×1.2) was player-favorable — one safe
+ *  tile on a 5-mine board paid 1.30× against 80% survival (EV 1.04),
+ *  an infinite printer via single-tile cashouts. */
+function minesMultiplier(revealed: number, mineCount: number, tiles: number): number {
+  const safe = tiles - mineCount;
+  let fair = 1;
+  for (let i = 0; i < revealed; i++) fair *= (tiles - i) / (safe - i);
+  return 0.97 * fair;
+}
+
 function MinesGame({ state, dispatch }: { state: GameState; dispatch: React.Dispatch<Action> }) {
   const ROWS = 5, COLS = 5;
   const [bet, setBet] = useState(10000);
@@ -935,7 +946,7 @@ function MinesGame({ state, dispatch }: { state: GameState; dispatch: React.Disp
     if (mines.has(idx)) { setGameOver(true); setPlaying(false); setWon(-bet); toast.error("BOOM!"); }
     else {
       const nr = new Set(revealed); nr.add(idx); setRevealed(nr);
-      const safe = ROWS * COLS - mineCount; const mult = 1 + (nr.size / safe) * (mineCount * 1.2); setCurrentMult(mult);
+      const safe = ROWS * COLS - mineCount; const mult = minesMultiplier(nr.size, mineCount, ROWS * COLS); setCurrentMult(mult);
       if (nr.size === safe) {        const win = Math.floor(bet * mult); dispatch({ type: "ADD_CASH", amount: win }); setPlaying(false); setWon(win); toast.success(`All clear! +$${win.toLocaleString()}`); }
     }
   }, [playing, revealed, mines, bet, mineCount, dispatch]);
@@ -1027,11 +1038,11 @@ function JackpotGame({ state, dispatch }: { state: GameState; dispatch: React.Di
   useEffect(() => () => { if (drawTimer.current) clearTimeout(drawTimer.current); }, []);
   const draw = useCallback(() => {
     if (pool.length === 0) return toast.error("Pool is empty!"); setSpinning(true); setWinner(null); setCarPrize(null);
-    // LOST cars must leave the garage when the draw resolves: they were
-    // removed at add time but only 40% of draws pay the pot — the other 60%
-    // used to hand every wagered car back for free (pot/garage desync).
-    const carsInPool = pool.filter((p) => p.type === "car").map((p) => p.label);
-    drawTimer.current = setTimeout(() => { const playerWins = Math.random() < 0.4; if (playerWins) { dispatch({ type: "ADD_CASH", amount: totalPool }); const hasCars = pool.some((e) => e.type === "car"); if (hasCars) { const cp = checkCasinoPrize(dispatch); if (cp) { setCarPrize(cp); } } setWinner("YOU WON THE JACKPOT!"); } else { for (const label of carsInPool) { const def = Object.values(GAME_CAR_MAP).find((c) => `${c.brand} ${c.name}` === label); if (def) dispatch({ type: "ADD_CAR", carId: def.id }); } setWinner("House wins the jackpot"); } setPool([]); setSpinning(false); }, 3000);
+    // Wagered cars stay gone when the house wins: they were removed from
+    // the garage at add time, but the losing branch used to re-add every
+    // wagered car for free — a pot/garage desync that made car entries
+    // risk-free (60% of draws refunded the full car stake).
+    drawTimer.current = setTimeout(() => { const playerWins = Math.random() < 0.4; if (playerWins) { dispatch({ type: "ADD_CASH", amount: totalPool }); const hasCars = pool.some((e) => e.type === "car"); if (hasCars) { const cp = checkCasinoPrize(dispatch); if (cp) { setCarPrize(cp); } } setWinner("YOU WON THE JACKPOT!"); } else { setWinner("House wins the jackpot"); } setPool([]); setSpinning(false); }, 3000);
   }, [pool, totalPool, dispatch]);
 
   return (
@@ -1167,7 +1178,8 @@ function OnlineJackpot({ state, dispatch }: { state: GameState; dispatch: React.
     const opps = Array.from({ length: 2 + Math.floor(Math.random() * 4) }, () => ({ name: names[Math.floor(Math.random() * names.length)], amount: Math.floor(Math.random() * 1000000) + 10000 }));
     setPlayers([...opps, { name: "YOU", amount: bet }]); setRound(true); setWinner(null);
     roundTimer.current = setTimeout(() => { const all = [...opps, { name: "YOU", amount: bet }]; const total = all.reduce((s, p) => s + p.amount, 0);
-      const w = all[Math.floor(Math.random() * all.length)]; if (w.name === "YOU") { dispatch({ type: "ADD_CASH", amount: total }); toast.success(`JACKPOT! Won $${total.toLocaleString()}!`); }
+      let roll = Math.random() * total; let w = all[all.length - 1];
+      for (const p of all) { roll -= p.amount; if (roll <= 0) { w = p; break; } } if (w.name === "YOU") { dispatch({ type: "ADD_CASH", amount: total }); toast.success(`JACKPOT! Won $${total.toLocaleString()}!`); }
       else { toast.error(`${w.name} won $${total.toLocaleString()}`); } setWinner(w.name); setRound(false); }, 4000);
   }, [bet, state.cash, dispatch]);
 

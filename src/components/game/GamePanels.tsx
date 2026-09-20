@@ -358,7 +358,7 @@ function GaragePanel({ state, dispatch }: { state: GameState; dispatch: any }) {
                     {!active && <button type="button" onClick={() => dispatch({ type: "SET_ACTIVE", id: car.id })}
                       className="flex-1 rounded-md border border-apex-red/40 bg-apex-red/10 px-2 py-1.5 font-display text-[11px] font-bold uppercase tracking-[0.12em] text-white transition-colors hover:bg-apex-red">Drive</button>}
                     <button type="button" disabled={owned.length <= 1}
-                      onClick={() => { dispatch({ type: "SELL_CAR", id: car.id }); ye.success("Sold the " + car.name + " for " + Ie(Math.round(Ur(state, car.id) * 0.35))); }}
+                      onClick={() => { dispatch({ type: "SELL_CAR", id: car.id }); ye.success("Sold the " + car.name + " for " + Ie(Math.round(Ur(state, car.id) * 0.3))); }}
                       className="flex-1 rounded-md border border-white/15 px-2 py-1.5 font-display text-[11px] font-bold uppercase tracking-[0.12em] text-white/60 transition-colors hover:border-apex-red hover:text-apex-red disabled:cursor-not-allowed disabled:opacity-30">Sell</button>
                   </div>
                 </div>
@@ -584,7 +584,10 @@ function AchievementsPanel({ state }: { state: GameState }) {
 
 /* ─── PrestigePanel ─── */
 function PrestigePanel({ state, dispatch }: { state: GameState; dispatch: any }) {
-  const required = 5000 * (state.prestigeLevel + 1);
+  // MUST mirror the engine's PRESTIGE requirement (8000 × (level+1)). The old
+  // 5000 here made the button look claimable at 5K rep while the reducer
+  // silently no-op'd below 8K — clicks did nothing.
+  const required = 8000 * (state.prestigeLevel + 1);
   const canPrestige = state.reputation >= required;
   return (
     <div>
@@ -601,8 +604,8 @@ function PrestigePanel({ state, dispatch }: { state: GameState; dispatch: any })
           <Ge.div className="h-full rounded-full bg-apex-red" animate={{ width: Math.min(100, state.reputation / required * 100) + "%" }} />
         </div>
         <div className="mt-4 space-y-1 text-[12px] text-white/40">
-          <p>Keeps: prestige level, achievements, lifetime earnings.</p>
-          <p>Resets: cash, cars, parts, dealer stock, daily streak.</p>
+          <p>Keeps: prestige level — a permanent +5% to all earnings.</p>
+          <p>Resets: cash, cars, parts, level, achievements, daily streak.</p>
         </div>
         <button type="button" disabled={!canPrestige}
           onClick={() => { dispatch({ type: "PRESTIGE" }); ye.success("Prestige " + (state.prestigeLevel + 1) + " reached"); }}
