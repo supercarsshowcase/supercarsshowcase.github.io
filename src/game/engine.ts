@@ -829,6 +829,9 @@ export function gameReducer(prevState: GameState, action: Action): GameState {
       if (!def) return state;
       if (state.ownedCars[action.id]) return state;
       if (levelFrom(state) < def.unlockLevel) return state;
+      // The secret car is a click-milestone trophy — it must never be
+      // purchasable, at any price, even via a crafted dispatch.
+      if (isSecretCar(action.id)) return state;
       const price = buyPrice(action.id);
       if (state.cash < price) return state;
       const weekly = trackWeekly(state, "carsBought", 1);
@@ -1072,6 +1075,9 @@ export function gameReducer(prevState: GameState, action: Action): GameState {
     case "ADD_CAR": {
       if (state.ownedCars[action.carId]) return state;
       if (!GAME_CAR_MAP[action.carId]) return state;
+      // Secret car is granted ONLY by the CLICK milestone — any other
+      // dispatch path (admin gifts, future features) is refused.
+      if (isSecretCar(action.carId)) return state;
       return applyAchievements({
         ...state,
         ownedCars: { ...state.ownedCars, [action.carId]: { upgrades: {}, fuel: FUEL_MAX, clicksSinceFuel: 0 } },

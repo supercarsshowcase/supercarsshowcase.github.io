@@ -40,6 +40,7 @@ import {
   GARAGE_COPY,
 } from "@/data/page-copy";
 import { GAME_CAR_MAP } from "@/game/data";
+import { isSecretCar } from "@/game/engine";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -485,7 +486,7 @@ export default function Admin() {
   const [resetCasino, setResetCasino] = useState(false);
 
   const sortedGameCars = Object.entries(GAME_CAR_MAP)
-    
+    .filter(([id]) => !isSecretCar(id)) // click-milestone trophy — not giftable
     .sort(([, a], [, b]) => b.value - a.value);
 
   const newFeedbackCount =
