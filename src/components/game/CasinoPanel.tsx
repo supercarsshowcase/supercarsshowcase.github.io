@@ -29,6 +29,7 @@ import {
 import type { GameState } from "@/game/types";
 import type { Action } from "@/game/engine";
 import { GAME_CAR_MAP } from "@/game/data";
+import { minesMultiplier } from "@/game/casino-math";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useQuery, useMutation } from "convex/react";
@@ -912,16 +913,9 @@ function CrashGame({ state, dispatch }: { state: GameState; dispatch: React.Disp
 /* ══════════════════════════════════════════════════════════════════════════ */
 /*  MINES                                                                    */
 /* ══════════════════════════════════════════════════════════════════════════ */
-/** Fair-mines payout: C(25,k)/C(25−m,k) with a 3% house edge. The old
- *  linear formula (1 + k/safe × m×1.2) was player-favorable — one safe
- *  tile on a 5-mine board paid 1.30× against 80% survival (EV 1.04),
- *  an infinite printer via single-tile cashouts. */
-function minesMultiplier(revealed: number, mineCount: number, tiles: number): number {
-  const safe = tiles - mineCount;
-  let fair = 1;
-  for (let i = 0; i < revealed; i++) fair *= (tiles - i) / (safe - i);
-  return 0.97 * fair;
-}
+/** Payout math lives in @/game/casino-math (unit-tested); the old inline
+ *  formula was player-favorable — an infinite printer via single-tile
+ *  cashouts. */
 
 function MinesGame({ state, dispatch }: { state: GameState; dispatch: React.Dispatch<Action> }) {
   const ROWS = 5, COLS = 5;
