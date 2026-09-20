@@ -969,7 +969,7 @@ function MinesGame({ state, dispatch }: { state: GameState; dispatch: React.Disp
     else {
       const nr = new Set(revealed); nr.add(idx); setRevealed(nr);
       const safe = ROWS * COLS - mineCount; const mult = minesMultiplier(nr.size, mineCount, ROWS * COLS); setCurrentMult(mult);
-      if (nr.size === safe) {        const win = Math.floor(bet * mult); dispatch({ type: "ADD_CASH", amount: win }); setPlaying(false); setWon(win); toast.success(`All clear! +$${win.toLocaleString()}`); }
+      if (nr.size === safe) {        const win = Math.floor(bet * mult); dispatch({ type: "ADD_CASH", amount: win }); setPlaying(false); setWon(win); setGameOver(true); toast.success(`All clear! +${win.toLocaleString()}`); }
     }
   }, [playing, revealed, mines, bet, mineCount, dispatch]);
 
