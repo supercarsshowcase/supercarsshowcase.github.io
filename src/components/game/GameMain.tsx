@@ -151,9 +151,11 @@ function CountdownTimer({ expiresAt }: { expiresAt: number }) {
 
 /** Minimum ms between clicks. Below this, clicks are silently dropped. */
 const CLICK_COOLDOWN_MS = 40;
-/** If 8+ clicks land within 1 second, block for this long (ms). */
+/** If 12+ clicks land within 1 second, block for this long (ms).
+ *  8/s tripped for fast human clickers (double-tapping hits 8 easily);
+ *  12/s still catches autoclickers (which run 15-25/s past the 40ms cap). */
 const BURST_PENALTY_MS = 2000;
-const BURST_THRESHOLD = 8;
+const BURST_THRESHOLD = 12;
 const BURST_WINDOW_MS = 1000;
 
 /** The game runs fullscreen — the site header is hidden on /game.
@@ -249,6 +251,13 @@ export function GameMain({
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const now = Date.now();
 
+    // 0. Honor the active lockout FIRST — a hard synchronous bail. Checking
+    //    this after the timestamp push let locked-out clicks count toward the
+    //    burst threshold, so mashing re-triggered the penalty and reset the
+    //    unlock timer on every click: the 2s lockout never expired and the
+    //    earn zone felt permanently frozen.
+    if (clickBlockedRef.current) return;
+
     // 1. Minimum cooldown between clicks — blocks simple autoclickers
     if (now - lastClickAt.current < CLICK_COOLDOWN_MS) return;
     lastClickAt.current = now;
@@ -261,7 +270,7 @@ export function GameMain({
       clickTimestamps.current = [];
       clickBlockedRef.current = true;
       setClickBlocked(true);
-      toast.error("Too fast! Auto-clicking detected. Clicking paused.", {
+      toast.error("Too fast! Clicking paused for 2 seconds.", {
         duration: BURST_PENALTY_MS,
         style: { background: "#1a0404", border: "1px solid rgba(255,0,0,0.4)", color: "#fff" },
       });
@@ -274,9 +283,6 @@ export function GameMain({
       }, BURST_PENALTY_MS);
       return;
     }
-    // Honor the active lockout synchronously — no dispatches, no popup churn
-    // while clicking is paused (the visible state was already updated).
-    if (clickBlockedRef.current) return;
 
     const crit = Math.random() < critChance(state);
     const amount = Math.round(perClick * (crit ? 5 : 1));
