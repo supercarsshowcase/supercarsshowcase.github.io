@@ -7,7 +7,9 @@ import {
   PART_MAP,
   STARTER_ID,
   SECRET_CAR_ID,
+  SECRET_CAR_CLICKS,
   UPGRADE_MAP,
+  getMonday,
   levelFrom,
   questUnit,
   rarityIndex,
@@ -15,12 +17,12 @@ import {
   generateWeeklyChallenges,
   initialWeeklyState,
 } from "./data";
-import type { CrateResult, DealerDef, GameCarDef, GameState, SpinResult, WeeklyState, WeeklyChallenge, WantedBounty } from "./types";
+import type { CrateResult, DealerDef, GameCarDef, GameState, SpinResult, WeeklyState, WantedBounty } from "./types";
 
 const SAVE_KEY = "supercars.game.v1";
 const STORAGE_VERSION = 2;
 
-/** The Lucky Spin wheel is free once every 15 minutes. */
+/** The Lucky Spin wheel is free once every 30 minutes. */
 export const SPIN_COOLDOWN_MS = 30 * 60_000;
 /** Chance the wheel lands on a supercar (0.3%). */
 export const SPIN_CAR_CHANCE = 0.003;
@@ -37,7 +39,7 @@ export const CAR_PASSIVE_RATE = 0.00002;
  * it via the condition upgrade is the intended early loop, not income math.
  */
 const STARTER_CLICK_VALUE = 1;
-/** Upgrade costs: ~12x base so early upgrades cost minutes of income, not days. */
+/** Upgrade costs: 16x base so early upgrades cost minutes of income, not days. */
 const UPGRADE_COST_MULT = 16;
 /** Upgrade effects run at half the designed strength. */
 const UPGRADE_EFFECT_MULT = 0.5;
@@ -511,17 +513,25 @@ export type Action =
   | { type: "REFRESH_WANTED"; now: number; cost: number }
   | { type: "LOAD"; state: GameState };
 
-/** Ensure the weekly state matches the current week AND current level. */
+/** Ensure the weekly state matches the current week AND a playable level. */
 function ensureWeekly(s: GameState, now: number): WeeklyState {
-  const currentMonday = getMondayStr(now);
+  const currentMonday = getMonday(new Date(now));
   const level = levelFrom(s);
-  const sameWeek = s.weekly.weekStart === currentMonday;
-  const sameLevel = s.weekly.genLevel === level;
-  if (sameWeek && sameLevel) return s.weekly;
-  if (!sameWeek) {
-    // New week: fresh counters and a freshly scaled set of challenges.
+  if (s.weekly.weekStart === currentMonday) {
+    // Same week: the board stays FROZEN at the level it was generated for.
+    // Re-scaling targets mid-week made the "Earn $X this week" quest
+    // mathematically uncompletable — the target (40K·lvl²) grows ~8× faster
+    // than the level band (5K·(lvl−1)²), so every level-up moved the finish
+    // line further ahead than the earning that triggered it. A leveled-UP
+    // player keeps the week's original board and rewards; next week
+    // re-scales. Old saves without genLevel are treated as current (frozen).
+    const genLevel = s.weekly.genLevel ?? level;
+    if (level >= genLevel) return s.weekly;
+    // Level-DOWN mid-week (prestige / admin reset): regenerate a fresh board
+    // for the new level — carrying progress into smaller targets would make
+    // some challenges instantly claimable for free.
     return {
-      weekStart: currentMonday,
+      ...s.weekly,
       genLevel: level,
       weeklyEarned: 0,
       weeklyClicks: 0,
@@ -532,25 +542,18 @@ function ensureWeekly(s: GameState, now: number): WeeklyState {
       challenges: generateWeeklyChallenges(currentMonday, level),
     };
   }
-  // Same week but the player leveled up: migrate progress ONLY from the old
-  // challenge with the SAME metric — never from a different slot's metric,
-  // which would let a claim from one category free-claim another.
-  const fresh = generateWeeklyChallenges(currentMonday, level);
-  const merged: WeeklyChallenge[] = fresh.map((ch) => {
-    const old = s.weekly.challenges.find((o) => challengeMetric(o) === ch.metric);
-    if (!old) return ch;
-    return { ...ch, progress: old.progress, claimed: old.claimed };
-  });
-  return { ...s.weekly, genLevel: level, challenges: merged };
-}
-
-function getMondayStr(now: number): string {
-  const d = new Date(now);
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  d.setDate(diff);
-  d.setHours(0, 0, 0, 0);
-  return d.toISOString().split("T")[0];
+  // New week: fresh counters and a freshly scaled set of challenges.
+  return {
+    weekStart: currentMonday,
+    genLevel: level,
+    weeklyEarned: 0,
+    weeklyClicks: 0,
+    weeklyCarsBought: 0,
+    weeklyCratesOpened: 0,
+    weeklySpins: 0,
+    weeklyPrestiges: 0,
+    challenges: generateWeeklyChallenges(currentMonday, level),
+  };
 }
 
 /**
@@ -631,9 +634,9 @@ export function canCompleteBounty(state: GameState, bounty: WantedBounty): boole
  * Anchored to questUnit(level) = max(250, 3400 × lvl²) — the economy's level
  * yardstick — so fuel stays the same *fraction* of earning power at every
  * stage: a full tank costs 6% of a quest unit (0.06 × max(250, 3400·lvl²),
- * floored at FUEL_COST), i.e. ~$204 at level 1, ~$1.8K at level 3, ~$138K at
- * level 26. Prosperity alone can't make refueling free, but the tax never
- * outpaces income either.
+ * floored at FUEL_COST), i.e. the $200 floor at level 1, ~$1.8K at level 3,
+ * ~$138K at level 26. Prosperity alone can't make refueling free, but the
+ * tax never outpaces income either.
  */
 export function fuelCost(state: GameState, carId: string): number {
   const owned = state.ownedCars[carId];
@@ -713,11 +716,17 @@ export function critChance(state: GameState): number {
 
 export function gameReducer(prevState: GameState, action: Action): GameState {
   // Cheap weekly/bounty upkeep on every action — keeps boards live without
-  // dedicated timers. ensureWeekly also re-scales challenges after level-ups.
-  const weekly = ensureWeekly(prevState, Date.now());
+  // dedicated timers. Upkeep runs on the ACTION'S clock when it carries one
+  // (TICK, WEEKLY_CHECK, SPIN…): using Date.now() internally made WEEKLY_CHECK
+  // with an explicit timestamp process two different weeks in one dispatch
+  // (pre-switch upkeep vs the case body), so its output depended on wall-clock
+  // skew and convergence tests could observe a mid-dispatch regeneration.
+  const now =
+    "now" in action && typeof action.now === "number" ? action.now : Date.now();
+  const weekly = ensureWeekly(prevState, now);
   const upkeep = maintainBounties(
     weekly === prevState.weekly ? prevState : { ...prevState, weekly },
-    Date.now(),
+    now,
   );
   const state = upkeep;
   switch (action.type) {
@@ -731,10 +740,23 @@ export function gameReducer(prevState: GameState, action: Action): GameState {
       const weeklyEarned = trackWeekly(state, "earned", amount);
       const weeklyClicks = trackWeekly({ ...state, weekly: weeklyEarned }, "clicks", 1);
 
-      // Fuel depletion: every FUEL_DRAIN_INTERVAL clicks on a car, fuel drops 1
+      // Secret-car reveal: 300 clicks on the starter uncover the ghost
+      // prototype. >= so pre-fix saves that already banked 300+ clicks get
+      // it on their next starter click. applyAchievements below then pays
+      // the "secret-found" reward in the same pass.
+      const grantGhost =
+        wasStarter &&
+        nextClicks >= SECRET_CAR_CLICKS &&
+        !state.ownedCars[SECRET_CAR_ID] &&
+        Boolean(GAME_CAR_MAP[SECRET_CAR_ID]);
+
+      // Fuel depletion: every FUEL_DRAIN_INTERVAL clicks on a car, fuel drops 1.
+      // The starter is exempt — it's the eternal $1/click fallback, and letting
+      // it run dry soft-locked fresh accounts (0 fuel + <$200 cash = no income
+      // source left at all). It runs on hope, not gasoline.
       const activeOwned = state.ownedCars[state.activeCarId];
       let ownedCars = state.ownedCars;
-      if (activeOwned) {
+      if (activeOwned && !wasStarter) {
         const prevClicks = activeOwned.clicksSinceFuel ?? 0;
         const newClicks = prevClicks + 1;
         const fuel = activeOwned.fuel ?? FUEL_MAX;
@@ -763,7 +785,9 @@ export function gameReducer(prevState: GameState, action: Action): GameState {
         clicksOnStarter: nextClicks,
         lastTick: Date.now(),
         weekly: weeklyClicks,
-        ownedCars,
+        ownedCars: grantGhost
+          ? { ...ownedCars, [SECRET_CAR_ID]: { upgrades: {}, fuel: FUEL_MAX, clicksSinceFuel: 0 } }
+          : ownedCars,
       };
       return applyAchievements(next);
     }
@@ -1162,16 +1186,34 @@ function normalize(current: GameState, loaded: Partial<GameState>): GameState {
     base.lastSpinAt = 0;
     base.version = STORAGE_VERSION;
   }
-  // Ensure all owned cars have fuel fields (for old saves)
+  // Legacy/corrupt weekly state without a challenges array would crash every
+  // trackWeekly pass — regenerate the board defensively.
+  if (!Array.isArray(base.weekly?.challenges)) {
+    base.weekly = initialWeeklyState(Date.now(), levelFrom(base));
+  }
+  // Ensure all owned cars have fuel fields (for old saves). `upgrades` must
+  // default too: a legacy/corrupt row without it crashed conditionOf and
+  // carUpgradeMults with a TypeError on every read.
   const ownedCars: Record<string, { upgrades: Record<string, number>; fuel: number; clicksSinceFuel: number }> = {};
   for (const [id, owned] of Object.entries(base.ownedCars)) {
+    if (!owned) continue; // drop null/undefined rows outright
     ownedCars[id] = {
-      upgrades: owned.upgrades,
+      upgrades: owned.upgrades ?? {},
       fuel: owned.fuel ?? FUEL_MAX,
       clicksSinceFuel: owned.clicksSinceFuel ?? 0,
     };
   }
   base.ownedCars = ownedCars;
+  // A corrupt save can point activeCarId at a car the player doesn't own —
+  // clicking it would pay value-based cash for a car that isn't in the
+  // garage. An empty garage reseeds the click-only starter so the account
+  // always has its $1/click fallback.
+  if (!base.ownedCars[base.activeCarId]) {
+    if (Object.keys(base.ownedCars).length === 0) {
+      base.ownedCars[STARTER_ID] = { upgrades: {}, fuel: FUEL_MAX, clicksSinceFuel: 0 };
+    }
+    base.activeCarId = Object.keys(base.ownedCars)[0];
+  }
   // Fill any dealer that has no stock yet (old saves predate stock seeding).
   const dealerStock: Record<string, string[]> = {};
   for (const d of DEALERS) {

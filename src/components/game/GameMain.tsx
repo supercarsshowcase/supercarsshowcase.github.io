@@ -37,9 +37,12 @@ import {
   GAME_CAR_MAP,
   RARITY_META,
   STARTER_ID,
+  SECRET_CAR_ID,
+  SECRET_CAR_CLICKS,
   fmtMoney,
   fmtNum,
   gameCarImage,
+  getMonday,
   levelFrom,
 } from "@/game/data";
 import {
@@ -215,11 +218,14 @@ export function GameMain({
   const canClaim = now >= state.daily.nextClaimAt;
   const waitMin = canClaim ? 0 : Math.max(1, Math.ceil((state.daily.nextClaimAt - now) / 60000));
   const waitLabel = waitMin >= 60 ? `${Math.floor(waitMin / 60)}h ${waitMin % 60}m` : `${waitMin}m`;
-  const levelBase = Math.max(1, level - state.prestigeLevel * 10);
-  const xpForLevel = (Math.pow(levelBase, 2) - Math.pow(levelBase - 1, 2)) * 500;
-  const xpIntoLevel = Math.max(0, state.totalEarned - Math.pow(levelBase - 1, 2) * 500);
+  // XP bar math mirrors levelFrom (1 + floor(√(T/5000)) + prestigeLevel):
+  // base level B spans totalEarned [5000·(B−1)², 5000·B²). The old version
+  // used a 500 constant and subtracted prestige×10, so the bar never matched
+  // the real level curve — it filled ~10× early and broke after prestiging.
+  const levelBase = Math.max(1, level - state.prestigeLevel);
+  const xpForLevel = (Math.pow(levelBase, 2) - Math.pow(levelBase - 1, 2)) * 5_000;
+  const xpIntoLevel = Math.max(0, state.totalEarned - Math.pow(levelBase - 1, 2) * 5_000);
   const xpPct = Math.min(100, (xpIntoLevel / Math.max(1, xpForLevel)) * 100);
-  const nextLevelEarned = Math.pow(levelBase, 2) * 500;
 
   // Keep the zoom in sync with the window width. It's a pure function of
   // width — no content measurement, no feedback loop, no oscillation. The
@@ -275,6 +281,18 @@ export function GameMain({
     const crit = Math.random() < critChance(state);
     const amount = Math.round(perClick * (crit ? 5 : 1));
     dispatch({ type: "CLICK", amount, globalMultiplier });
+    // The reducer grants the ghost prototype on the 300th starter click —
+    // surface the moment instead of leaving the reveal silent.
+    if (
+      state.activeCarId === STARTER_ID &&
+      !state.ownedCars[SECRET_CAR_ID] &&
+      state.clicksOnStarter + 1 >= SECRET_CAR_CLICKS
+    ) {
+      toast.success("👻 Secret unlocked: The Ghost Prototype added to your garage!", {
+        duration: 8000,
+        style: { background: "#0a0a1a", border: "1px solid rgba(120,120,255,0.4)", color: "#fff" },
+      });
+    }
     const rect = e.currentTarget.getBoundingClientRect();
     const id = ++popupId.current;
     // Popup coordinates live inside the CSS-zoomed tree — convert the
@@ -1326,12 +1344,10 @@ function WeeklyChallenges({
   const hoursLeft = Math.floor((msLeft % 86_400_000) / 3_600_000);
   const timeLabel = daysLeft > 0 ? `${daysLeft}d ${hoursLeft}h` : `${hoursLeft}h`;
 
-  // Ensure weekly state is current
-  const currentMonday = new Date(now);
-  const d = currentMonday.getDay();
-  currentMonday.setDate(currentMonday.getDate() - d + (d === 0 ? -6 : 1));
-  currentMonday.setHours(0, 0, 0, 0);
-  const currentMondayStr = currentMonday.toISOString().split("T")[0];
+  // Ensure weekly state is current — shared, timezone-safe Monday calc (the
+  // old inline toISOString version disagreed with the reducer in UTC+
+  // timezones, re-triggering WEEKLY_CHECK on every render).
+  const currentMondayStr = getMonday(new Date(now));
   const playerLevel = levelFrom(state);
   // The WEEKLY_CHECK itself is guarded in the reducer; the effect only needs
   // to fire when the stored week/level actually disagrees with reality —

@@ -46,6 +46,8 @@ export const RARITY_META: Record<Rarity, RarityMeta> = {
 
 export const STARTER_ID = "rusty-hatch-91";
 export const SECRET_CAR_ID = "ghost-prototype";
+/** Starter clicks that reveal the secret car. */
+export const SECRET_CAR_CLICKS = 300;
 
 // ── Car definitions ───────────────────────────────────────────────────────────
 
@@ -709,13 +711,21 @@ export const ACHIEVEMENTS: AchievementDef[] = [
 
 // ── Weekly Challenges ─────────────────────────────────────────────────────────
 
-/** Get the ISO date string (YYYY-MM-DD) for the most recent Monday. */
+/** Get the ISO date string (YYYY-MM-DD) for the most recent Monday.
+ *  Timezone-safe: derives the Monday from LOCAL calendar fields and formats
+ *  them directly. The old `toISOString()` version shifted the date back a
+ *  day in UTC+ timezones (local Monday midnight is still Sunday in UTC),
+ *  which made ensureWeekly disagree with the stored weekStart and
+ *  regenerate the whole weekly board on every single reducer action. */
 export function getMonday(date: Date): string {
   const d = new Date(date);
   const day = d.getDay();
   const diff = d.getDate() - day + (day === 0 ? -6 : 1);
   d.setDate(diff);
-  return d.toISOString().split("T")[0];
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day_ = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day_}`;
 }
 
 /** Re-export the weekly types so engine/components can import them from here. */

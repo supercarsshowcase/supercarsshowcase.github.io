@@ -241,17 +241,35 @@ describe("fuelCost level scaling", () => {
     expect(next.cash).toBe(1);
   });
 
-  it("out-of-fuel clicks still drain fuel counters", () => {
+  it("the starter never burns fuel — no fresh-account soft-lock", () => {
+    // The starter is the eternal $1/click fallback. If it could run dry, a
+    // fresh account with <$200 cash (the refuel floor) and an empty tank had
+    // NO income source left — permanently stuck.
+    const s = initialGameState();
+    let next = s;
+    for (let i = 0; i < 250; i++) {
+      next = gameReducer(next, { type: "CLICK", amount: clickValue(next) });
+    }
+    expect(next.ownedCars[STARTER_ID].fuel).toBe(FUEL_MAX);
+    expect(next.ownedCars[STARTER_ID].clicksSinceFuel).toBe(0);
+    // And it keeps earning through all those clicks.
+    expect(clickValue(next)).toBe(1);
+  });
+
+  it("out-of-fuel clicks still drain fuel counters (non-starter cars)", () => {
     const s = make({
-      activeCarId: STARTER_ID,
+      activeCarId: "civic-lx-95",
       ownedCars: {
-        [STARTER_ID]: { upgrades: {}, fuel: 0, clicksSinceFuel: 99 },
+        [STARTER_ID]: { upgrades: {}, fuel: FUEL_MAX, clicksSinceFuel: 0 },
+        "civic-lx-95": { upgrades: {}, fuel: 0, clicksSinceFuel: 99 },
       },
     });
     const next = gameReducer(s, { type: "CLICK", amount: 0 });
     // fuel stays 0, but the click counter rolls over the drain interval
-    expect(next.ownedCars[STARTER_ID].fuel).toBe(0);
-    expect(next.ownedCars[STARTER_ID].clicksSinceFuel).toBe(0);
+    expect(next.ownedCars["civic-lx-95"].fuel).toBe(0);
+    expect(next.ownedCars["civic-lx-95"].clicksSinceFuel).toBe(0);
+    // …and the starter is untouched by clicks on another car.
+    expect(next.ownedCars[STARTER_ID].fuel).toBe(FUEL_MAX);
   });
 });
 
@@ -265,6 +283,58 @@ describe("upgradeCost", () => {
 });
 
 describe("car income balance", () => {
+  it("grants the ghost prototype on the 300th starter click (exactly once)", () => {
+    let s = initialGameState();
+    for (let i = 0; i < 299; i++) {
+      s = gameReducer(s, { type: "CLICK", amount: 1 });
+    }
+    expect(s.ownedCars["ghost-prototype"]).toBeUndefined();
+    s = gameReducer(s, { type: "CLICK", amount: 1 });
+    expect(s.ownedCars["ghost-prototype"]).toBeDefined();
+    // Achievement "secret-found" pays out in the same pass.
+    expect(s.achievements).toContain("secret-found");
+    // Secret cars are trophies — no passive income from the grant.
+    expect(passivePerSec(s)).toBe(0);
+    // Idempotent: further clicks never re-mint or duplicate the car.
+    const before = s.cash;
+    s = gameReducer(s, { type: "CLICK", amount: 1 });
+    expect(s.ownedCars["ghost-prototype"]).toBeDefined();
+    expect(s.cash).toBe(before + 1);
+    // Clicks on NON-starter cars never trigger the grant.
+    const other = make({
+      ownedCars: {
+        [STARTER_ID]: { upgrades: {}, fuel: FUEL_MAX, clicksSinceFuel: 0 },
+        "civic-lx-95": { upgrades: {}, fuel: FUEL_MAX, clicksSinceFuel: 0 },
+      },
+      activeCarId: "civic-lx-95",
+      clicksOnStarter: 299,
+    });
+    const after = gameReducer(other, { type: "CLICK", amount: 1 });
+    expect(after.ownedCars["ghost-prototype"]).toBeUndefined();
+  });
+
+  it("normalize repairs a corrupt save (missing upgrades, bad activeCarId, missing weekly)", () => {
+    // Loaded through the LOAD path so the defensive normalize() runs.
+    const corrupt = {
+      ...initialGameState(),
+      ownedCars: {
+        "civic-lx-95": { fuel: 50, clicksSinceFuel: 3 } as never,
+        [STARTER_ID]: undefined as never,
+      },
+      activeCarId: "car-i-never-owned",
+      weekly: { ...initialGameState().weekly, challenges: undefined as never },
+    };
+    const fixed = gameReducer(initialGameState(), { type: "LOAD", state: corrupt });
+    // Missing upgrades defaulted; the starter-less row kept its fuel.
+    expect(fixed.ownedCars["civic-lx-95"].upgrades).toEqual({});
+    expect(fixed.ownedCars["civic-lx-95"].fuel).toBe(50);
+    // activeCarId re-anchored to an owned car.
+    expect(fixed.ownedCars[fixed.activeCarId]).toBeDefined();
+    // Weekly board regenerated instead of crashing trackWeekly.
+    expect(Array.isArray(fixed.weekly.challenges)).toBe(true);
+    expect(fixed.weekly.challenges.length).toBeGreaterThan(0);
+  });
+
   it("every owned car pays $/sec proportional to its value (starter is click-only)", () => {
     // THE reported bug: cars generated $0/sec. Every non-secret car must
     // generate income, and pricier cars must pay strictly more. The starter

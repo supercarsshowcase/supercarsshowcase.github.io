@@ -6,6 +6,7 @@ import { useConvexAuth } from "convex/react";
 import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
 import { GameMain } from "@/components/game/GameMain";
+import type { GameState } from "@/game/types";
 import { gameReducer, loadGame, saveGame, passivePerSec } from "@/game/engine";
 import { GAME_CARS, levelFrom, fmtMoney } from "@/game/data";
 
@@ -93,11 +94,15 @@ export default function Game() {
     const { state: cloudState, updatedAt } = loadCloudSave;
     if (!cloudState) return;
     try {
-      const cloud = JSON.parse(cloudState);
+      const cloud = JSON.parse(cloudState) as Partial<GameState>;
       const local = loadGame();
       // Use cloud save if it's newer or local has less total earned
-      if (!local || cloud.totalEarned > local.totalEarned) {
-        dispatch({ type: "LOAD", state: cloud });
+      if (!local || (cloud.totalEarned ?? 0) > local.totalEarned) {
+        // Cloud saves carry the lastTick from when they were WRITTEN. Without
+        // stamping it to now, the loaded state instantly looks hours "away"
+        // and the first TICK re-credits that whole stale gap at 100% on top
+        // of whatever offline payout already ran against the local save.
+        dispatch({ type: "LOAD", state: { ...cloud, lastTick: Date.now() } as GameState });
         toast.success("☁️ Cloud save loaded!", {
           duration: 3000,
           style: { background: "#0a1520", border: "1px solid rgba(0,150,255,0.3)", color: "#fff" },

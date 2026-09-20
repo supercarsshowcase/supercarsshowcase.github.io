@@ -50,18 +50,39 @@ describe("weekly challenge convergence (freeze guard)", () => {
     expect(first.weekly.genLevel).toBeGreaterThan(0);
   });
 
-  test("WEEKLY_CHECK migrates progress when the player levels up mid-week", () => {
+  test("level-up mid-week FREEZES the board (targets must not chase the level)", () => {
     const s = initialGameState();
     const t = 1_700_000_000_000;
     const base = gameReducer(s, { type: "WEEKLY_CHECK", now: t });
-    // Simulate a level-up burst: totalEarned jumps several levels within the
-    // same week. The re-gen must keep the SAME weekStart and carry progress
-    // (not reset it) for matching metrics.
+    // The old behavior regenerated the board on every mid-week level-up.
+    // The earn target (40K·lvl²) grows ~8× faster than the level band
+    // (5K·(lvl−1)²), so each level-up pushed the finish line further than
+    // the earning that triggered it — mathematically uncompletable. Now a
+    // level-up keeps the week's original board, rewards and progress.
     const leveled = { ...base, totalEarned: base.totalEarned + 5_000_000 };
-    const migrated = gameReducer(leveled, { type: "WEEKLY_CHECK", now: t });
-    expect(migrated.weekly.weekStart).toBe(base.weekly.weekStart);
-    expect(migrated.weekly.genLevel).toBeGreaterThan(base.weekly.genLevel);
-    expect(migrated.weekly.challenges.length).toBe(base.weekly.challenges.length);
+    const frozen = gameReducer(leveled, { type: "WEEKLY_CHECK", now: t });
+    expect(frozen.weekly.weekStart).toBe(base.weekly.weekStart);
+    expect(frozen.weekly.genLevel).toBe(base.weekly.genLevel);
+    expect(frozen.weekly.challenges).toEqual(base.weekly.challenges);
+    // The extra earnings are NOT retroactively credited toward the old earn
+    // quest (its target was sized for the smaller level) — progress only
+    // counts actions taken while the board was live.
+    expect(frozen.weekly.weeklyEarned).toBe(base.weekly.weeklyEarned);
+  });
+
+  test("level-down mid-week regenerates the board for the new level", () => {
+    const s = { ...initialGameState(), totalEarned: 5_000_000 };
+    const t = 1_700_000_000_000;
+    const base = gameReducer(s, { type: "WEEKLY_CHECK", now: t });
+    expect(base.weekly.genLevel).toBeGreaterThan(1);
+    // Prestige/reset drops the player's level: carrying progress into
+    // smaller targets would make some challenges instantly claimable.
+    const dropped = { ...base, totalEarned: 1_000, prestigeLevel: 0 };
+    const regen = gameReducer(dropped, { type: "WEEKLY_CHECK", now: t });
+    expect(regen.weekly.weekStart).toBe(base.weekly.weekStart);
+    expect(regen.weekly.genLevel).toBe(1);
+    expect(regen.weekly.weeklyEarned).toBe(0);
+    expect(regen.weekly.challenges).not.toEqual(base.weekly.challenges);
   });
 });
 
