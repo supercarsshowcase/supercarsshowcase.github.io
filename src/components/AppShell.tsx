@@ -219,7 +219,7 @@ export function AppShell() {
             <Logo name={settings?.siteName} />
             {/* Nav tray — the links sit in a recessed panel; the active
                 route is a filled red chip instead of a thin underline. */}
-            <nav className="hidden items-center gap-0.5 rounded-lg border border-white/10 bg-white/[0.04] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] lg:flex">
+            <nav className="hidden items-center gap-0.5 rounded-lg border border-white/10 bg-white/[0.04] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] xl:flex">
               {NAV_LINKS.map((link) => (
                 <NavLink
                   key={link.to}
@@ -263,20 +263,20 @@ export function AppShell() {
                 md+ Surprise + tray + the right-side controls exceeded the
                 viewport and (body has overflow-x:hidden) the right-side
                 controls were silently CLIPPED — sign-in, favorites and the
-                currency selector became unreachable. Show it from xl. */}
+                currency selector became unreachable. Show it from 2xl. */}
             <button
               type="button"
               onClick={surpriseMe}
-              className="hidden items-center gap-2 rounded-md border border-apex-red/50 bg-apex-red/15 px-3 py-2 font-display text-[12px] font-semibold uppercase tracking-[0.14em] text-white shadow-[0_0_16px_rgba(255,46,0,0.2)] transition-all hover:bg-apex-red hover:shadow-[0_0_26px_rgba(255,46,0,0.45)] xl:flex"
+              className="hidden items-center gap-2 rounded-md border border-apex-red/50 bg-apex-red/15 px-3 py-2 font-display text-[12px] font-semibold uppercase tracking-[0.14em] text-white shadow-[0_0_16px_rgba(255,46,0,0.2)] transition-all hover:bg-apex-red hover:shadow-[0_0_26px_rgba(255,46,0,0.45)] 2xl:flex"
             >
               <Shuffle className="size-3.5" />
               {nav.surprise}
             </button>
 
             {/* Region selector — appears together with the desktop nav tray
-                (lg). At sm–md it competed with the tray for width and pushed
+                (2xl). At smaller widths it competed with the tray and pushed
                 the auth controls off-screen on laptops. */}
-            <div className="relative hidden lg:block">
+            <div className="relative hidden 2xl:block">
               <select
                 value={region}
                 onChange={(e) => setRegion(e.target.value)}
@@ -425,7 +425,7 @@ export function AppShell() {
             <button
               type="button"
               onClick={() => setMobileOpen((v) => !v)}
-              className="flex size-9 items-center justify-center rounded-md border border-white/10 bg-white/[0.04] text-white/80 transition-colors hover:border-apex-red hover:text-white lg:hidden"
+              className="flex size-9 items-center justify-center rounded-md border border-white/10 bg-white/[0.04] text-white/80 transition-colors hover:border-apex-red hover:text-white xl:hidden"
               aria-label="Menu"
             >
               {mobileOpen ? <X className="size-4" /> : <Menu className="size-4" />}
@@ -440,7 +440,7 @@ export function AppShell() {
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.22, ease: "easeOut" }}
-            className="overflow-hidden border-t border-apex-line bg-black/95 backdrop-blur-xl lg:hidden"
+            className="overflow-hidden border-t border-apex-line bg-black/95 backdrop-blur-xl xl:hidden"
           >
             <div className="flex flex-col px-4 py-3">
               {NAV_LINKS.map((link, i) => {

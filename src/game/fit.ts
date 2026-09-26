@@ -28,11 +28,11 @@ export const REM_PX = 16;
  * Guard the rem height of the game's own header row (title + stat pills,
  * measured in GameMain). The rails' fixed height must subtract it, because
  * the header row sits ABOVE the rails inside the same one-viewport slot.
- * Falls back to 2.75rem (the row's natural height) before the first
+ * Falls back to 3rem (2.75rem natural height + its mb-1.5 margin) before
  * measurement lands or if the measurement is somehow invalid.
  */
 export function gameHeaderRem(rem: number): number {
-  return Number.isFinite(rem) && rem > 0 ? rem : 2.75;
+  return Number.isFinite(rem) && rem > 0 ? rem : 3;
 }
 
 /**

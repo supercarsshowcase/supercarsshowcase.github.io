@@ -184,9 +184,9 @@ export function GameMain({
   // must subtract it too — otherwise the total is always one header taller
   // than the slot and the sidebar's bottom (Save/Reset) hangs below the
   // fold. Height varies with the pill row (wraps on narrower laptops), so
-  // measure instead of guessing; 2.75rem until the first measurement lands.
+  // measure instead of guessing; 3rem until the first measurement lands.
   const headerRef = useRef<HTMLDivElement>(null);
-  const [headerRem, setHeaderRem] = useState(2.75);
+  const [headerRem, setHeaderRem] = useState(3);
   useEffect(() => {
     const el = headerRef.current;
     if (!el) return;
@@ -406,7 +406,7 @@ export function GameMain({
           </div>
         </motion.div>
       )}      {/* ── Header ── */}
-      <div ref={headerRef} className="mb-1 flex items-center justify-between gap-1">
+      <div ref={headerRef} className="mb-1.5 flex items-center justify-between gap-1">
         <div>
           <p className="inline-flex items-center gap-1 font-display text-[9px] font-semibold uppercase tracking-[0.28em] text-apex-red">
             <span className="inline-block size-1 rounded-full bg-apex-red" />
@@ -428,9 +428,9 @@ export function GameMain({
           >
             <Home className="size-3.5" />
           </Link>
-          {/* Desktop pill row — unchanged on md+. Mobile gets the organized
+          {/* Desktop pill row — unchanged on lg+. Mobile gets the organized
               stat strip below instead of five cramped 9px pills. */}
-          <div className="hidden flex-wrap items-center gap-1.5 md:flex">
+          <div className="hidden flex-wrap items-center gap-1.5 lg:flex">
           <StatPill icon={Coins} label="Cash" value={fmtMoney(cash)} accent />
           <StatPill icon={TrendingUp} label="Income/s" value={fmtMoney(income)} />
           <StatPill icon={Star} label="Level" value={String(level)} />
@@ -440,7 +440,7 @@ export function GameMain({
             <button
               type="button"
               onClick={() => setChatOpen(true)}
-              className="inline-flex items-center gap-1 rounded-md border border-white/15 bg-apex-panel px-1.5 py-0.5 text-[10px] font-bold text-white/50 transition-colors hover:border-apex-red hover:text-white md:flex"
+              className="inline-flex items-center gap-1 rounded-md border border-white/15 bg-apex-panel px-1.5 py-0.5 text-[10px] font-bold text-white/50 transition-colors hover:border-apex-red hover:text-white lg:flex"
             >
               <MessageCircle className="size-2.5" />
               Chat

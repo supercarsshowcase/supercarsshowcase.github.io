@@ -101,11 +101,11 @@ describe("game header row share (laptop rail fit)", () => {
 
   it("falls back to the row's natural height for invalid measurements", () => {
     for (const bad of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
-      expect(gameHeaderRem(bad)).toBe(2.75);
+      expect(gameHeaderRem(bad)).toBe(3);
     }
   });
 
   it("shrinks the fixed rails by the header row on top of the default extra", () => {
-    expect(vpRail(1, 1 + 2.75)).toBe(`calc((100dvh - ${SITE_HEADER_REM}rem) / 1 - 3.75rem)`);
+    expect(vpRail(1, 1 + 3)).toBe(`calc((100dvh - ${SITE_HEADER_REM}rem) / 1 - 4rem)`);
   });
 });
