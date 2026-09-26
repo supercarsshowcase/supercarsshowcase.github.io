@@ -215,7 +215,7 @@ export function AppShell() {
           className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/[0.05] to-transparent"
         />
         <div className="relative mx-auto flex h-16 max-w-[1400px] items-center justify-between gap-2 px-3 sm:gap-3 sm:px-6">
-          <div className="flex items-center gap-6">
+          <div className="flex min-w-0 items-center gap-3 lg:gap-6">
             <Logo name={settings?.siteName} />
             {/* Nav tray — the links sit in a recessed panel; the active
                 route is a filled red chip instead of a thin underline. */}
@@ -256,18 +256,27 @@ export function AppShell() {
             </nav>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex min-w-0 flex-nowrap items-center gap-2 sm:gap-3">
+            {/* Surprise Me needs ~140px — showing it from md (768px) made
+                the header overflow on 1024–1279px laptops: the desktop nav
+                tray appears from lg (1024px) and needs ~400px on its own, so
+                md+ Surprise + tray + the right-side controls exceeded the
+                viewport and (body has overflow-x:hidden) the right-side
+                controls were silently CLIPPED — sign-in, favorites and the
+                currency selector became unreachable. Show it from xl. */}
             <button
               type="button"
               onClick={surpriseMe}
-              className="hidden items-center gap-2 rounded-md border border-apex-red/50 bg-apex-red/15 px-3 py-2 font-display text-[12px] font-semibold uppercase tracking-[0.14em] text-white shadow-[0_0_16px_rgba(255,46,0,0.2)] transition-all hover:bg-apex-red hover:shadow-[0_0_26px_rgba(255,46,0,0.45)] md:flex"
+              className="hidden items-center gap-2 rounded-md border border-apex-red/50 bg-apex-red/15 px-3 py-2 font-display text-[12px] font-semibold uppercase tracking-[0.14em] text-white shadow-[0_0_16px_rgba(255,46,0,0.2)] transition-all hover:bg-apex-red hover:shadow-[0_0_26px_rgba(255,46,0,0.45)] xl:flex"
             >
               <Shuffle className="size-3.5" />
               {nav.surprise}
             </button>
 
-            {/* Region selector */}
-            <div className="relative hidden sm:block">
+            {/* Region selector — appears together with the desktop nav tray
+                (lg). At sm–md it competed with the tray for width and pushed
+                the auth controls off-screen on laptops. */}
+            <div className="relative hidden lg:block">
               <select
                 value={region}
                 onChange={(e) => setRegion(e.target.value)}

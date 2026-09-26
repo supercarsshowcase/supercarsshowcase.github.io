@@ -58,7 +58,9 @@ import {
 } from "@/game/engine";
 import {
   gameEventBannerRem,
+  gameHeaderRem,
   gameZoom,
+  REM_PX,
   SITE_HEADER_REM,
   SITE_ZOOM,
   vpFill,
@@ -174,7 +176,26 @@ export function GameMain({
 }) {
   const [tab, setTab] = useState<TabId>("earn");
   const [showGiftModal, setShowGiftModal] = useState(false);
-  const [chatOpen, setChatOpen] = useState(true);
+  const [chatOpen, setChatOpen] = useState(
+    typeof window === "undefined" ? true : window.innerWidth >= 1280,
+  );
+  // Rendered height (rem) of the game's own header row (title + stat pills).
+  // It sits ABOVE the rails inside the game root, so the rails' fixed height
+  // must subtract it too — otherwise the total is always one header taller
+  // than the slot and the sidebar's bottom (Save/Reset) hangs below the
+  // fold. Height varies with the pill row (wraps on narrower laptops), so
+  // measure instead of guessing; 2.75rem until the first measurement lands.
+  const headerRef = useRef<HTMLDivElement>(null);
+  const [headerRem, setHeaderRem] = useState(2.75);
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const measure = () => setHeaderRem(el.getBoundingClientRect().height / REM_PX);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [popups, setPopups] = useState<Popup[]>([]);
@@ -385,7 +406,7 @@ export function GameMain({
           </div>
         </motion.div>
       )}      {/* ── Header ── */}
-      <div className="mb-1 flex items-center justify-between gap-1">
+      <div ref={headerRef} className="mb-1 flex items-center justify-between gap-1">
         <div>
           <p className="inline-flex items-center gap-1 font-display text-[9px] font-semibold uppercase tracking-[0.28em] text-apex-red">
             <span className="inline-block size-1 rounded-full bg-apex-red" />
@@ -431,7 +452,7 @@ export function GameMain({
 
       {/* ── Mobile stat strip — three organized, readable cells replace the
           cramped pill row. Desktop keeps the pills above. ── */}
-      <div className="mb-2 grid grid-cols-3 divide-x divide-apex-line overflow-hidden rounded-lg border border-apex-line bg-apex-panel md:hidden">
+      <div className="mb-2 grid grid-cols-3 divide-x divide-apex-line overflow-hidden rounded-lg border border-apex-line bg-apex-panel lg:hidden">
         <div className="min-w-0 px-2 py-1.5 text-center">
           <p className="text-[8px] font-semibold uppercase tracking-[0.2em] text-white/40">Cash</p>
           <p className="truncate font-display text-sm font-black text-apex-red">{fmtMoney(cash)}</p>
@@ -447,7 +468,7 @@ export function GameMain({
       </div>
 
       {/* ── Mobile action row (compact, thumb-friendly) ── */}
-      <div className="mb-1 flex items-center gap-1.5 md:hidden">
+      <div className="mb-1 flex items-center gap-1.5 lg:hidden">
         <button
           type="button"
           onClick={claimDaily}
@@ -474,14 +495,14 @@ export function GameMain({
       <div className="relative flex min-h-0 flex-1 items-stretch gap-3 overflow-visible">
         {/* ── Left sidebar (desktop) ── */}
         <aside
-          className="z-10 hidden w-[18rem] shrink-0 flex-col gap-2 md:sticky md:flex"
+          className="z-10 hidden w-[18rem] shrink-0 flex-col gap-2 lg:sticky lg:flex"
           style={{
             // FIXED height — identical on every tab — so switching Earn ↔
             // Garage ↔ Leaderboard can never stretch/squeeze the rails or
             // reshuffle the nav. Fills the game slot (viewport minus the
             // site header) exactly. Sticky keeps the nav and the save/reset
             // block pinned on screen while long panels scroll beside them.
-            height: vpRail(SITE_ZOOM * uiZoom, railExtraRem),
+          height: vpRail(SITE_ZOOM * uiZoom, railExtraRem + gameHeaderRem(headerRem)),
             top: "0.5rem",
           }}
         >
@@ -636,7 +657,7 @@ export function GameMain({
         <ChatPanel
           open={chatOpen}
           onToggle={() => setChatOpen((v) => !v)}
-          height={vpRail(SITE_ZOOM * uiZoom, railExtraRem)}
+          height={vpRail(SITE_ZOOM * uiZoom, railExtraRem + gameHeaderRem(headerRem))}
         />
       </div>
 
@@ -644,7 +665,7 @@ export function GameMain({
           flow and content can scroll clear of the fixed tab bar) and inside
           the zoom wrapper (so it scales with the game, never leaving a dead
           band). Desktop ignores it. */}
-      <div className="h-[76px] md:hidden" aria-hidden="true" />
+      <div className="h-[76px] lg:hidden" aria-hidden="true" />
       </div>
 
       {/* ── Mobile bottom tab bar — FIXED OUTSIDE the zoom wrapper (fixed
@@ -657,12 +678,12 @@ export function GameMain({
           bar dismisses the More sheet. Desktop never renders it (md:hidden). */}
       {moreOpen && (
         <div
-          className="fixed inset-0 z-30 md:hidden"
+          className="fixed inset-0 z-30 lg:hidden"
           onClick={() => setMoreOpen(false)}
           aria-hidden="true"
         />
       )}
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-apex-line bg-black/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden" style={{ touchAction: "manipulation" }}>
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-apex-line bg-black/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden" style={{ touchAction: "manipulation" }}>
         <div className="mx-auto grid max-w-lg grid-cols-6 px-1 select-none">
           {PRIMARY_TABS.map((id) => {
             const item = NAV.find((n) => n.id === id)!;

@@ -20,6 +20,21 @@ export const SITE_ZOOM = 1;
 /** Height of the site header (h-16 = 4rem) that sits above the game. */
 export const SITE_HEADER_REM = 4;
 
+/** Pixels per rem at the default root font size — used to convert measured
+ * pixel heights (getBoundingClientRect) into rem for the vp* calculators. */
+export const REM_PX = 16;
+
+/**
+ * Guard the rem height of the game's own header row (title + stat pills,
+ * measured in GameMain). The rails' fixed height must subtract it, because
+ * the header row sits ABOVE the rails inside the same one-viewport slot.
+ * Falls back to 2.75rem (the row's natural height) before the first
+ * measurement lands or if the measurement is somehow invalid.
+ */
+export function gameHeaderRem(rem: number): number {
+  return Number.isFinite(rem) && rem > 0 ? rem : 2.75;
+}
+
 /**
  * The game shell's zoom for a given window width. The game inherits the
  * site zoom and adds nothing of its own; kept as a function so GameMain and
@@ -51,7 +66,8 @@ export function vpFill(zoom: number): string {
  * FIXED pre-zoom height for the side rails (sidebar, chat). The rails live
  * INSIDE the game root, whose own min-height already excludes the site
  * header (vpFill) — so a rail is the game slot minus `extraRem` (the root's
- * 0.5rem×2 padding, plus the banner's share while an event is active).
+ * 0.5rem×2 padding, plus the banner's share while an event is active, plus
+ * the in-game header row via gameHeaderRem).
  * Fixed — not a max-height stretch — so the rails are IDENTICAL on every
  * tab; a stretch cap lets short tabs (Earn) size the rails differently than
  * long ones (Garage), which visibly reshuffled the nav on every tab switch.
