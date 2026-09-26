@@ -267,7 +267,7 @@ export function AppShell() {
             <button
               type="button"
               onClick={surpriseMe}
-              className="hidden items-center gap-2 rounded-md border border-apex-red/50 bg-apex-red/15 px-3 py-2 font-display text-[12px] font-semibold uppercase tracking-[0.14em] text-white shadow-[0_0_16px_rgba(255,46,0,0.2)] transition-all hover:bg-apex-red hover:shadow-[0_0_26px_rgba(255,46,0,0.45)] 2xl:flex"
+              className="hidden shrink-0 items-center gap-2 rounded-md border border-apex-red/50 bg-apex-red/15 px-3 py-2 font-display text-[12px] font-semibold uppercase tracking-[0.14em] text-white shadow-[0_0_16px_rgba(255,46,0,0.2)] transition-all hover:bg-apex-red hover:shadow-[0_0_26px_rgba(255,46,0,0.45)] 2xl:flex"
             >
               <Shuffle className="size-3.5" />
               {nav.surprise}
@@ -276,7 +276,7 @@ export function AppShell() {
             {/* Region selector — appears together with the desktop nav tray
                 (2xl). At smaller widths it competed with the tray and pushed
                 the auth controls off-screen on laptops. */}
-            <div className="relative hidden 2xl:block">
+            <div className="relative hidden shrink-0 2xl:block">
               <select
                 value={region}
                 onChange={(e) => setRegion(e.target.value)}
@@ -293,7 +293,7 @@ export function AppShell() {
             </div>
 
             {/* Currency selector */}
-            <div className="relative">
+            <div className="relative shrink-0">
               <select
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value as CurrencyCode)}
@@ -311,7 +311,7 @@ export function AppShell() {
 
             <Link
               to="/favorites"
-              className="relative flex size-9 items-center justify-center rounded-md border border-white/10 bg-white/[0.04] text-white/80 transition-colors hover:border-apex-red hover:text-white"
+              className="relative flex size-9 shrink-0 items-center justify-center rounded-md border border-white/10 bg-white/[0.04] text-white/80 transition-colors hover:border-apex-red hover:text-white"
               aria-label="Favorites"
             >
               <Heart className="size-4" />
@@ -328,7 +328,7 @@ export function AppShell() {
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
-                    className="flex size-9 items-center justify-center rounded-md border border-white/10 bg-white/[0.04] text-white/80 transition-colors hover:border-apex-red hover:text-white"
+                    className="flex size-9 shrink-0 items-center justify-center rounded-md border border-white/10 bg-white/[0.04] text-white/80 transition-colors hover:border-apex-red hover:text-white"
                     aria-label="Account"
                   >
                     {user?.image ? (
@@ -415,7 +415,7 @@ export function AppShell() {
             ) : (
               <Link
                 to="/auth"
-                className="inline-flex items-center gap-2 rounded-md bg-apex-red px-3.5 py-2 font-display text-[12px] font-semibold uppercase tracking-[0.12em] text-white shadow-[0_0_20px_rgba(255,46,0,0.35)] transition-all hover:bg-apex-red-bright hover:shadow-[0_0_28px_rgba(255,46,0,0.5)]"
+                className="inline-flex shrink-0 items-center gap-2 rounded-md bg-apex-red px-3.5 py-2 font-display text-[12px] font-semibold uppercase tracking-[0.12em] text-white shadow-[0_0_20px_rgba(255,46,0,0.35)] transition-all hover:bg-apex-red-bright hover:shadow-[0_0_28px_rgba(255,46,0,0.5)]"
               >
                 <LogIn className="size-3.5" />
                 <span className="hidden sm:inline">{nav.signIn}</span>
@@ -425,7 +425,7 @@ export function AppShell() {
             <button
               type="button"
               onClick={() => setMobileOpen((v) => !v)}
-              className="flex size-9 items-center justify-center rounded-md border border-white/10 bg-white/[0.04] text-white/80 transition-colors hover:border-apex-red hover:text-white xl:hidden"
+              className="flex size-9 shrink-0 items-center justify-center rounded-md border border-white/10 bg-white/[0.04] text-white/80 transition-colors hover:border-apex-red hover:text-white xl:hidden"
               aria-label="Menu"
             >
               {mobileOpen ? <X className="size-4" /> : <Menu className="size-4" />}
