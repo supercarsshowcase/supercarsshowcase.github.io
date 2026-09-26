@@ -68,7 +68,7 @@ import {
 } from "@/game/fit";
 import type { GameState } from "@/game/types";
 import { cn } from "@/lib/utils";
-import { formatChatTime } from "@/lib/format";
+import { canDeleteChatMessage, formatChatTime } from "@/lib/format";
 import { toast } from "sonner";
 import {
   BadgeCheck,
@@ -1082,7 +1082,6 @@ const STAFF_STYLES: Record<
   },
 };
 
-
 /** The verified check next to staff names in the mobile chat sheet. */
 function StaffMark({ role }: { role: string }) {
   const style = STAFF_STYLES[role];
@@ -1217,10 +1216,7 @@ function MobileChatSheet({ open, onClose }: { open: boolean; onClose: () => void
           const mine = user != null && msg.userId === user._id;
           const style = msg.role ? STAFF_STYLES[msg.role] : undefined;
           const isStaffMsg = Boolean(style);
-          // Staff can delete any message. Owners can additionally delete
-          // their own; admins/mods get no delete button on their own messages
-          // in this UI (the server would permit it — we stay conservative).
-          const canDelete = isStaff && (!mine || myRole === "owner");
+          const canDelete = canDeleteChatMessage(myRole, mine);
           return (
             <div key={msg._id} className={cn("flex items-start gap-2", mine && "flex-row-reverse")}>
               <div

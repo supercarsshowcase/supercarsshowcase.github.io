@@ -96,3 +96,17 @@ export function formatChatTime(ts: number): string {
   });
   return `${date}, ${time}`;
 }
+
+/**
+ * Who may delete a live-chat message. Staff (owner/admin/moderator) can
+ * delete anyone's message; owners can additionally delete their own.
+ * Admins and moderators get no delete button on their own messages in the
+ * UI — deliberate conservatism, the Convex mutation would permit it.
+ */
+export function canDeleteChatMessage(
+  viewerRole: string | null | undefined,
+  mine: boolean,
+): boolean {
+  const isStaff = viewerRole === "owner" || viewerRole === "admin" || viewerRole === "moderator";
+  return isStaff && (!mine || viewerRole === "owner");
+}
