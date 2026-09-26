@@ -25,6 +25,15 @@ const BOARD_LEAD_VERB: Record<RankBoardId, string> = {
   expensive: "outsells",
 };
 
+/** True when the runner-up must appear BEFORE the margin for the sentence
+ *  to read correctly ("outguns the X by 97 hp", not "outguns 97 hp by the X"). */
+const BOARD_RU_FIRST: Record<RankBoardId, boolean> = {
+  fastest: false,
+  quickest: false,
+  powerful: true,
+  expensive: true,
+};
+
 /** Completes the sentence for verb forms that need a different connective. */
 const BOARD_LEAD_SUFFIX: Record<RankBoardId, string> = {
   fastest: "over",
@@ -288,16 +297,27 @@ export default function Rankings() {
           })}
         </div>
 
-                {margin > 0 && leader && runnerUp && (
+        {margin > 0 && leader && runnerUp && (
           <p className="text-xs text-apex-muted">
             <span className="font-display font-bold uppercase tracking-[0.14em] text-white">
               {leader.brand} {leader.model}
             </span>{" "}
             {BOARD_LEAD_VERB[boardId]}{" "}
+            {BOARD_RU_FIRST[boardId] && (
+              <>
+                the {runnerUp.brand} {runnerUp.model}{" "}
+              </>
+            )}
             <span className="font-display font-bold text-apex-red">
               {board.format(margin, currency)}
-            </span>{" "}
-            {BOARD_LEAD_SUFFIX[boardId]} the {runnerUp.brand} {runnerUp.model}.
+            </span>
+            {!BOARD_RU_FIRST[boardId] && (
+              <>
+                {BOARD_LEAD_SUFFIX[boardId]} the {runnerUp.brand}{" "}
+                {runnerUp.model}
+              </>
+            )}
+            .
           </p>
         )}
       </div>

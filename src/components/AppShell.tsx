@@ -227,7 +227,7 @@ export function AppShell() {
                   end={link.end}
                   className={({ isActive }) =>
                     cn(
-                      "rounded-md px-3 py-1.5 font-display text-[13px] font-semibold uppercase tracking-[0.16em] transition-all",
+                      "shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 font-display text-[13px] font-semibold uppercase tracking-[0.16em] transition-all",
                       isActive
                         ? "bg-apex-red text-white shadow-[0_0_16px_rgba(255,46,0,0.5)]"
                         : "text-white/55 hover:bg-white/[0.08] hover:text-white",
@@ -242,7 +242,7 @@ export function AppShell() {
                   to="/admin"
                   className={({ isActive }) =>
                     cn(
-                      "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 font-display text-[13px] font-semibold uppercase tracking-[0.16em] transition-all",
+                      "inline-flex shrink-0 items-center gap-1.5 rounded-md px-3 py-1.5 font-display text-[13px] font-semibold uppercase tracking-[0.16em] transition-all",
                       isActive
                         ? "bg-apex-red/20 text-apex-red"
                         : "text-white/45 hover:bg-apex-red/10 hover:text-apex-red",
