@@ -146,7 +146,7 @@ function ResultBadge({ won, children }: { won: boolean; children: React.ReactNod
   return (
     <motion.div initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
       className={cn("flex items-center gap-3 rounded-2xl px-10 py-5 font-display text-2xl font-black border-2",
-        won ? "bg-green-500/15 text-green-400 border-green-500/30" : "bg-red-500/15 text-red-400 border-red-500/30"
+        won ? "bg-green-500/15 text-green-400 border-green-500/30 shadow-[0_0_40px_rgba(34,197,94,0.3)]" : "bg-red-500/15 text-red-400 border-red-500/30 shadow-[0_0_40px_rgba(239,68,68,0.3)]"
       )}>
       {won ? <Trophy className="size-8 shrink-0" /> : <XCircle className="size-8 shrink-0" />}
       {children}
@@ -158,7 +158,7 @@ function ResultBadge({ won, children }: { won: boolean; children: React.ReactNod
 function PlayAgainButton({ onClick, disabled, label = "Play Again" }: { onClick: () => void; disabled?: boolean; label?: string }) {
   return (
     <button type="button" onClick={onClick} disabled={disabled}
-      className="inline-flex cursor-pointer items-center gap-2 rounded-2xl border-2 border-amber-500/60 bg-amber-500/10 px-8 py-4 font-display text-base font-black uppercase tracking-wider text-amber-300 transition-all hover:bg-amber-500/20 hover:scale-105 active:scale-105 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100">
+      className="inline-flex cursor-pointer items-center gap-2 rounded-2xl border-2 border-amber-500/60 bg-amber-500/10 px-8 py-4 font-display text-base font-black uppercase tracking-wider text-amber-300 shadow-[0_0_24px_rgba(245,158,11,0.2)] transition-all hover:bg-amber-500/20 hover:shadow-[0_0_36px_rgba(245,158,11,0.35)] hover:scale-105 active:scale-105 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100">
       <RotateCcw className="size-5" />{label}
     </button>
   );
@@ -177,8 +177,8 @@ export function CasinoPanel({ state, dispatch }: { state: GameState; dispatch: R
         <AnimatePresence mode="wait">
           <motion.div key={game} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
             <button type="button" onClick={back}
-              className="mb-4 inline-flex items-center gap-2 rounded-lg border border-white/15 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white/50 transition-colors hover:border-apex-red hover:text-white">
-              <ArrowLeft className="size-3.5" /> Back to Casino
+              className="group mb-4 inline-flex items-center gap-2 rounded-lg border border-white/15 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white/50 transition-all hover:border-apex-red hover:text-white">
+              <ArrowLeft className="size-3.5 transition-transform group-hover:-translate-x-0.5" /> Back to Casino
             </button>
             {game === "coinflip" && <CoinflipGame state={state} dispatch={dispatch} />}
             {game === "roulette" && <RouletteGame state={state} dispatch={dispatch} />}
@@ -202,33 +202,61 @@ function CasinoLobby({ state, dispatch, onSelect }: { state: GameState; dispatch
 
   return (
     <div>
-      <div className="mb-6 text-center">
-        <h2 className="font-display text-4xl font-black text-white tracking-tight">Casino</h2>
+      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="font-display text-[11px] font-semibold uppercase tracking-[0.3em] text-apex-red">
+            Apex Casino
+          </p>
+          <h2 className="mt-1 font-display text-4xl font-black text-white tracking-tight">
+            Pick Your Table
+          </h2>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/5 px-4 py-2">
+            <DollarSign className="size-4 text-green-400" />
+            <div>
+              <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/40">Balance</p>
+              <p className="font-display text-sm font-black tabular-nums text-white">
+                ${state.cash.toLocaleString()}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/5 px-4 py-2">
+            <Car className="size-4 text-apex-red" />
+            <div>
+              <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/40">Cars</p>
+              <p className="font-display text-sm font-black tabular-nums text-white">
+                {Object.keys(state.ownedCars).length}
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div>
-          <p className="mb-3 text-center font-display text-xs font-bold uppercase tracking-[0.25em] text-white/40">Games</p>
+          <p className="mb-3 flex items-center gap-2 font-display text-xs font-bold uppercase tracking-[0.25em] text-white/40"><span className="h-3 w-1 rounded-full bg-apex-red" />Games</p>
           <div className="space-y-2">
             {offline.map((g) => (
               <button key={g.id} type="button" onClick={() => onSelect(g.id)}
-                className="flex w-full items-center gap-4 rounded-xl border border-white/10 bg-[#111114] p-4 text-left transition-all hover:border-apex-red/50 hover:bg-[#161619] group">
-                <div className="flex size-14 items-center justify-center rounded-xl bg-white/5 group-hover:scale-110 transition-transform">{g.icon}</div>
+                className="group flex w-full items-center gap-4 rounded-2xl border border-white/10 bg-gradient-to-b from-[#141417] to-[#0f0f12] p-4 text-left transition-all duration-300 hover:-translate-y-0.5 hover:border-apex-red/60 hover:shadow-[0_16px_40px_-16px_rgba(255,46,0,0.35)]">
+                <div className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-white/10 to-white/[0.02] ring-1 ring-white/10 transition-all duration-300 group-hover:scale-110 group-hover:from-apex-red/25 group-hover:to-apex-red/5 group-hover:ring-apex-red/40">{g.icon}</div>
                 <div className="flex-1">
                   <p className="font-display text-sm font-bold text-white group-hover:text-apex-red transition-colors">{g.name}</p>
                   <p className="text-xs text-white/35 mt-0.5">{g.desc}</p>
                 </div>
+                <ChevronRight className="size-4 shrink-0 text-white/20 transition-all duration-300 group-hover:translate-x-1 group-hover:text-apex-red" />
               </button>
             ))}
           </div>
         </div>
         <div>
-          <p className="mb-3 text-center font-display text-xs font-bold uppercase tracking-[0.25em] text-white/40">Online Games</p>
+          <p className="mb-3 flex items-center gap-2 font-display text-xs font-bold uppercase tracking-[0.25em] text-white/40"><span className="h-3 w-1 rounded-full bg-apex-red" />Online Games</p>
           <div className="space-y-2">
             {online.map((g) => (
               <button key={g.id} type="button" onClick={() => onSelect(g.id)}
-                className="flex w-full items-center gap-4 rounded-xl border border-white/10 bg-[#111114] p-4 text-left transition-all hover:border-apex-red/50 hover:bg-[#161619] group">
-                <div className="flex size-14 items-center justify-center rounded-xl bg-white/5 group-hover:scale-110 transition-transform">{g.icon}</div>
+                className="group flex w-full items-center gap-4 rounded-2xl border border-white/10 bg-gradient-to-b from-[#141417] to-[#0f0f12] p-4 text-left transition-all duration-300 hover:-translate-y-0.5 hover:border-apex-red/60 hover:shadow-[0_16px_40px_-16px_rgba(255,46,0,0.35)]">
+                <div className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-white/10 to-white/[0.02] ring-1 ring-white/10 transition-all duration-300 group-hover:scale-110 group-hover:from-apex-red/25 group-hover:to-apex-red/5 group-hover:ring-apex-red/40">{g.icon}</div>
                 <div className="flex-1">
                   <p className="font-display text-sm font-bold text-white group-hover:text-apex-red transition-colors">
                     {g.name}
@@ -237,6 +265,7 @@ function CasinoLobby({ state, dispatch, onSelect }: { state: GameState; dispatch
                   </p>
                   <p className="text-xs text-white/35 mt-0.5">{g.desc}</p>
                 </div>
+                <ChevronRight className="size-4 shrink-0 text-white/20 transition-all duration-300 group-hover:translate-x-1 group-hover:text-apex-red" />
               </button>
             ))}
           </div>
@@ -279,11 +308,11 @@ function TradeCarsPanel({ state, dispatch }: { state: GameState; dispatch: React
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[400px] overflow-y-auto pr-2">
           {ownedCars.map((car) => (
-            <div key={car.id} className="flex items-center gap-3 rounded-xl border border-white/10 bg-[#0a0a0c] p-3">
+            <div key={car.id} className="flex items-center gap-3 rounded-xl border border-white/10 bg-[#0a0a0c] p-3 transition-colors hover:border-apex-red/40">
               <Car className="size-4 shrink-0 text-white/30" />
               <div className="flex-1 min-w-0">
                 <p className="truncate text-xs font-bold text-white">{car.brand} {car.name}</p>
-                <p className="text-[11px] text-white/30">${Math.floor(car.value * 0.7).toLocaleString()} money</p>
+                <p className="text-[11px] text-white/30">${Math.floor(car.value * 0.7).toLocaleString()} cash</p>
               </div>
               <button type="button" onClick={() => trade(car.id)}
                 className="shrink-0 rounded-lg bg-apex-red/80 px-3 py-1.5 text-[11px] font-bold uppercase text-white hover:bg-apex-red">
@@ -333,10 +362,13 @@ function BetInput({ value, onChange, max }: { value: number; onChange: (v: numbe
 /* ── Helper: GameLayout ────────────────────────────────────────────────── */
 function GameLayout({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-[#111114] p-4 sm:p-8 lg:p-10">
+    <div className="rounded-2xl border border-white/10 bg-gradient-to-b from-[#131316] to-[#0e0e11] p-4 sm:p-8 lg:p-10">
       <div className="mb-6 flex items-center gap-3 sm:mb-8 sm:gap-4">
-        <div className="flex size-11 items-center justify-center rounded-xl bg-white/5 sm:size-14">{icon}</div>
-        <h3 className="font-display text-2xl font-black text-white sm:text-3xl">{title}</h3>
+        <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-apex-red/10 ring-1 ring-apex-red/30 sm:size-14">{icon}</div>
+        <div className="min-w-0">
+          <p className="mb-0.5 font-display text-[9px] font-semibold uppercase tracking-[0.3em] text-apex-red/80">Apex Casino</p>
+          <h3 className="truncate font-display text-2xl font-black text-white sm:text-3xl">{title}</h3>
+        </div>
       </div>
       {children}
     </div>
