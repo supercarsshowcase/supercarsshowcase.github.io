@@ -675,7 +675,7 @@ export function GameMain({
           aware, thumb-reachable. Primary tabs get their own slot; the
           remaining 10 live under More. ── */}
       {/* Tap-away layer: touch has no Escape, so a tap anywhere outside the
-          bar dismisses the More sheet. Desktop never renders it (md:hidden). */}
+          bar dismisses the More sheet. Desktop never renders it (lg:hidden). */}
       {moreOpen && (
         <div
           className="fixed inset-0 z-30 lg:hidden"
@@ -778,7 +778,7 @@ export function GameMain({
       />
 
       {/* Mobile chat — full-screen sheet, thumb-typing height. The desktop
-          rail (hidden md:flex) is untouched. */}
+          rail (hidden lg:flex) is untouched. */}
       <MobileChatSheet
         open={mobileChatOpen}
         onClose={() => setMobileChatOpen(false)}

@@ -159,7 +159,7 @@ export function ChatPanel({
        the sidebar (18rem) + chat + gaps + earn zone all have to fit, and
        the extra 0.75rem here was squeezing the earn zone hardest. */
     <div
-        className="hidden w-60 shrink-0 flex-col self-stretch overflow-hidden rounded-xl border border-apex-line bg-gradient-to-b from-[#101013] to-[#0a0a0c] shadow-[0_10px_40px_rgba(0,0,0,0.5)] md:flex xl:w-72"
+        className="hidden w-60 shrink-0 flex-col self-stretch overflow-hidden rounded-xl border border-apex-line bg-gradient-to-b from-[#101013] to-[#0a0a0c] shadow-[0_10px_40px_rgba(0,0,0,0.5)] lg:flex xl:w-72"
       style={{ height: height ?? "calc(100dvh - 0.75rem)" }}
     >
       {/* Header */}

@@ -6,6 +6,8 @@ import {
   vpFill,
   vpRail,
   gameEventBannerRem,
+  gameHeaderRem,
+  REM_PX,
 } from "./fit";
 
 /** The 0.5rem×2 root padding that vpRail subtracts by default. */
@@ -84,5 +86,26 @@ describe("viewport fill helpers", () => {
     expect(gameEventBannerRem(1)).toBeCloseTo(4.375, 3);
     expect(gameEventBannerRem(2)).toBeCloseTo(gameEventBannerRem(1) / 2, 10);
     expect(gameEventBannerRem(2)).toBeLessThan(gameEventBannerRem(1));
+  });
+});
+
+describe("game header row share (laptop rail fit)", () => {
+  it("exposes the rem conversion used for measured pixel heights", () => {
+    expect(REM_PX).toBe(16);
+  });
+
+  it("passes the measured header height through unchanged", () => {
+    expect(gameHeaderRem(2.75)).toBe(2.75);
+    expect(gameHeaderRem(3.5)).toBe(3.5);
+  });
+
+  it("falls back to the row's natural height for invalid measurements", () => {
+    for (const bad of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(gameHeaderRem(bad)).toBe(2.75);
+    }
+  });
+
+  it("shrinks the fixed rails by the header row on top of the default extra", () => {
+    expect(vpRail(1, 1 + 2.75)).toBe(`calc((100dvh - ${SITE_HEADER_REM}rem) / 1 - 3.75rem)`);
   });
 });
