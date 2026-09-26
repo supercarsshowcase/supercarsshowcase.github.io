@@ -12,12 +12,8 @@ import {
   Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatChatTime } from "@/lib/format";
 import { useAuth } from "@/hooks/use-auth";
-
-function formatTime(ts: number) {
-  const d = new Date(ts);
-  return `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
-}
 
 /** Staff identity — mirrors the announcement overlay colors exactly. */
 const ROLE_STYLES: Record<
@@ -203,7 +199,10 @@ export function ChatPanel({
           const mine = user != null && msg.userId === user._id;
           const style = msg.role ? ROLE_STYLES[msg.role] : undefined;
           const isStaffMsg = Boolean(style);
-          const canDelete = isStaff && !mine;
+          // Staff can delete any message. Owners can additionally delete
+          // their own; admins/mods get no delete button on their own messages
+          // in this UI (the server would permit it — we stay conservative).
+          const canDelete = isStaff && (!mine || myRole === "owner");
           return (
             <div
               key={msg._id}
@@ -272,7 +271,7 @@ export function ChatPanel({
                     </span>
                   )}
                   <span className="ml-auto shrink-0 text-[9px] text-white/25">
-                    {formatTime(msg.createdAt)}
+                    {formatChatTime(msg.createdAt)}
                   </span>
                   {canDelete && (
                     <button

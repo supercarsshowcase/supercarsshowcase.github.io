@@ -73,3 +73,26 @@ export function youtubeSearchUrl(query: string): string {
 export function wikipediaSearchUrl(query: string): string {
   return `https://en.wikipedia.org/w/index.php?search=${encodeURIComponent(query)}`;
 }
+
+/**
+ * Live-chat timestamp. Today shows just the time ("14:30"), yesterday is
+ * labelled, and anything older shows the full weekday, day, month and year
+ * so nothing in the scrollback is ambiguous ("Fri, 12 Sep 2025, 14:30").
+ * Locale-aware via Intl — renders in the viewer's own locale.
+ */
+export function formatChatTime(ts: number): string {
+  const d = new Date(ts);
+  const time = d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", hour12: false });
+  const now = new Date();
+  const startOfDay = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const days = Math.round((startOfDay(now) - startOfDay(d)) / 86_400_000);
+  if (days <= 0) return time;
+  if (days === 1) return `Yesterday ${time}`;
+  const date = d.toLocaleDateString(undefined, {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+  return `${date}, ${time}`;
+}
