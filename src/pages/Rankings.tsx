@@ -314,6 +314,10 @@ export default function Rankings() {
             </span>
             {!BOARD_RU_FIRST[boardId] && (
               <>
+                {/* Explicit {" "}: JSX collapses the newline after the margin
+                    span, so the connective would glue onto the margin text
+                    ("20 km/hover the Zenvo ST1"). */}
+                {" "}
                 {BOARD_LEAD_SUFFIX[boardId]} the {runnerUp.brand}{" "}
                 {runnerUp.model}
               </>

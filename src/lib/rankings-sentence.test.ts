@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, test as it, expect } from "bun:test";
 import { formatNumber, formatPriceCompact } from "@/lib/format";
 import type { Car } from "@/lib/types";
@@ -46,10 +47,10 @@ function sentence(boardId: RankBoardId, leader: Car, runnerUp: Car): string {
   if (ruFirst)
     parts.push(`the ${runnerUp.brand} ${runnerUp.model}`, BOARD_LEAD_SUFFIX[boardId]);
   parts.push(board.format(margin, "USD"));
+  // NB: join(" ") normalizes whitespace, so this mirror is blind to JSX-level
+  // whitespace bugs in the component (see the source-guard test below).
   if (!ruFirst)
-    parts.push(
-      `${BOARD_LEAD_SUFFIX[boardId] ?? "by"} the ${runnerUp.brand} ${runnerUp.model}`,
-    );
+    parts.push(`${BOARD_LEAD_SUFFIX[boardId]} the ${runnerUp.brand} ${runnerUp.model}`);
   return `${parts.join(" ")}.`;
 }
 
@@ -103,5 +104,15 @@ describe("leaderboard margin sentences", () => {
   it("hides the sentence entirely on a tie (margin 0)", () => {
     const tie = { ...rival, topSpeedKmh: champ.topSpeedKmh };
     expect(sentence("fastest", champ, tie)).toBe("");
+  });
+
+  it("keeps the explicit space between margin and connective (JSX whitespace)", () => {
+    // Regression: JSX collapses the newline after the margin span, so the
+    // fastest board rendered "… by 20 km/hover the Zenvo ST1.". The mirror
+    // above can't see this (its join normalizes whitespace), so guard the
+    // component source: the !ruFirst branch must open with an explicit
+    // `{" "}` token right before the connective.
+    const src = readFileSync("src/pages/Rankings.tsx", "utf8");
+    expect(src).toMatch(/\{" "\}\s*\{BOARD_LEAD_SUFFIX\[boardId\]\} the/);
   });
 });
