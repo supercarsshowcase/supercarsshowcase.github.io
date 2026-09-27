@@ -306,6 +306,7 @@ export default function Rankings() {
             {BOARD_RU_FIRST[boardId] && (
               <>
                 the {runnerUp.brand} {runnerUp.model}{" "}
+                {BOARD_LEAD_SUFFIX[boardId]}{" "}
               </>
             )}
             <span className="font-display font-bold text-apex-red">
