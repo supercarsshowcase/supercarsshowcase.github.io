@@ -81,9 +81,14 @@ function Logo({ name }: { name?: string }) {
       </span>
       {/* Multi-word site names used to overflow small phones — first word
           always shows; from the second on, phones keep just the initial
-          dot-joined word, desktop keeps everything. */}
-      <span className="flex min-w-0 items-center gap-1.5 truncate sm:gap-1.5">
-        <span className="font-display text-base font-black uppercase tracking-tight text-white sm:text-lg">
+          dot-joined word, desktop keeps everything. The first word renders
+          smaller on phones (text-sm + tracking-tighter, ~35px narrower than
+          text-base) so it never flex-squeezes into a mid-word clip like
+          "SUPERCA…" — every header control around it is shrink-0, so the
+          wordmark was the only compressible element. truncate stays as the
+          last resort for very long admin-set names on 320px screens. */}
+      <span className="flex min-w-0 items-center gap-1.5 truncate whitespace-nowrap sm:gap-1.5">
+        <span className="font-display text-sm font-black uppercase tracking-tighter text-white sm:text-lg sm:tracking-tight">
           {words[0]}
         </span>
         {words.slice(1).map((word, i) => (
