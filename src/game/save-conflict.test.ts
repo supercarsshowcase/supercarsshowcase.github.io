@@ -72,6 +72,33 @@ describe("resolveSaveConflict", () => {
     expect(resolveSaveConflict(local, cloud)).toBe(local);
   });
 
+  it("fresh-session creep does NOT count as progress (clicks grant money+rep+achievements in seconds)", () => {
+    // A few stray clicks on a new device before the cloud query resolved:
+    // totalEarned < $1k, reputation > 0, first-click achievement — all three
+    // used to make this save look "real" and win the timestamp tiebreak.
+    const creeped: Partial<GameState> = {
+      ...base,
+      savedAt: 9_000,
+      totalEarned: 500,
+      reputation: 5,
+      achievements: ["first-click"],
+    };
+    const cloud = rich({ savedAt: undefined }); // legacy, much older
+    expect(resolveSaveConflict(creeped, cloud)).toBe(cloud);
+  });
+
+  it("totalEarned above the $1k lifetime threshold DOES count as progress", () => {
+    // Crosses the threshold → real, so it beats a fresher but fake save.
+    const groundDown = starterOnly({ totalEarned: 1_001, savedAt: 5_000 });
+    const freshFake = starterOnly({ savedAt: 9_000 });
+    expect(resolveSaveConflict(groundDown, freshFake)).toBe(groundDown);
+    // Exactly at the threshold (> is strict) → still fake, loses to a real
+    // legacy cloud save despite being fresher.
+    const justBelow = starterOnly({ totalEarned: 1_000, savedAt: 9_000 });
+    const legacyCloud = rich({ savedAt: undefined });
+    expect(resolveSaveConflict(justBelow, legacyCloud)).toBe(legacyCloud);
+  });
+
   it("real-progress guard works for legacy saves on BOTH sides", () => {
     // Prestiged local state: cars kept, totalEarned reset to 0, no stamp
     // (legacy), yet it must still beat a starter-only stamped cloud save.

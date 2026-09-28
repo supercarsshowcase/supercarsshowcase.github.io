@@ -30,10 +30,20 @@ export default function Game() {
   const claimGift = useMutation(api.adminAbuse.claimGift);
   const upsertScore = useMutation(api.leaderboard.upsertScore);
 
-  const { isAuthenticated } = useConvexAuth();
+  const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
   const loadCloudSave = useQuery(api.gameSaves.load);
   const saveCloudSave = useMutation(api.gameSaves.save);
   const cloudLoadedRef = useRef(false);
+  // Cloud gate (see the sync block below): offline-earnings and gift cash
+  // must not land in state before arbitration has run. Ref mirrors the state
+  // so interval/visibility closures can read it without re-subscribing.
+  const [cloudGate, setCloudGate] = useState(false);
+  const cloudGateRef = useRef(false);
+  const openCloudGate = () => {
+    if (cloudGateRef.current) return;
+    cloudGateRef.current = true;
+    setCloudGate(true);
+  };
 
   const [state, dispatch] = useReducer(gameReducer, undefined, loadGame);
   const stateRef = useRef(state);
@@ -80,7 +90,7 @@ export default function Game() {
   // would re-credit the whole away-gap at 100%. Rate: half the live income,
   // capped at 8h, only for absences longer than a minute.
   useEffect(() => {
-    if (offlineClaimedRef.current) return;
+    if (!cloudGate || offlineClaimedRef.current) return;
     offlineClaimedRef.current = true;
     const boot = bootStateRef.current;
     const awayMs = Date.now() - boot.lastTick;
@@ -91,9 +101,15 @@ export default function Game() {
     // double-pay the gap (at zero earnings it just resets the clock).
     dispatch({ type: "CLAIM_OFFLINE", amount, now: Date.now() });
     if (amount > 0) setOffline({ amount, awayMs: cappedMs });
-  }, []);
+  }, [cloudGate]);
 
   // ── Cloud save sync ──
+  // Gate: the offline-earnings claim and admin-gift consumption both dispatch
+  // cash into state on mount, and those dispatches must NOT land before the
+  // cloud arbitration has either loaded the cloud save or decided it loses.
+  // Otherwise a gift-inflated fresh local state wins the timestamp tiebreak
+  // and the periodic writer clobbers the cloud with it. cloudReadyRef starts
+  // false and flips once arbitration has run its course for this mount.
   // On mount, load the cloud save and arbitrate it against the local one via
   // resolveSaveConflict (one-sided-progress guard, then newest-write-wins).
   // The old totalEarned tiebreaker let a new device's starter-only autosave
@@ -103,7 +119,11 @@ export default function Game() {
     if (!isAuthenticated || !loadCloudSave || cloudLoadedRef.current) return;
     cloudLoadedRef.current = true;
     const { state: cloudState } = loadCloudSave;
-    if (!cloudState) return;
+    if (!cloudState) {
+      // Authenticated with no cloud save: nothing to arbitrate.
+      openCloudGate();
+      return;
+    }
     try {
       const cloud = JSON.parse(cloudState) as Partial<GameState>;
       const local = loadGame();
@@ -120,7 +140,18 @@ export default function Game() {
         });
       }
     } catch { /* ignore corrupt cloud save */ }
+    // Arbitration has run its course for this mount (loaded, kept local, or
+    // hit a corrupt payload) — mount-time cash dispatches are safe now.
+    openCloudGate();
   }, [isAuthenticated, loadCloudSave]);
+
+  // Fallback gate-open for sessions where the load effect never runs:
+  // signed-out players (no cloud to arbitrate) and authenticated players
+  // whose account simply has no save yet (loadCloudSave === null).
+  useEffect(() => {
+    if (authLoading) return;
+    if (!isAuthenticated || loadCloudSave !== undefined) openCloudGate();
+  }, [authLoading, isAuthenticated, loadCloudSave]);
 
   // Save to cloud periodically alongside localStorage.
   // Use a ref so the interval always calls the latest version.
@@ -139,9 +170,11 @@ export default function Game() {
   };
 
   // Consume admin gifts (money / cars) on mount and when new gifts arrive.
+  // Gated on cloudGate: a gift landing before arbitration would inflate the
+  // fresh local state and let it out-rank the player's real cloud save.
   const claimedGiftsRef = useRef(new Set<string>());
   useEffect(() => {
-    if (!gifts || gifts.length === 0) return;
+    if (!cloudGate || !gifts || gifts.length === 0) return;
     for (const gift of gifts) {
       if (claimedGiftsRef.current.has(gift._id)) continue;
       claimedGiftsRef.current.add(gift._id);
@@ -211,7 +244,7 @@ export default function Game() {
       // unhandled rejections from a flaky network).
       claimGift({ giftId: gift._id }).catch(() => {});
     }
-  }, [gifts, claimGift]);
+  }, [cloudGate, gifts, claimGift]);
 
   // Persist every few seconds and on tab hide/unload.
   // Cloud writes are 6× rarer than local ones: every cloud write also
@@ -223,18 +256,20 @@ export default function Game() {
       if (!stateRef.current) return;
       saveGame(stateRef.current);
       ticks += 1;
-      if (ticks % 6 === 0) saveCloudRef.current(); // ~every 30s
+      // Cloud writes wait for the gate (see cloudGateRef above); local saves
+      // are per-device and always safe.
+      if (ticks % 6 === 0 && cloudGateRef.current) saveCloudRef.current(); // ~every 30s
     }, SAVE_INTERVAL_MS);
     const onVisibility = () => {
       if (document.visibilityState === "hidden" && stateRef.current) {
         saveGame(stateRef.current);
-        saveCloudRef.current();
+        if (cloudGateRef.current) saveCloudRef.current();
       }
     };
     const onPageHide = () => {
       if (stateRef.current) {
         saveGame(stateRef.current);
-        saveCloudRef.current();
+        if (cloudGateRef.current) saveCloudRef.current();
       }
     };
     document.addEventListener("visibilitychange", onVisibility);
@@ -245,7 +280,7 @@ export default function Game() {
       window.removeEventListener("pagehide", onPageHide);
       if (stateRef.current) {
         saveGame(stateRef.current);
-        saveCloudRef.current();
+        if (cloudGateRef.current) saveCloudRef.current();
       }
     };
   }, []);

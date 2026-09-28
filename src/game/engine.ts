@@ -19,7 +19,7 @@ import {
 } from "./data";
 import type { CrateResult, DealerDef, GameCarDef, GameState, SpinResult, WeeklyState, WantedBounty } from "./types";
 
-const SAVE_KEY = "supercars.game.v1";
+export const SAVE_KEY = "supercars.game.v1";
 const STORAGE_VERSION = 2;
 
 /** The Lucky Spin wheel is free once every 30 minutes. */
@@ -1272,14 +1272,26 @@ export function serializeSave(state: GameState): string {
 /** Tolerance for near-simultaneous writes (two tabs, clock jitter). */
 const SAVE_SKEW_MS = 90_000;
 
-/** True when a save shows real play beyond the auto-granted starter car. */
+/**
+ * True when a save shows real play that a brand-new device could NOT have
+ * within the first seconds of a session.
+ *
+ * Deliberately EXCLUDES totalEarned/reputation below the threshold and
+ * achievements: clicks grant all three almost instantly ("first-click" fires
+ * on click #1), so on a fresh device one stray click before the cloud-save
+ * query resolved used to make the empty local save look "real" and win the
+ * timestamp tiebreak against the player's actual cloud save. Prestige keeps
+ * its level and casino losses keep the garage, so those signals are safe.
+ */
 function hasRealProgress(s: Partial<GameState>): boolean {
   return (
     Object.keys(s.ownedCars ?? {}).some((id) => id !== STARTER_ID) ||
     Object.keys(s.inventory ?? {}).length > 0 ||
-    (s.totalEarned ?? 0) > 0 ||
-    (s.reputation ?? 0) > 0 ||
-    (s.prestigeLevel ?? 0) > 0
+    (s.prestigeLevel ?? 0) > 0 ||
+    // Lifetime accumulator: crosses $1k only after real play (car buys,
+    // quests, days of idling) — never from the passive/click creep of a
+    // fresh session's first seconds.
+    (s.totalEarned ?? 0) > 1_000
   );
 }
 
@@ -1303,11 +1315,10 @@ function hasRealProgress(s: Partial<GameState>): boolean {
  * 3. Both stamped → newest write wins, clamped by SAVE_SKEW_MS.
  * 4. Both legacy → old totalEarned heuristic (unchanged behavior).
  *
- * Known narrow caveat: prestiging on new code while the cloud still holds a
- * legacy save can let that legacy save roll the local prestige state back —
- * only possible if the tab died within the ~30s cloud-save window after
- * prestiging. Rule 1 must outrank rule 2 because mistaking a fresh device's
- * save for "no progress" loses a whole garage, which is far worse.
+ * Note rule 2 is asymmetric by design: a legacy cloud save can never roll
+ * back a stamped local state, and rule 1 covers the fresh-device case for
+ * legacy clouds. Residual accepted edge: a sub-$1k-lifetime account played
+ * on two devices resolves by last-write-wins — negligible stakes.
  */
 export function resolveSaveConflict(
   local: Partial<GameState> | null,

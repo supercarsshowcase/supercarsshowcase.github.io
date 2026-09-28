@@ -54,6 +54,8 @@ import {
   fuelCost,
   FUEL_MAX,
   passivePerSec,
+  serializeSave,
+  SAVE_KEY,
   type Action,
 } from "@/game/engine";
 import {
@@ -349,7 +351,10 @@ export function GameMain({
   };
 
   const saveNow = () => {
-    localStorage.setItem("supercars.game.v1", JSON.stringify(state));
+    // serializeSave (not raw JSON.stringify): manual saves must carry the
+    // savedAt/deviceId stamps that cloud save arbitration consumes, and must
+    // not drift from SAVE_KEY if the storage key ever changes.
+    localStorage.setItem(SAVE_KEY, serializeSave(state));
     toast.success("Game saved");
   };
 
