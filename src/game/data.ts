@@ -159,7 +159,7 @@ const rawCars: CarSpec[] = [
   ["infinity-one-27", "One-off", "Infinity One", 2027, "", 3000, 560, 1.5, 900000000, "ultimate", 330, "vault", 10],
 ];
 
-export const GAME_CARS: GameCarDef[] = [
+const BASE_GAME_CARS: GameCarDef[] = [
   ...rawCars.map(car),
   // Secret car — granted after 300 starter clicks, never sold or crated.
   {
@@ -210,6 +210,117 @@ export const GAME_CARS: GameCarDef[] = [
   { id: "casino-vantage", brand: "Aston Martin", name: "Vantage Casino Edition", year: 2018, gallerySlug: "", hp: 503, topSpeed: 314, accel: 3.5, value: 1500000, rarity: "legendary", unlockLevel: 1, dealer: "vault", crateTier: 0, secret: false },
   { id: "casino-amg-gt", brand: "Mercedes-AMG", name: "AMG GT Casino Edition", year: 2015, gallerySlug: "", hp: 503, topSpeed: 304, accel: 3.9, value: 1200000, rarity: "legendary", unlockLevel: 1, dealer: "vault", crateTier: 0, secret: false },
 ];
+
+// ── Archive-derived cars (the 900+ expansion) ────────────────────────────────
+// Every showcase car becomes collectible: value = showcase price ×
+// CAR_VALUE_MULT, rarity/level/dealer/crate derived from the same price
+// bands the hand-written ladder uses. Ids are archive slugs (unique vs all
+// hand-written ids); gallerySlug points at the car itself so
+// gameCarImage resolves its verified photo (or the generated scene).
+
+const CRATE_TIER_BY_RARITY: Record<Rarity, number> = {
+  common: 1,
+  uncommon: 2,
+  rare: 3,
+  epic: 4,
+  legendary: 5,
+  exotic: 6,
+  hyper: 7,
+  mythic: 8,
+  ultimate: 10,
+};
+
+/** Rarity from showcase price, mirroring the hand-written ladder's bands. */
+function archiveRarity(priceUSD: number): Rarity {
+  if (priceUSD < 30_000) return "common";
+  if (priceUSD < 60_000) return "uncommon";
+  if (priceUSD < 100_000) return "rare";
+  if (priceUSD < 200_000) return "epic";
+  if (priceUSD < 400_000) return "legendary";
+  if (priceUSD < 1_000_000) return "exotic";
+  if (priceUSD < 3_000_000) return "hyper";
+  if (priceUSD < 10_000_000) return "mythic";
+  return "ultimate";
+}
+
+/** Piecewise-linear unlock level over the hand-written ladder's anchors. */
+const UNLOCK_ANCHORS: [value: number, level: number][] = [
+  [20_000, 6], [50_000, 10], [100_000, 13], [150_000, 17], [200_000, 21],
+  [300_000, 27], [430_000, 33], [620_000, 38], [900_000, 45], [1_250_000, 52],
+  [1_900_000, 60], [3_200_000, 65], [5_200_000, 72], [8_400_000, 80],
+  [12_500_000, 90], [21_000_000, 110], [42_000_000, 135], [65_000_000, 150],
+  [110_000_000, 200], [300_000_000, 260], [900_000_000, 330],
+];
+function archiveLevel(value: number): number {
+  if (value <= UNLOCK_ANCHORS[0][0]) return UNLOCK_ANCHORS[0][1];
+  for (let i = 1; i < UNLOCK_ANCHORS.length; i++) {
+    const [v1, l1] = UNLOCK_ANCHORS[i - 1];
+    const [v2, l2] = UNLOCK_ANCHORS[i];
+    if (value <= v2) return Math.round(l1 + ((value - v1) / (v2 - v1)) * (l2 - l1));
+  }
+  return UNLOCK_ANCHORS[UNLOCK_ANCHORS.length - 1][1];
+}
+
+/** Dealer band from showcase price (mirrors each dealer's stock theme). */
+function archiveDealer(priceUSD: number): string {
+  if (priceUSD < 50_000) return "budget";
+  if (priceUSD < 200_000) return "performance";
+  if (priceUSD < 500_000) return "sports";
+  if (priceUSD < 1_000_000) return "super";
+  if (priceUSD < 12_000_000) return "hyper";
+  if (priceUSD < 60_000_000) return "collector";
+  return "vault";
+}
+
+/** Mirrors DEALERS' unlock levels (static values; keeps the derivation free
+ *  of a DEALERS dependency so it can build eagerly at module init). */
+const DEALER_UNLOCK_LEVELS: Record<string, number> = {
+  used: 1,
+  budget: 6,
+  performance: 14,
+  sports: 24,
+  super: 36,
+  hyper: 55,
+  collector: 90,
+  vault: 150,
+};
+
+function dealerUnlockLevel(dealerId: string): number {
+  return DEALER_UNLOCK_LEVELS[dealerId] ?? 1;
+}
+
+const baseGameIds = new Set(BASE_GAME_CARS.map((c) => c.id));
+/**
+ * Archive-derived cars (the 900+ showcase expansion). Built eagerly: it only
+ * depends on carsList() + static tables, never on DEALERS (see the unlock
+ * table above), so no TDZ coupling exists.
+ */
+export const ARCHIVE_GAME_CARS: GameCarDef[] = carsList()
+    .filter((c) => !baseGameIds.has(c.slug))
+    .map((c): GameCarDef => {
+      const value = c.priceUSD * 30;
+      const rarity = archiveRarity(c.priceUSD);
+      const dealer = archiveDealer(c.priceUSD);
+      const dealerUnlock = dealerUnlockLevel(dealer);
+      return {
+        id: c.slug,
+        brand: c.brand,
+        name: c.model,
+        year: c.year,
+        gallerySlug: c.slug,
+        hp: c.horsepower,
+        topSpeed: c.topSpeedKmh,
+        accel: c.zeroToHundredKmh,
+        value,
+        rarity,
+        unlockLevel: Math.max(archiveLevel(value), dealerUnlock),
+        dealer,
+        crateTier: CRATE_TIER_BY_RARITY[rarity],
+      };
+    });
+
+/** Every collectible car: hand-written ladder + archive-derived + casino. */
+export const GAME_CARS: GameCarDef[] = [...BASE_GAME_CARS, ...ARCHIVE_GAME_CARS];
 
 export const GAME_CAR_MAP: Record<string, GameCarDef> = Object.fromEntries(
   GAME_CARS.map((c) => [c.id, c]),
@@ -359,6 +470,21 @@ export const DEALERS: DealerDef[] = [
     ]),
   },
 ];
+
+// Archive-derived cars join their band's dealer pool (kept after the
+// literal so every dealer keeps its hand-picked anchor stock first).
+{
+  const byDealer = new Map<string, string[]>();
+  for (const c of ARCHIVE_GAME_CARS) {
+    const list = byDealer.get(c.dealer) ?? [];
+    list.push(c.id);
+    byDealer.set(c.dealer, list);
+  }
+  for (const d of DEALERS) {
+    const extra = byDealer.get(d.id);
+    if (extra?.length) d.pool.push(...extra);
+  }
+}
 
 export const DEALER_MAP: Record<string, DealerDef> = Object.fromEntries(
   DEALERS.map((d) => [d.id, d]),
@@ -1067,6 +1193,10 @@ export function gameCarImage(car: GameCarDef): string {
   for (const candidate of archive) {
     const candBrand = words(candidate.brand).join(" ");
     if (!(candBrand.includes(brand) || brand.includes(candBrand))) continue;
+    // Photo-covered candidates only: with 1000 archive cars the pool is big
+    // enough that fuzzy ties can otherwise land on a generated-scene car and
+    // return "" instead of the archive photo that exists for this model.
+    if (!getCarImage(candidate)) continue;
     const model = words(candidate.model);
     let score = 0;
     for (const t of tokens) if (model.includes(t)) score += 10;

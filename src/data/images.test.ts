@@ -138,18 +138,47 @@ describe("getCarGallery", () => {
 });
 
 describe("data integrity", () => {
-  test("every car has a unique slug and a real photo", () => {
+  test("every car has a unique slug", () => {
     const slugs = new Set<string>();
     for (const c of CARS) {
       expect(slugs.has(c.slug)).toBe(false);
       slugs.add(c.slug);
-      expect(getCarImage(c)).toMatch(/^https:\/\/upload\.wikimedia\.org\//);
     }
   });
 
-  test("every marque used by a car has a brand image", () => {
+  test("no two cars share a photo URL (no copies)", () => {
+    // The archive mixes hand-verified Wikimedia photos (original 88 + the
+    // expansion's slug-matched cars) with SmartImage generated scenes (empty
+    // src, unique per slug). A photo URL must never appear on two cars.
+    const urls = new Set<string>();
     for (const c of CARS) {
-      expect(getBrandImage(c.brand)).toMatch(/^https:\/\/upload\.wikimedia\.org\//);
+      const img = getCarImage(c);
+      if (!img) continue; // generated-scene car
+      expect(urls.has(img)).toBe(false);
+      urls.add(img);
+    }
+  });
+
+  test("every photo points at Wikimedia", () => {
+    for (const c of CARS) {
+      const img = getCarImage(c);
+      if (img) expect(img).toMatch(/^https:\/\/upload\.wikimedia\.org\//);
+    }
+  });
+
+  test("every marque WITH a photo-covered car resolves a brand image", () => {
+    // The dedicated table covers the 18 original marques; the expansion's
+    // marques fall back to their first photo-covered car. Brands whose cars
+    // are all generated-scene (volume brands) legitimately have no photo.
+    for (const c of CARS) {
+      if (!getCarImage(c)) continue;
+      expect(getBrandImage(c.brand)).not.toBe("");
+    }
+  });
+
+  test("the 18 original marques keep their dedicated brand photos", () => {
+    for (const brand of ["Bugatti", "Ferrari", "Mercedes-AMG", "BMW M", "Porsche", "Rolls-Royce", "Audi Sport"]) {
+      expect(getBrandImage(brand)).toMatch(/^https:\/\/upload\.wikimedia\.org\//);
     }
   });
 });

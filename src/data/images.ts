@@ -1,5 +1,6 @@
 // Relative import: also typechecked by the Convex toolchain (no "@/" alias).
 import type { Car } from "../lib/types";
+import { CARS } from "./cars";
 
 /**
  * Static, hand-verified Wikimedia lead images resolved by article title (not
@@ -117,7 +118,6 @@ const CAR_IMAGES: Record<string, string> = {
   "pagani-huayra-bc": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/Pagani%2C_GIMS_2019%2C_Le_Grand-Saconnex_%28GIMS0023%29.jpg/960px-Pagani%2C_GIMS_2019%2C_Le_Grand-Saconnex_%28GIMS0023%29.jpg",
   "pagani-huayra-r": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/Pagani%2C_GIMS_2019%2C_Le_Grand-Saconnex_%28GIMS0023%29.jpg/960px-Pagani%2C_GIMS_2019%2C_Le_Grand-Saconnex_%28GIMS0023%29.jpg",
   "pagani-utopia": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/Pagani_Utopia.jpg/960px-Pagani_Utopia.jpg",
-  "pagani-zonda-hp-barchetta": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/42/Pagani_Zonda_C12_%27chassis_001%27_Genf_2019_1Y7A5539.jpg/960px-Pagani_Zonda_C12_%27chassis_001%27_Genf_2019_1Y7A5539.jpg",
   "rolls-royce-phantom": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1c/2019_Rolls-Royce_Phantom_V12_Automatic_6.75.jpg/960px-2019_Rolls-Royce_Phantom_V12_Automatic_6.75.jpg",
   "rolls-royce-ghost": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/2022_Rolls-Royce_Ghost_Black_Badge_in_Arctic_White%2C_front_left.jpg/960px-2022_Rolls-Royce_Ghost_Black_Badge_in_Arctic_White%2C_front_left.jpg",
   "rolls-royce-cullinan": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/2019_Rolls-Royce_Cullinan_V12_Automatic_6.75_Front.jpg/960px-2019_Rolls-Royce_Cullinan_V12_Automatic_6.75_Front.jpg",
@@ -131,7 +131,6 @@ const CAR_IMAGES: Record<string, string> = {
   "bentley-flying-spur": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/Bentley_Flying_Spur_W12_Speed_%282019%29_1X7A1636.jpg/960px-Bentley_Flying_Spur_W12_Speed_%282019%29_1X7A1636.jpg",
   "bentley-bentayga": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/Bentley_Bentayga_V8_%28FL%29_IMG_0005.jpg/960px-Bentley_Bentayga_V8_%28FL%29_IMG_0005.jpg",
   "bentley-bacalar": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/Bentley_Continental_GT_First_Edition_%2849919050697%29_%28cropped%29_%28cropped%29.jpg/960px-Bentley_Continental_GT_First_Edition_%2849919050697%29_%28cropped%29_%28cropped%29.jpg",
-  "bentley-batur": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/Bentley_Continental_GT_First_Edition_%2849919050697%29_%28cropped%29_%28cropped%29.jpg/960px-Bentley_Continental_GT_First_Edition_%2849919050697%29_%28cropped%29_%28cropped%29.jpg",
   "bentley-mulsanne": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3d/Bentley_Mulsanne_%E2%80%93_Frontansicht_%285%29%2C_30._August_2011%2C_D%C3%BCsseldorf.jpg/960px-Bentley_Mulsanne_%E2%80%93_Frontansicht_%285%29%2C_30._August_2011%2C_D%C3%BCsseldorf.jpg",
   "bentley-continental-supersports": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/Bentley_Continental_GT_First_Edition_%2849919050697%29_%28cropped%29_%28cropped%29.jpg/960px-Bentley_Continental_GT_First_Edition_%2849919050697%29_%28cropped%29_%28cropped%29.jpg",
   "audi-r8-v10": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d2/2018_Audi_R8_Coupe_V10_plus_Front.jpg/960px-2018_Audi_R8_Coupe_V10_plus_Front.jpg",
@@ -343,5 +342,12 @@ export function getCarImageHiRes(car: Car): string {
 }
 
 export function getBrandImage(brand: string): string {
-  return BRAND_IMAGES[brand] ?? "";
+  const direct = BRAND_IMAGES[brand];
+  if (direct) return direct;
+  // New marques (the 900+ expansion) have no dedicated brand photo: fall
+  // back to that marque's first car with a verified photo. Same one-way
+  // images→cars dependency as the rest of the file; cars.ts never imports
+  // images.ts, so there is no cycle.
+  const owned = CARS.find((c) => c.brand === brand && CAR_IMAGES[c.slug]);
+  return owned ? CAR_IMAGES[owned.slug] : "";
 }
