@@ -7,7 +7,14 @@ import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
 import { GameMain } from "@/components/game/GameMain";
 import type { GameState } from "@/game/types";
-import { gameReducer, loadGame, saveGame, passivePerSec } from "@/game/engine";
+import {
+  gameReducer,
+  loadGame,
+  saveGame,
+  passivePerSec,
+  resolveSaveConflict,
+  serializeSave,
+} from "@/game/engine";
 import { GAME_CARS, levelFrom, fmtMoney } from "@/game/data";
 
 const SAVE_INTERVAL_MS = 5000;
@@ -87,17 +94,21 @@ export default function Game() {
   }, []);
 
   // ── Cloud save sync ──
-  // On mount, load cloud save and use it if newer than localStorage.
+  // On mount, load the cloud save and arbitrate it against the local one via
+  // resolveSaveConflict (one-sided-progress guard, then newest-write-wins).
+  // The old totalEarned tiebreaker let a new device's starter-only autosave
+  // clobber the real cloud save right after login — the "my cars vanished
+  // when I switched to PC" bug.
   useEffect(() => {
     if (!isAuthenticated || !loadCloudSave || cloudLoadedRef.current) return;
     cloudLoadedRef.current = true;
-    const { state: cloudState, updatedAt } = loadCloudSave;
+    const { state: cloudState } = loadCloudSave;
     if (!cloudState) return;
     try {
       const cloud = JSON.parse(cloudState) as Partial<GameState>;
       const local = loadGame();
-      // Use cloud save if it's newer or local has less total earned
-      if (!local || (cloud.totalEarned ?? 0) > local.totalEarned) {
+      const winner = resolveSaveConflict(local, cloud);
+      if (winner === cloud) {
         // Cloud saves carry the lastTick from when they were WRITTEN. Without
         // stamping it to now, the loaded state instantly looks hours "away"
         // and the first TICK re-credits that whole stale gap at 100% on top
@@ -117,9 +128,11 @@ export default function Game() {
   saveCloudRef.current = () => {
     if (!isAuthenticated || !stateRef.current) return;
     try {
-      // .catch so a failed cloud write (offline, auth expiry) can't surface
-      // as an unhandled promise rejection — local saves already cover us.
-      saveCloudSave({ state: JSON.stringify(stateRef.current) }).catch(
+      // serializeSave stamps savedAt/deviceId so the load-time conflict
+      // arbitration can tell a fresh device's starter-only save from real
+      // progress. .catch so a failed cloud write (offline, auth expiry)
+      // can't surface as an unhandled rejection — local saves cover us.
+      saveCloudSave({ state: serializeSave(stateRef.current) }).catch(
         () => {},
       );
     } catch { /* ignore */ }

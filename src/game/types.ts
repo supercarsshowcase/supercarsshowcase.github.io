@@ -150,6 +150,13 @@ export interface GameState {
   wantedBounties: WantedBounty[];
   /** Timestamp of the last bounty-board refresh (manual or auto). */
   wantedRefreshAt: number;
+  /** When this save was last written — stamped by serializeSave on every
+   *  local/cloud write. Optional so legacy saves still normalize. Drives
+   *  resolveSaveConflict's newest-write-wins arbitration. */
+  savedAt?: number;
+  /** Which device wrote this save (stamped by serializeSave) — provenance
+   *  for debugging save drift across devices. */
+  deviceId?: string;
 }
 
 export interface SpinResult {

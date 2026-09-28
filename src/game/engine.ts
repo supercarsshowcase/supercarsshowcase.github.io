@@ -1233,7 +1233,7 @@ function normalize(current: GameState, loaded: Partial<GameState>): GameState {
 
 export function saveGame(state: GameState): void {
   try {
-    localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+    localStorage.setItem(SAVE_KEY, serializeSave(state));
   } catch {
     /* storage unavailable */
   }
@@ -1248,6 +1248,86 @@ export function loadGame(): GameState {
   } catch {
     return initialGameState();
   }
+}
+
+/** Best-effort per-browser id (survives refreshes, not incognito/clearing). */
+export function getDeviceId(): string {
+  const KEY = "supercars.device.id";
+  try {
+    const existing = localStorage.getItem(KEY);
+    if (existing) return existing;
+    const id = crypto.randomUUID();
+    localStorage.setItem(KEY, id);
+    return id;
+  } catch {
+    return "unknown-device";
+  }
+}
+
+/** JSON payload for local AND cloud saves, stamped for conflict arbitration. */
+export function serializeSave(state: GameState): string {
+  return JSON.stringify({ ...state, savedAt: Date.now(), deviceId: getDeviceId() });
+}
+
+/** Tolerance for near-simultaneous writes (two tabs, clock jitter). */
+const SAVE_SKEW_MS = 90_000;
+
+/** True when a save shows real play beyond the auto-granted starter car. */
+function hasRealProgress(s: Partial<GameState>): boolean {
+  return (
+    Object.keys(s.ownedCars ?? {}).some((id) => id !== STARTER_ID) ||
+    Object.keys(s.inventory ?? {}).length > 0 ||
+    (s.totalEarned ?? 0) > 0 ||
+    (s.reputation ?? 0) > 0 ||
+    (s.prestigeLevel ?? 0) > 0
+  );
+}
+
+/**
+ * Pick the winner when a cloud save and a local save disagree.
+ *
+ * The old tiebreaker (`cloud.totalEarned > local.totalEarned`) broke in both
+ * directions: PRESTIGE resets totalEarned to 0 while the garage persists, so
+ * (a) after a prestige the cloud save always lost — including to a brand-new
+ * device's starter-only autosave, which then clobbered the player's real
+ * cloud save ("signed in on PC and all my cars are gone") — and (b) an old
+ * rich cloud save permanently rolled back newer local progress.
+ *
+ * New rules, in order:
+ * 1. One-sided progress wins outright — a starter-only, never-played save
+ *    never erases real progress, no matter how fresh it is. This also covers
+ *    legacy (pre-savedAt) cloud saves, i.e. every save written before this
+ *    fix, on first login from a new device.
+ * 2. Same realness on both sides: the stamped (new-code) side beats a
+ *    legacy side.
+ * 3. Both stamped → newest write wins, clamped by SAVE_SKEW_MS.
+ * 4. Both legacy → old totalEarned heuristic (unchanged behavior).
+ *
+ * Known narrow caveat: prestiging on new code while the cloud still holds a
+ * legacy save can let that legacy save roll the local prestige state back —
+ * only possible if the tab died within the ~30s cloud-save window after
+ * prestiging. Rule 1 must outrank rule 2 because mistaking a fresh device's
+ * save for "no progress" loses a whole garage, which is far worse.
+ */
+export function resolveSaveConflict(
+  local: Partial<GameState> | null,
+  cloud: Partial<GameState> | null,
+): Partial<GameState> | null {
+  if (!cloud) return local;
+  if (!local) return cloud;
+  const cReal = hasRealProgress(cloud);
+  const lReal = hasRealProgress(local);
+  if (cReal !== lReal) return cReal ? cloud : local;
+  if (cloud.savedAt === undefined || local.savedAt === undefined) {
+    // At least one side is legacy (pre-stamping). One stamped side beats a
+    // legacy side (rule 2); two legacy sides use the old totalEarned
+    // heuristic (rule 4), strictly greater so ties keep local (no reload
+    // loop when the cloud save was just loaded).
+    if (cloud.savedAt !== undefined) return cloud;
+    if (local.savedAt !== undefined) return local;
+    return (cloud.totalEarned ?? 0) > (local.totalEarned ?? 0) ? cloud : local;
+  }
+  return cloud.savedAt >= local.savedAt - SAVE_SKEW_MS ? cloud : local;
 }
 
 
