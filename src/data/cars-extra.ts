@@ -19,36 +19,50 @@ import type { Car, Category } from "../lib/types";
 // ── Engine code → display string ─────────────────────────────────────────────
 
 const ENGINES: Record<string, string> = {
+  I3NA: "I3 Naturally-Aspirated",
+  I3T: "I3 Turbo",
   I4NA: "I4 Naturally-Aspirated",
   I4T: "I4 Turbo",
   I4SC: "I4 Supercharged",
+  I4H: "I4 Turbo Hybrid",
+  I4D: "I4 Turbo-Diesel",
   I5T: "I5 Turbo",
+  I5NA: "I5 Naturally-Aspirated",
   I6NA: "I6 Naturally-Aspirated",
   I6T: "I6 Turbo",
   I6SC: "I6 Supercharged",
+  I6TT: "I6 Twin-Turbo",
   I8NA: "I8 Naturally-Aspirated",
   I8SC: "I8 Supercharged",
   ROT: "Rotary Twin-Turbo",
   F4: "Flat-4",
+  F4NA: "Flat-4 Naturally-Aspirated",
   F6NA: "Flat-6 Naturally-Aspirated",
   F6T: "Flat-6 Turbo",
+  F4T: "Flat-4 Turbo",
   F6TT: "Flat-6 Twin-Turbo",
   F12NA: "Flat-12 Naturally-Aspirated",
   V4H: "V4 Turbo Hybrid (Racing)",
   V6NA: "V6 Naturally-Aspirated",
   V6T: "V6 Turbo",
   V6TT: "V6 Twin-Turbo",
+  V6D: "V6 Turbo-Diesel",
+  V6SC: "V6 Supercharged",
   V6H: "V6 Twin-Turbo Hybrid",
   V8NA: "V8 Naturally-Aspirated",
   V8T: "V8 Turbo",
   V8TT: "V8 Twin-Turbo",
+  V8D: "V8 Turbo-Diesel",
   V8SC: "V8 Supercharged",
   V8H: "V8 Twin-Turbo Hybrid",
   V10NA: "V10 Naturally-Aspirated",
+  V10TT: "V10 Twin-Turbo",
+  V10SC: "V10 Supercharged",
   V12NA: "V12 Naturally-Aspirated",
   V12T: "V12 Twin-Turbo",
   V12QT: "V12 Quad-Turbo",
   V12H: "V12 Hybrid",
+  V16NA: "V16 Naturally-Aspirated",
   W16: "W16 Quad-Turbo",
   W12T: "W12 Twin-Turbo",
   V16H: "V16 Hybrid",
@@ -157,7 +171,9 @@ function descriptionFor(slug: string, brand: string, model: string, year: number
   return `${lead} ${tail}`;
 }
 
-// ── Expansion ────────────────────────────────────────────────────────────────export function expandCar(brand: string, s: ExtraSpec): Car {
+// ── Expansion ────────────────────────────────────────────────────────────────
+
+export function expandCar(brand: string, s: ExtraSpec): Car {
   const [slug, model, year, category, priceUSD, hp, nm, acc, top, kg, drive, eng] = s;
   return {
     slug,

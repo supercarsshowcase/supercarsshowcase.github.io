@@ -1,5 +1,6 @@
 // Relative import: also typechecked by the Convex toolchain (no "@/" alias).
 import type { Car } from "../lib/types";
+import { EXTRA_CARS } from "./cars-expansion";
 
 // Owner-editable overrides merged on top of the stock data (see convex/cars.ts).
 // Populated at runtime by the app so admin edits show across the whole site.
@@ -20,6 +21,12 @@ export function mergeCar(base: Car): Car {
   return patch ? { ...base, ...patch } : base;
 }
 
+/**
+ * The 1000-car archive: the hand-written 88 + the shard expansion (912).
+ * EXTRA_CARS throws at module load on any slug collision (vs base or within
+ * the expansion), so a dupe can never ship silently. (The composed export
+ */
+
 /** The full archive with any owner edits applied. */
 export function carsList(): Car[] {
   return CARS.map(mergeCar);
@@ -32,7 +39,7 @@ export function mergedCarBySlug(slug: string): Car | undefined {
 }
 
 
-export const CARS: Car[] = [
+const BASE_CARS: Car[] = [
   // ─────────────────────────── BUGATTI                ───────────────────────────
   {
       slug: "bugatti-veyron-super-sport",
@@ -1813,11 +1820,30 @@ export const CARS: Car[] = [
     },
 ];
 
+// Lazy accessors: CARS is composed after BASE_CARS + EXTRA_CARS below, and
+// getters keep these safe regardless of declaration order.
 export const carBySlug = (slug: string) => CARS.find((c) => c.slug === slug);
 
 export const carsByBrand = (brand: string) =>
   CARS.filter((c) => c.brand === brand);
 
-export const brandNames = Array.from(new Set(CARS.map((c) => c.brand)));
+export const getBrandNames = () => Array.from(new Set(CARS.map((c) => c.brand)));
 
-export const categories = Array.from(new Set(CARS.map((c) => c.category)));
+export const getCategories = () => Array.from(new Set(CARS.map((c) => c.category)));
+
+/**
+ * The 1000-car archive: the hand-written 88 + the shard expansion (912).
+ * EXTRA_CARS throws at module load on any slug collision (vs base or within
+ * the expansion), so a dupe can never ship silently.
+ */
+export const CARS: Car[] = [...BASE_CARS, ...EXTRA_CARS];
+
+// Slug-uniqueness guard: a duplicate is a module-load throw, never a silent
+// shadow of an existing car (covers both base↔expansion and expansion-only).
+{
+  const seen = new Set<string>();
+  for (const car of CARS) {
+    if (seen.has(car.slug)) throw new Error(`duplicate car slug: ${car.slug}`);
+    seen.add(car.slug);
+  }
+}

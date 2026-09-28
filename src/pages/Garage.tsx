@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Search, ChevronDown, RotateCcw, SlidersHorizontal } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { carsList, brandNames, categories } from "@/data/cars";
+import { carsList, getBrandNames, getCategories } from "@/data/cars";
 import { useApp } from "@/context/app-context";
 import { formatPriceCompact } from "@/lib/format";
 import { CarCard } from "@/components/CarCard";
@@ -196,13 +196,13 @@ export default function Garage() {
         {/* Brand */}
         <div className="mb-6 space-y-1.5">
           <label className="font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">{copy.brandLbl}</label>
-          <Dropdown value={brand} onChange={setBrand} options={["All Brands", ...brandNames]} />
+          <Dropdown value={brand} onChange={setBrand} options={["All Brands", ...getBrandNames()]} />
         </div>
 
         {/* Category */}
         <div className="mb-6 space-y-1.5">
           <label className="font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">{copy.categoryLbl}</label>
-          <Dropdown value={category} onChange={setCategory} options={["All Categories", ...categories]} />
+          <Dropdown value={category} onChange={setCategory} options={["All Categories", ...getCategories()]} />
         </div>
 
         {/* Rarity */}
