@@ -168,22 +168,37 @@ function queueSlugs(slugs: string[]): void {
 }
 
 async function flush(): Promise<void> {
-  const queued = [...inflight];
-  for (let i = 0; i < queued.length; i += BATCH_TITLES) {
-    const batch = queued.slice(i, i + BATCH_TITLES);
-    // Consume exactly this batch before fetching, so a remount during the
-    // flush can't double-fetch keys that are already in flight.
-    for (const slug of batch) inflight.delete(slug);
-    try {
-      await fetchBatch(batch);
-    } catch {
-      // network hiccup — leave memory untouched so a later mount retries
+  // Drain in waves: slugs queued while a flush runs join the next wave, so a
+  // second timer firing mid-flush neither double-fetches in-flight slugs nor
+  // strands late arrivals until some future call.
+  while (inflight.size > 0) {
+    const queued = [...inflight];
+    const misses: string[] = [];
+    for (let i = 0; i < queued.length; i += BATCH_TITLES) {
+      const batch = queued.slice(i, i + BATCH_TITLES);
+      // Consume exactly this batch before fetching, so a remount during the
+      // flush can't double-fetch keys that are already in flight.
+      for (const slug of batch) inflight.delete(slug);
+      try {
+        await fetchBatch(batch);
+      } catch {
+        // network hiccup — leave memory untouched so a later mount retries
+      }
+      notify(batch);
+      misses.push(...batch.filter((s) => memory.get(s) === ""));
     }
-    notify(batch);
+    // One search pass per wave (not per batch): the direct pass resolves most
+    // titles in bulk; misses are far fewer, so this stays out of the way of
+    // the next direct batch instead of head-of-line blocking it.
     try {
-      await runSearchFallback(batch);
+      await runSearchFallback(misses);
     } catch {
       // search is best-effort — the generated scene stays the fallback
+    }
+    if (inflight.size > 0) continue; // requeued slugs join the next wave
+    if (flushTimer) {
+      clearTimeout(flushTimer);
+      flushTimer = null; // fully drained; rearm on the next enqueue
     }
   }
 }
@@ -194,8 +209,16 @@ async function flush(): Promise<void> {
  *  to keep request pressure low; results cache like direct hits. */
 async function runSearchFallback(slugs: string[]): Promise<void> {
   const missing = slugs.filter((s) => memory.get(s) === "");
-  for (let i = 0; i < missing.length; i += 4) {
-    await Promise.all(missing.slice(i, i + 4).map(searchThumb));
+  const pending = new Set(missing);
+  try {
+    for (let i = 0; i < missing.length; i += 4) {
+      await Promise.all(missing.slice(i, i + 4).map(searchThumb));
+      for (const slug of missing.slice(i, i + 4)) pending.delete(slug);
+    }
+  } finally {
+    // No verdict = search was cut short (request threw / unmounted) — requeue
+    // for a later flush. A final "" verdict is NOT requeued (it's definitive).
+    for (const slug of pending) inflight.add(slug);
   }
 }
 
@@ -322,16 +345,11 @@ export function useBrandImage(name: string): string {
       setEnriched(hit);
       return;
     }
-    let alive = true;
-    void fetchBatch([wikiSlug(name)])
-      .catch(() => {
-        // leave memory untouched — a later mount retries
-      })
-      .finally(() => {
-        if (alive) setEnriched(memory.get(wikiSlug(name)) ?? "");
-      });
+    const key = wikiSlug(name);
+    queueSlugs([key]); // shared queue: dedupes warmup, gets the search pass
+    const unsub = subscribe(key, () => setEnriched(memory.get(key) ?? ""));
     return () => {
-      alive = false;
+      unsub();
     };
   }, [name, staticImg]);
 
