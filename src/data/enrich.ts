@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import type { Car } from "../lib/types";
 import { getCarImage, getBrandImage } from "./images";
+import { CARS } from "./cars";
 
 /**
  * Runtime photo enrichment for the archive.
@@ -56,7 +57,11 @@ export function wikiSlug(title: string): string {
 
 // ── Cache ─────────────────────────────────────────────────────────────────────
 
-const STORAGE_KEY = "carthumbs.v1";
+// v2: the first release flushed the whole inflight queue with a single
+// candidate per car, permanently storing "" (no photo) for titles the
+// current rules resolve fine. Bumping the key discards those poisoned
+// entries so every car re-probes under the improved matching.
+const STORAGE_KEY = "carthumbs.v2";
 /** Slugified title → thumbnail URL ("" = confirmed no photo). */
 const memory = new Map<string, string>();
 
@@ -136,15 +141,24 @@ let flushTimer: ReturnType<typeof setTimeout> | null = null;
 /** Queue cars whose thumbnail is unknown; a debounced flush batches them. */
 export function ensureThumbs(cars: Car[]): void {
   loadStorage();
-  let added = false;
+  const wanted: string[] = [];
   for (const car of cars) {
     if (getCarImage(car)) continue; // static photo — no lookup needed
     for (const title of titleCandidates(car.brand, car.model)) {
-      const key = wikiSlug(title);
-      if (memory.has(key) || inflight.has(key)) continue;
-      inflight.add(key);
-      added = true;
+      wanted.push(wikiSlug(title));
     }
+  }
+  queueSlugs(wanted);
+}
+
+/** Queue slugs (car candidates, brand marque titles) that have no known
+ *  thumbnail yet; a debounced flush batches them. */
+function queueSlugs(slugs: string[]): void {
+  let added = false;
+  for (const slug of slugs) {
+    if (memory.has(slug) || inflight.has(slug)) continue;
+    inflight.add(slug);
+    added = true;
   }
   if (!added || flushTimer) return;
   flushTimer = setTimeout(() => {
@@ -166,7 +180,42 @@ async function flush(): Promise<void> {
       // network hiccup — leave memory untouched so a later mount retries
     }
     notify(batch);
+    try {
+      await runSearchFallback(batch);
+    } catch {
+      // search is best-effort — the generated scene stays the fallback
+    }
   }
+}
+
+/** Second-chance pass: titles that are not actual article titles on
+ *  Wikipedia (trim-level names like "Nissan Qashqai e-Power") get a search
+ *  lookup for the closest real article and take its lead thumbnail. Chunked
+ *  to keep request pressure low; results cache like direct hits. */
+async function runSearchFallback(slugs: string[]): Promise<void> {
+  const missing = slugs.filter((s) => memory.get(s) === "");
+  for (let i = 0; i < missing.length; i += 4) {
+    await Promise.all(missing.slice(i, i + 4).map(searchThumb));
+  }
+}
+
+async function searchThumb(slug: string): Promise<void> {
+  const title = slug.replace(/_/g, " ");
+  const url =
+    `${API}?action=query&format=json&origin=*&redirects=1` +
+    `&generator=search&gsrsearch=${encodeURIComponent(title)}` +
+    `&gsrnamespace=0&gsrlimit=1&prop=pageimages&piprop=thumbnail&pithumbsize=640`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`wiki search ${res.status}`);
+  const data = (await res.json()) as {
+    query?: { pages?: Record<string, WikiPage> };
+  };
+  const page = Object.values(data.query?.pages ?? {}).find(
+    (p) => p.thumbnail?.source,
+  );
+  memory.set(slug, page?.thumbnail?.source ?? ""); // "" = search found nothing
+  scheduleSave();
+  notify([slug]);
 }
 
 interface WikiPage {
@@ -217,6 +266,22 @@ async function fetchBatch(slugs: string[]): Promise<void> {
 }
 
 // ── React hook ────────────────────────────────────────────────────────────────
+
+/** Enrich the entire archive (plus photo-less marque headers) once per
+ *  session, shortly after the app mounts. Enriching only visited cars left
+ *  never-opened cars on their generated scene forever — the "a lot of cars
+ *  aren't loading" complaint. The cache makes this a one-time cost per
+ *  browser; the idle delay + batched requests keep it off the critical
+ *  path. */
+export function warmupThumbs(): void {
+  loadStorage();
+  ensureThumbs(CARS);
+  queueSlugs(
+    [...new Set(CARS.map((c) => c.brand))]
+      .filter((b) => !getBrandImage(b))
+      .map((b) => wikiSlug(b)),
+  );
+}
 
 /** Enriched car image: verified static photo → Wikipedia thumbnail → "".
  *  Queues a background lookup for photo-less cars; re-renders subscribers

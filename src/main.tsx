@@ -29,6 +29,7 @@ import AuthPage from "./pages/Auth.tsx";
 import Game from "./pages/Game.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import { SITE_ZOOM } from "@/game/fit";
+import { warmupThumbs } from "@/data/enrich";
 
 // The whole site renders at browser-zoom scale: publish SITE_ZOOM as a CSS
 // variable (consumed by #root { zoom } in index.css) before anything mounts.
@@ -38,6 +39,13 @@ const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
 
 function RouteSyncer() {
   const location = useLocation();
+  useEffect(() => {
+    // Kick off the one-time whole-archive photo enrichment shortly after the
+    // app mounts (idle-delayed inside the module) so never-visited cars fill
+    // in too instead of staying on their generated scene forever.
+    const t = setTimeout(() => warmupThumbs(), 2500);
+    return () => clearTimeout(t);
+  }, []);
   useEffect(() => {
     window.parent.postMessage(
       { type: "iframe-route-change", path: location.pathname },
