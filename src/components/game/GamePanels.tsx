@@ -21,6 +21,7 @@ import {
   levelFrom,
 } from "../../game/data";
 import { SmartImage } from "../SmartImage";
+import { GameCarImage } from "../GameCarImage";
 import { cn } from "../../lib/utils";
 import { CasinoPanel } from "./CasinoPanel";
 import { LeaderboardPanel } from "./LeaderboardPanel";
@@ -33,8 +34,6 @@ import {
 } from "lucide-react";
 
 const Te = GAME_CAR_MAP;
-const es = gameCarImage;
-const Ha = SmartImage;
 const ce = cn;
 const dp = RARITY_META;
 const Gh = ACHIEVEMENTS;
@@ -225,7 +224,7 @@ function SpinPanel({ state, dispatch }: { state: GameState; dispatch: any }) {
               return (
                 <div key={meta.tier} className={"absolute overflow-hidden rounded-md border-2 " + meta.borderClass}
                   style={{ left: (50 + 30 * Math.sin(angle)) + "%", top: (50 - 30 * Math.cos(angle)) + "%", width: "17%", aspectRatio: "16/10", transform: "translate(-50%, -50%)", boxShadow: "0 4px 18px rgba(0,0,0,0.55)", zIndex: 10 }}>
-                  <Ha src={es(car)} alt={car.name} seed={car.id} className="h-full w-full object-cover" />
+                  <GameCarImage car={car} alt={car.name} seed={car.id} className="h-full w-full object-cover" />
                   <span className={"absolute left-1 top-1 rounded px-1 py-0.5 text-[9px] font-black uppercase " + meta.labelBg}>{meta.pct}</span>
                 </div>
               );
@@ -278,7 +277,7 @@ function SpinPanel({ state, dispatch }: { state: GameState; dispatch: any }) {
                 <div key={tier} className="overflow-hidden rounded-xl border bg-apex-panel" style={{ borderColor: color + "40" }}>
                   <div className="flex gap-3 p-3">
                     <div className="relative h-20 w-28 shrink-0 overflow-hidden rounded-lg bg-[#0a0a0b]">
-                      <Ha src={es(car)} alt={car.name} seed={car.id} className="h-full w-full object-cover" />
+                      <GameCarImage car={car} alt={car.name} seed={car.id} className="h-full w-full object-cover" />
                     </div>
                     <div className="flex flex-1 flex-col justify-center min-w-0">
                       <div className="flex items-center gap-2">
@@ -342,7 +341,7 @@ function GaragePanel({ state, dispatch }: { state: GameState; dispatch: any }) {
             return (
               <div key={car.id} className={ce("group relative overflow-hidden rounded-xl border bg-apex-panel transition-colors", active ? "border-apex-red/60" : "border-apex-line hover:border-white/25")}>
                 <div className="relative h-36 overflow-hidden bg-[#0a0a0b]">
-                  <Ha src={es(car)} alt={car.name} seed={car.id} className="h-full w-full object-cover opacity-90 transition-transform duration-500 group-hover:scale-105" />
+                  <GameCarImage car={car} alt={car.name} seed={car.id} className="h-full w-full object-cover opacity-90 transition-transform duration-500 group-hover:scale-105" />
                   <div className="absolute left-2 top-2"><RarityBadge rarity={car.rarity} /></div>
                   {active && <span className="absolute right-2 top-2 rounded-sm bg-apex-red px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-white">Active</span>}
                 </div>
@@ -407,7 +406,7 @@ function DealerPanel({ state, dispatch }: { state: GameState; dispatch: any }) {
                     return (
                       <div key={carId} className="overflow-hidden rounded-lg border border-white/10 bg-[#0c0c0d]">
                         <div className="relative h-20 bg-[#0a0a0b]">
-                          <Ha src={es(car)} alt={car.name} seed={carId} className="h-full w-full object-cover" />
+                          <GameCarImage car={car} alt={car.name} seed={carId} className="h-full w-full object-cover" />
                           <div className="absolute left-1.5 top-1.5"><RarityBadge rarity={car.rarity} /></div>
                         </div>
                         <div className="p-2.5">

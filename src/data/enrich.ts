@@ -1,0 +1,274 @@
+// Relative import: also typechecked by the Convex toolchain (no "@/") alias.
+import { useEffect, useState } from "react";
+import type { Car } from "../lib/types";
+import { getCarImage, getBrandImage } from "./images";
+
+/**
+ * Runtime photo enrichment for the archive.
+ *
+ * The 1000-car expansion deliberately ships no static photo for cars without
+ * a hand-verified Wikimedia URL (fabricating filenames just 404s). Those cars
+ * rendered the generated-silhouette scene, which reads as "thumbnail not
+ * loading". This module fills them in at runtime:
+ *
+ * - It asks Wikipedia's pageimages API for the lead thumbnail of the car's
+ *   article (title rules mirror images.ts carWikiTitle). The API returns the
+ *   real image or nothing — URLs are never guessed.
+ * - Results cache in localStorage forever and in memory for the session, so
+ *   each car costs the network at most once.
+ * - Requests batch 40 titles per call and only fire for mounted cars, so the
+ *   grid never storms the API.
+ * - A car with no Wikipedia photo keeps its unique generated scene — the
+ *   designed fallback, never a broken image.
+ */
+
+// ── Title prediction (mirrors carWikiTitle in images.ts) ─────────────────────
+
+export function wikiTitle(brand: string, model: string): string {
+  if (brand === "BMW M") return `BMW ${model}`;
+  if (brand === "Audi Sport") return `Audi ${model}`;
+  if (brand === "Mercedes-AMG") {
+    return `Mercedes-AMG ${model.replace(/^AMG\s+/i, "")}`;
+  }
+  return `${brand} ${model}`;
+}
+
+/** Candidate article titles for one car: the full title, then progressively
+ *  trimmed base-model variants ("Toyota Chaser Tourer V" → "Toyota Chaser
+ *  Tourer" → "Toyota Chaser") — variant/trim-level articles often don't
+ *  exist, but the base-model article's lead photo is the right car. Capped
+ *  at 3 to keep batches small. */
+export function titleCandidates(brand: string, model: string): string[] {
+  const full = wikiTitle(brand, model);
+  const tokens = full.split(/\s+/);
+  const out = [full];
+  while (tokens.length > 2 && out.length < 3) {
+    tokens.pop();
+    out.push(tokens.join(" "));
+  }
+  return out;
+}
+
+/** Wikipedia titles use underscores; disambiguation parens never match. */
+export function wikiSlug(title: string): string {
+  return title.replace(/\s*\([^)]*\)\s*/g, "").trim().replace(/\s+/g, "_");
+}
+
+// ── Cache ─────────────────────────────────────────────────────────────────────
+
+const STORAGE_KEY = "carthumbs.v1";
+/** Slugified title → thumbnail URL ("" = confirmed no photo). */
+const memory = new Map<string, string>();
+
+function loadStorage(): void {
+  if (memory.size > 0) return;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const obj = JSON.parse(raw) as Record<string, string>;
+    for (const [k, v] of Object.entries(obj)) if (typeof v === "string") memory.set(k, v);
+  } catch {
+    // no localStorage (tests/private mode) / corrupt JSON — memory-only
+  }
+}
+
+let saveTimer: ReturnType<typeof setTimeout> | null = null;
+function scheduleSave(): void {
+  if (saveTimer) return;
+  saveTimer = setTimeout(() => {
+    saveTimer = null;
+    try {
+      const obj: Record<string, string> = {};
+      for (const [k, v] of memory) obj[k] = v;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(obj));
+    } catch {
+      // quota / unavailable — enrichment continues from memory
+    }
+  }, 800);
+}
+
+/** Enrichment-only lookup (no static photo): best known thumbnail or "". */
+export function cachedEnriched(car: Car): string {
+  loadStorage();
+  for (const title of titleCandidates(car.brand, car.model)) {
+    const hit = memory.get(wikiSlug(title));
+    if (hit) return hit;
+  }
+  return "";
+}
+
+/** Best image for a car right now: verified static photo, else any
+ *  previously-enriched thumbnail ("" = still unknown, scene stays up). */
+export function cachedCarImage(car: Car): string {
+  return getCarImage(car) || cachedEnriched(car);
+}
+
+// ── Subscriptions (hooks re-render when their car resolves) ───────────────────
+
+type Listener = () => void;
+const listeners = new Map<string, Set<Listener>>(); // by wikiSlug of title
+
+function subscribe(key: string, fn: Listener): () => void {
+  const set = listeners.get(key) ?? new Set<Listener>();
+  set.add(fn);
+  listeners.set(key, set);
+  return () => {
+    set.delete(fn);
+    if (set.size === 0) listeners.delete(key);
+  };
+}
+
+function notify(keys: string[]): void {
+  for (const k of keys) {
+    const set = listeners.get(k);
+    if (set) for (const fn of set) fn();
+  }
+}
+
+// ── Batched fetching ──────────────────────────────────────────────────────────
+
+const API = "https://en.wikipedia.org/w/api.php";
+const BATCH_TITLES = 40; // API limit is 50 titles; headroom for base-model variants
+
+const inflight = new Set<string>(); // slugs queued or being fetched
+let flushTimer: ReturnType<typeof setTimeout> | null = null;
+
+/** Queue cars whose thumbnail is unknown; a debounced flush batches them. */
+export function ensureThumbs(cars: Car[]): void {
+  loadStorage();
+  let added = false;
+  for (const car of cars) {
+    if (getCarImage(car)) continue; // static photo — no lookup needed
+    for (const title of titleCandidates(car.brand, car.model)) {
+      const key = wikiSlug(title);
+      if (memory.has(key) || inflight.has(key)) continue;
+      inflight.add(key);
+      added = true;
+    }
+  }
+  if (!added || flushTimer) return;
+  flushTimer = setTimeout(() => {
+    flushTimer = null;
+    void flush();
+  }, 150);
+}
+
+async function flush(): Promise<void> {
+  const queued = [...inflight];
+  for (let i = 0; i < queued.length; i += BATCH_TITLES) {
+    const batch = queued.slice(i, i + BATCH_TITLES);
+    // Consume exactly this batch before fetching, so a remount during the
+    // flush can't double-fetch keys that are already in flight.
+    for (const slug of batch) inflight.delete(slug);
+    try {
+      await fetchBatch(batch);
+    } catch {
+      // network hiccup — leave memory untouched so a later mount retries
+    }
+    notify(batch);
+  }
+}
+
+interface WikiPage {
+  title: string;
+  thumbnail?: { source: string };
+}
+
+async function fetchBatch(slugs: string[]): Promise<void> {
+  // Paren-suffixed model variants can slug-collide with their base title —
+  // dedupe so they don't waste the batch's 50-title budget.
+  const titles = [...new Set(slugs.map((s) => s.replace(/_/g, " ")))].join("|");
+  const url =
+    `${API}?action=query&format=json&origin=*&redirects=1` +
+    `&prop=pageimages&piprop=thumbnail&pithumbsize=640&titles=${encodeURIComponent(titles)}`;
+
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`wiki ${res.status}`);
+  const data = (await res.json()) as {
+    query?: {
+      normalized?: { from: string; to: string }[];
+      redirects?: { from: string; to: string }[];
+      pages?: Record<string, WikiPage>;
+    };
+  };
+
+  const thumbByCanonical = new Map<string, string>();
+  for (const page of Object.values(data.query?.pages ?? {})) {
+    if (page.thumbnail?.source) thumbByCanonical.set(page.title, page.thumbnail.source);
+  }
+
+  // Resolve requested title → canonical page title through the normalization
+  // and redirect chains the API echoes back.
+  const resolve = new Map<string, string>();
+  for (const slug of slugs) resolve.set(slug.replace(/_/g, " "), slug.replace(/_/g, " "));
+  for (const { from, to } of data.query?.normalized ?? []) {
+    if (resolve.has(from)) resolve.set(from, to);
+  }
+  for (const { from, to } of data.query?.redirects ?? []) {
+    for (const [req, cur] of resolve) if (cur === from) resolve.set(req, to);
+  }
+
+  for (const slug of slugs) {
+    const requested = slug.replace(/_/g, " ");
+    const canonical = resolve.get(requested) ?? requested;
+    memory.set(slug, thumbByCanonical.get(canonical) ?? ""); // "" = confirmed none
+  }
+  scheduleSave();
+}
+
+// ── React hook ────────────────────────────────────────────────────────────────
+
+/** Enriched car image: verified static photo → Wikipedia thumbnail → "".
+ *  Queues a background lookup for photo-less cars; re-renders subscribers
+ *  when their batch resolves. `undefined` (game cars with no archive twin)
+ *  yields "" without queuing anything. */
+export function useCarImage(car: Car | undefined): string {
+  const staticImg = car ? getCarImage(car) : "";
+  const [enriched, setEnriched] = useState(() =>
+    car && !staticImg ? cachedEnriched(car) : "",
+  );
+
+  useEffect(() => {
+    if (!car || staticImg) return;
+    setEnriched(cachedEnriched(car));
+    ensureThumbs([car]);
+    const keys = titleCandidates(car.brand, car.model).map(wikiSlug);
+    const unsubs = keys.map((k) => subscribe(k, () => setEnriched(cachedEnriched(car))));
+    return () => unsubs.forEach((u) => u());
+  }, [car, staticImg]);
+
+  return staticImg || enriched;
+}
+
+/** Enriched brand-header image: hand-verified photo → Wikipedia thumbnail →
+ *  "". The 36 expansion marques have no verified brand photo, so their
+ *  headers resolve a car-thumbnail or article image at runtime. */
+export function useBrandImage(name: string): string {
+  const staticImg = getBrandImage(name);
+  const [enriched, setEnriched] = useState(staticImg);
+
+  useEffect(() => {
+    if (staticImg) return;
+    setEnriched("");
+    if (!name) return; // brand still resolving (deep link) — nothing to look up
+    loadStorage();
+    const hit = memory.get(wikiSlug(name));
+    if (hit) {
+      setEnriched(hit);
+      return;
+    }
+    let alive = true;
+    void fetchBatch([wikiSlug(name)])
+      .catch(() => {
+        // leave memory untouched — a later mount retries
+      })
+      .finally(() => {
+        if (alive) setEnriched(memory.get(wikiSlug(name)) ?? "");
+      });
+    return () => {
+      alive = false;
+    };
+  }, [name, staticImg]);
+
+  return staticImg || enriched;
+}

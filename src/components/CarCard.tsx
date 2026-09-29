@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import { Heart, Gauge, Timer, Zap } from "lucide-react";
 import type { Car } from "@/lib/types";
 import { getCarImage } from "@/data/images";
+import { useCarImage } from "@/data/enrich";
 import { useApp } from "@/context/app-context";
 import { formatPriceCompact, formatNumber } from "@/lib/format";
 import { SmartImage } from "./SmartImage";
@@ -12,6 +13,8 @@ export const CarCard = memo(function CarCard({ car }: { car: Car }) {
   const { currency, isFavorite, toggleFavorite } = useApp();
   const favorite = isFavorite(car.slug);
   const handleFav = useCallback(() => toggleFavorite(car.slug), [toggleFavorite, car.slug]);
+  // Verified static photo, else runtime Wikipedia thumbnail (fills in async).
+  const img = useCarImage(car);
 
   return (
     <Link
@@ -20,7 +23,7 @@ export const CarCard = memo(function CarCard({ car }: { car: Car }) {
     >
       <div className="relative aspect-[16/10] overflow-hidden">
         <SmartImage
-          src={getCarImage(car)}
+          src={img}
           alt={`${car.brand} ${car.model}`}
           sublabel={car.model}
           accent="#ff2e00"

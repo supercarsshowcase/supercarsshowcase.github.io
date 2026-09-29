@@ -2,13 +2,15 @@ import { Link, useParams } from "react-router";
 import { ArrowLeft, MapPin, Flag, CalendarDays } from "lucide-react";
 import { brandBySlug } from "@/data/brands";
 import { carsList } from "@/data/cars";
-import { getBrandImage } from "@/data/images";
 import { SmartImage } from "@/components/SmartImage";
+import { useBrandImage } from "@/data/enrich";
 import { CarCard } from "@/components/CarCard";
 
 export default function BrandDetail() {
   const { slug } = useParams<{ slug: string }>();
   const brand = slug ? brandBySlug(slug) : undefined;
+  // Verified marque photo, else runtime Wikipedia thumbnail (new marques).
+  const brandImg = useBrandImage(brand?.name ?? "");
 
   if (!brand) {
     return (
@@ -83,7 +85,7 @@ export default function BrandDetail() {
 
             <div className="w-full max-w-md shrink-0 overflow-hidden rounded-lg border border-apex-line">
               <SmartImage
-                src={getBrandImage(brand.name)}
+                src={brandImg}
                 alt={brand.name}
                 label={brand.name}
                 sublabel={`Est. ${brand.founded}`}

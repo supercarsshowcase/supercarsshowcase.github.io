@@ -32,6 +32,7 @@ import { Link } from "react-router";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { SmartImage } from "@/components/SmartImage";
+import { GameCarImage } from "@/components/GameCarImage";
 import { useAuth } from "@/hooks/use-auth";
 import {
   GAME_CAR_MAP,
@@ -924,8 +925,8 @@ function EarnZone({
 
           {/* Car image */}
           <motion.div whileTap={{ scale: clickBlocked ? 1 : 0.97 }} className="relative mt-2 w-full max-w-5xl flex-1 flex flex-col justify-center min-h-0">
-            <SmartImage
-              src={gameCarImage(active)}
+            <GameCarImage
+              car={active}
               alt={active.name}
               className={cn(
                 "mx-auto w-full max-h-[300px] sm:max-h-[380px] lg:max-h-[460px] object-contain drop-shadow-[0_20px_60px_rgba(0,0,0,0.8)] transition-all duration-300",

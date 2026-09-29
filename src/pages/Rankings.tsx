@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Link, useSearchParams } from "react-router";
 import { ArrowRight, Crown, Heart } from "lucide-react";
-import { getCarImage } from "@/data/images";
+import { useCarImage } from "@/data/enrich";
 import { useApp } from "@/context/app-context";
 import { formatNumber, formatPriceCompact } from "@/lib/format";
 import {
@@ -107,6 +107,7 @@ function PodiumCard({
   leaderValue: number;
 }) {
   const champion = rank === 1;
+  const img = useCarImage(car);
   return (
     <Link
       to={`/cars/${car.slug}`}
@@ -119,7 +120,7 @@ function PodiumCard({
     >
       <div className="relative aspect-[16/9] overflow-hidden">
         <SmartImage
-          src={getCarImage(car)}
+          src={img}
           alt={`${car.brand} ${car.model}`}
           sublabel={car.model}
           accent="#ff2e00"
@@ -180,6 +181,7 @@ function RankedRow({
   onToggleFavorite: (slug: string) => void;
   leaderValue: number;
 }) {
+  const img = useCarImage(car);
   return (
     <Link
       to={`/cars/${car.slug}`}
@@ -190,7 +192,7 @@ function RankedRow({
       </span>
       <div className="h-12 w-16 shrink-0 overflow-hidden rounded-md sm:h-14 sm:w-20">
         <SmartImage
-          src={getCarImage(car)}
+          src={img}
           alt={`${car.brand} ${car.model}`}
           label={car.brand}
           sublabel=""

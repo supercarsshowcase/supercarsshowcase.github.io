@@ -1172,6 +1172,17 @@ const GAME_CAR_ALIASES: Record<string, string> = {
  * 3. brand/year/model fuzzy match in the archive,
  * 4. "" so SmartImage renders its generated scene.
  */
+/**
+ * The archive showcase car behind a game def — used by the runtime photo
+ * enrichment layer to resolve a Wikipedia thumbnail for game cars whose
+ * static image chain comes up empty (id and gallerySlug share the archive
+ * slug for all 1000 archive-derived cars).
+ */
+export function gameArchiveCar(car: GameCarDef): Car | undefined {
+  const slug = car.gallerySlug || car.id;
+  return carsList().find((c) => c.slug === slug);
+}
+
 export function gameCarImage(car: GameCarDef): string {
   const direct = GAME_CAR_IMAGES[car.id];
   if (direct) return direct;

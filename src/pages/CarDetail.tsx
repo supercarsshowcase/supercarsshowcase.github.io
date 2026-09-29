@@ -26,6 +26,7 @@ import { mergedCarBySlug, carsList } from "@/data/cars";
 import { useAuth } from "@/hooks/use-auth";
 import { brandByName } from "@/data/brands";
 import { getCarGallery, getCarImage } from "@/data/images";
+import { useCarImage } from "@/data/enrich";
 import { useApp } from "@/context/app-context";
 import {
   formatPriceFull,
@@ -98,6 +99,8 @@ export default function CarDetail() {
 
   const car = slug ? mergedCarBySlug(slug) : undefined;
   const brand = car ? brandByName(car.brand) : undefined;
+  // Hero photo: verified static image, else runtime Wikipedia thumbnail.
+  const heroImg = useCarImage(car);
   const inGarage = car ? (garage?.carSlugs.includes(car.slug) ?? false) : false;
 
   const toggleGarage = async () => {
@@ -196,7 +199,7 @@ export default function CarDetail() {
             <SmartImage
               src={
                 activeView === 0
-                  ? getCarImage(car)
+                  ? heroImg
                   : (gallery[activeView]?.src ?? "")
               }
               alt={`${car.brand} ${car.model} — ${gallery[activeView]?.label ?? ""}`}

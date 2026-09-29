@@ -2,13 +2,28 @@ import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { Scale, Plus, X, ArrowRight } from "lucide-react";
 import { carsList, mergedCarBySlug } from "@/data/cars";
-import { getCarImage } from "@/data/images";
+import { useCarImage } from "@/data/enrich";
 import { useApp } from "@/context/app-context";
 import type { Car } from "@/lib/types";
 import { formatPriceCompact, formatNumber } from "@/lib/format";
 import { SmartImage } from "@/components/SmartImage";
 
 const MAX_CARS = 3;
+
+/** Table header cell with a hook-resolved (static → enriched) car photo. */
+function CompareThumb({ car }: { car: Car }) {
+  const img = useCarImage(car);
+  return (
+    <SmartImage
+      src={img}
+      alt={`${car.brand} ${car.model}`}
+      label={car.brand}
+      sublabel=""
+      seed={car.slug}
+      className="aspect-[16/9] w-full transition-transform group-hover:scale-105"
+    />
+  );
+}
 
 type Row = {
   label: string;
@@ -153,14 +168,7 @@ export default function Compare() {
                       className="group block overflow-hidden"
                     >
                       <div className="overflow-hidden rounded-md">
-                        <SmartImage
-                          src={getCarImage(car)}
-                          alt={`${car.brand} ${car.model}`}
-                          label={car.brand}
-                          sublabel=""
-                          seed={car.slug}
-                          className="aspect-[16/9] w-full transition-transform group-hover:scale-105"
-                        />
+                        <CompareThumb car={car} />
                       </div>
                       <p className="mt-3 font-display text-[11px] font-semibold uppercase tracking-[0.14em] text-white/45">
                         {car.brand}
