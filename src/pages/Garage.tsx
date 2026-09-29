@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, ChevronDown, RotateCcw, SlidersHorizontal } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -12,6 +12,10 @@ import { cn } from "@/lib/utils";
 import type { Car, SortMode } from "@/lib/types";
 
 const PRICE_MAX = 50_000_000;
+
+/** Cards mounted before the Load More button appears — 1000 CarCards at once
+ *  (heavy CarCard + SmartImage subtrees) janks the archive grid on phones. */
+const PAGE_SIZE = 48;
 
 // ── Derived rarities from production counts ──
 const PROD_UNITS: Record<string, number> = {};
@@ -81,6 +85,9 @@ export default function Garage() {
   // Mobile: the filter rail collapses behind a toggle (desktop keeps the
   // always-visible sidebar — phones get the full-width car grid instead).
   const [filtersOpen, setFiltersOpen] = useState(false);
+  // Pagination window over `filtered` — reset whenever the filter/sort inputs change.
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const loadMoreRef = useRef<HTMLButtonElement>(null);
   const activeFilterCount =
     (brand !== "All Brands" ? 1 : 0) +
     (category !== "All Categories" ? 1 : 0) +
@@ -89,6 +96,7 @@ export default function Garage() {
     (query.trim() ? 1 : 0);
 
   const filtered = useMemo(() => {
+    setVisibleCount(PAGE_SIZE); // new filter/sort results → collapse back to the first page
     const q = query.trim().toLowerCase();
     let list = carsList().filter((car) => {
       if (brand !== "All Brands" && car.brand !== brand) return false;
@@ -126,6 +134,20 @@ export default function Garage() {
     }
     return list;
   }, [query, brand, category, rarity, maxPrice, sort]);
+
+  const visible = filtered.slice(0, visibleCount);
+  const remaining = filtered.length - visible.length;
+
+  const loadMore = () => {
+    setVisibleCount((n) => n + PAGE_SIZE);
+    // Keep focus/scroll anchored on the button across page growth.
+    requestAnimationFrame(() => loadMoreRef.current?.focus({ preventScroll: true }));
+  };
+
+  // Defensive clamp: if `filtered` shrinks (e.g. owner edits) below the window.
+  useEffect(() => {
+    setVisibleCount((n) => Math.min(n, Math.max(PAGE_SIZE, filtered.length)));
+  }, [filtered.length]);
 
   const reset = () => {
     setQuery("");
@@ -274,11 +296,26 @@ export default function Garage() {
 
         {/* Grid or empty */}
         {filtered.length > 0 ? (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((car) => (
-              <CarCard key={car.slug} car={car} />
-            ))}
-          </div>
+          <>
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {visible.map((car) => (
+                <CarCard key={car.slug} car={car} />
+              ))}
+            </div>
+
+            {remaining > 0 && (
+              <div className="mt-10 flex justify-center">
+                <button
+                  ref={loadMoreRef}
+                  type="button"
+                  onClick={loadMore}
+                  className="rounded-md border border-white/[0.12] bg-[#0b0b0c] px-8 py-3 font-display text-xs font-bold uppercase tracking-[0.22em] text-white/70 transition-colors hover:border-apex-red/60 hover:text-white"
+                >
+                  Load More — {remaining.toLocaleString()} more
+                </button>
+              </div>
+            )}
+          </>
         ) : (
           <div className="flex flex-col items-center justify-center rounded-lg border border-white/[0.06] bg-[#0b0b0c] px-6 py-20 text-center sm:py-32">
             <p className="font-display text-3xl font-black text-white">

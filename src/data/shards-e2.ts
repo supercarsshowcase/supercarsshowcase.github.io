@@ -284,7 +284,7 @@ export const SHARD_E2: { brand: string; rows: readonly ExtraSpec[] }[] = [
     brand: "Koenigsegg",
     rows: [
       ["koenigsegg-jesko-naturasky", "Jesko Naturasky", 2025, "Hypercar", 3_600_000, 1600, 1500, 2.5, 440, 1320, 0, "V8TT"],
-      ["koenigsegg-gemera-hv8", "Gemera HV8", 2025, "Hypercar", 1_900_000, 2658, 3500, 1.9, 400, 1850, 1, "V8H"],
+      ["koenigsegg-gemera-hv8", "Gemera HV8", 2025, "Hypercar", 1_900_000, 2300, 3500, 1.9, 400, 1850, 1, "V8H"],
     ],
   },
   {

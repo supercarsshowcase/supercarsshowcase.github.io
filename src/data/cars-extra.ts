@@ -18,9 +18,14 @@ import type { Car, Category } from "../lib/types";
 
 // ── Engine code → display string ─────────────────────────────────────────────
 
-const ENGINES: Record<string, string> = {
+// NOTE: no Record<string,string> annotation — the literal type IS the union,
+// so ExtraSpec's `keyof typeof ENGINES` makes an unknown engine code a
+// compile error instead of a silent `engine: undefined` at runtime.
+const ENGINES = {
   I3NA: "I3 Naturally-Aspirated",
   I3T: "I3 Turbo",
+  I3SC: "I3 Supercharged",
+  I3H: "I3 Hybrid",
   I4NA: "I4 Naturally-Aspirated",
   I4T: "I4 Turbo",
   I4SC: "I4 Supercharged",
@@ -30,6 +35,7 @@ const ENGINES: Record<string, string> = {
   I5NA: "I5 Naturally-Aspirated",
   I6NA: "I6 Naturally-Aspirated",
   I6T: "I6 Turbo",
+  I6D: "I6 Turbo-Diesel",
   I6SC: "I6 Supercharged",
   I6TT: "I6 Twin-Turbo",
   I8NA: "I8 Naturally-Aspirated",
@@ -56,6 +62,7 @@ const ENGINES: Record<string, string> = {
   V8SC: "V8 Supercharged",
   V8H: "V8 Twin-Turbo Hybrid",
   V10NA: "V10 Naturally-Aspirated",
+  V10H: "V10 Hybrid",
   V10TT: "V10 Twin-Turbo",
   V10SC: "V10 Supercharged",
   V12NA: "V12 Naturally-Aspirated",
@@ -69,7 +76,7 @@ const ENGINES: Record<string, string> = {
   EV1: "Single Electric Motor",
   EV2: "Dual Electric Motors",
   EV3: "Tri Electric Motors",
-};
+} as const;
 
 const DRIVE_NAMES = ["Rear-Wheel Drive", "All-Wheel Drive", "Front-Wheel Drive"] as const;
 
