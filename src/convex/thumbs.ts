@@ -7,7 +7,12 @@ import {
   query,
 } from "./_generated/server";
 import { internal } from "./_generated/api";
-import { carKey, titleCandidates } from "../lib/wikiTitles";
+import {
+  asciiSlug,
+  carKeyIndex,
+  isAsciiKey,
+  titleCandidates,
+} from "../lib/wikiTitles";
 import { CARS } from "../data/cars";
 import { getCarImage, getBrandImage } from "../data/images";
 
@@ -66,11 +71,18 @@ export const kickoff = mutation({
   args: {},
   handler: async (ctx) => {
     const rows = await ctx.db.query("carThumbs").collect();
-    const known = new Set(rows.map((r) => r.key));
+    // Purge keys that violate Convex object-field rules (legacy rows from
+    // before asciiSlug — e.g. "Murciélago", "4x4²") — they break the whole
+    // catalog query for every client.
+    for (const row of rows) {
+      if (!isAsciiKey(row.key)) await ctx.db.delete(row._id);
+    }
+    const known = new Set(rows.filter((r) => isAsciiKey(r.key)).map((r) => r.key));
     let added = 0;
+    const slugToKey = carKeyIndex(CARS);
     for (const car of CARS) {
       if (getCarImage(car)) continue;
-      const key = carKey(car);
+      const key = slugToKey[car.slug] ?? "";
       if (!key || known.has(key)) continue;
       known.add(key);
       await ctx.db.insert("carThumbs", {
@@ -83,7 +95,7 @@ export const kickoff = mutation({
     }
     for (const brand of new Set(CARS.map((c) => c.brand))) {
       if (getBrandImage(brand)) continue;
-      const key = brand.trim().replace(/\s+/g, "_");
+      const key = asciiSlug(brand);
       if (!key || known.has(key)) continue;
       known.add(key);
       await ctx.db.insert("carThumbs", {

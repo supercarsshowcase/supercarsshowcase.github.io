@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import type { Car } from "../lib/types";
 import { getCarImage, getBrandImage } from "./images";
 import { CARS } from "./cars";
-import { carKey } from "../lib/wikiTitles";
+import { asciiSlug, carKeyIndex } from "../lib/wikiTitles";
 
 /** Directory of car thumbnails seeded into Convex storage by the admin
  *  seeder. Populated once per session from the app's own backend — the
@@ -26,10 +26,13 @@ export function setThumbCatalog(map: Record<string, string>): void {
   for (const fn of catalogListeners) fn();
 }
 
+// Unique catalog key per car slug (title collisions disambiguated by slug).
+const SLUG_TO_KEY = carKeyIndex(CARS);
+
 /** Convex-served thumbnail for a car, if the seeder has resolved one. */
 export function catalogCarImage(car: Car): string {
   if (!catalog) return "";
-  const id = catalog[carKey(car)];
+  const id = catalog[SLUG_TO_KEY[car.slug] ?? ""];
   return id ? thumbUrl(id) : "";
 }
 
@@ -360,8 +363,9 @@ export function useBrandImage(name: string): string {
   // Re-render when the Convex catalog lands (module state → version counter).
   const [, setCatV] = useState(catalogVersion);
   useEffect(() => subscribeCatalog(() => setCatV(catalogVersion)), []);
-  const key = name ? wikiSlug(name) : "";
-  const catalogHit = catalogImageFor(key);
+  const wikiKey = name ? wikiSlug(name) : "";
+  const catalogKey = name ? asciiSlug(name) : "";
+  const catalogHit = catalogImageFor(catalogKey);
   const [enriched, setEnriched] = useState(staticImg);
 
   useEffect(() => {
@@ -369,18 +373,17 @@ export function useBrandImage(name: string): string {
     setEnriched("");
     if (!name) return; // brand still resolving (deep link) — nothing to look up
     loadStorage();
-    const hit = memory.get(wikiSlug(name));
+    const hit = memory.get(wikiKey);
     if (hit) {
       setEnriched(hit);
       return;
     }
-    const key = wikiSlug(name);
-    queueSlugs([key]); // shared queue: dedupes warmup, gets the search pass
-    const unsub = subscribe(key, () => setEnriched(memory.get(key) ?? ""));
+    queueSlugs([wikiKey]); // shared queue: dedupes warmup, gets the search pass
+    const unsub = subscribe(wikiKey, () => setEnriched(memory.get(wikiKey) ?? ""));
     return () => {
       unsub();
     };
-  }, [name, staticImg, catalogHit]);
+  }, [name, staticImg, catalogHit, wikiKey]);
 
   return staticImg || catalogHit || enriched;
 }
