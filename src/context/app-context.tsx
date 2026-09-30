@@ -68,7 +68,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // (immutable-cached) instead of each visitor's browser reaching Wikimedia.
   const thumbCatalog = useQuery(api.thumbs.catalog);
   useEffect(() => {
-    if (thumbCatalog) setThumbCatalog(thumbCatalog);
+    if (thumbCatalog) {
+      setThumbCatalog(
+        thumbCatalog.map((e) => ({ key: e.key, storageId: e.storageId })),
+      );
+    }
   }, [thumbCatalog]);
 
   // Idempotent kickoff: make sure the catalog covers the current car set.

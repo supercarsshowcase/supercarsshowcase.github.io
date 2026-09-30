@@ -35,16 +35,22 @@ import { getCarImage, getBrandImage } from "../data/images";
 
 const API = "https://en.wikipedia.org/w/api.php";
 
-/** Catalog entries the client needs (key → storage id). */
+/** Catalog entries the client needs. Returned as an ARRAY (not a keyed
+ *  object): Convex serializes object keys as field names and rejects
+ *  non-ASCII ones — a single poisoned row used to 500 the whole query and
+ *  crash every subscribed client. Array items carry the key as a plain
+ *  string value, which is always serializable. */
 export const catalog = query({
   args: {},
   handler: async (ctx) => {
     const rows = await ctx.db.query("carThumbs").collect();
-    const map: Record<string, string> = {};
+    const out: { key: string; storageId: string }[] = [];
     for (const row of rows) {
-      if (row.storageId) map[row.key] = row.storageId;
+      if (row.storageId && isAsciiKey(row.key)) {
+        out.push({ key: row.key, storageId: row.storageId });
+      }
     }
-    return map;
+    return out;
   },
 });
 

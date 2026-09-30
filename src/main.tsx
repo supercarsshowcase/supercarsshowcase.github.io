@@ -30,6 +30,7 @@ import Game from "./pages/Game.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import { SITE_ZOOM } from "@/game/fit";
 import { warmupThumbs } from "@/data/enrich";
+import { AppErrorBoundary } from "@/components/AppErrorBoundary";
 
 // The whole site renders at browser-zoom scale: publish SITE_ZOOM as a CSS
 // variable (consumed by #root { zoom } in index.css) before anything mounts.
@@ -78,6 +79,7 @@ function ScrollToTop() {
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
+    <AppErrorBoundary>
     <VlyToolbar />
     <InstrumentationProvider>
       <ConvexAuthProvider client={convex}>
@@ -139,5 +141,6 @@ createRoot(document.getElementById("root")!).render(
         <Toaster />
       </ConvexAuthProvider>
     </InstrumentationProvider>
+    </AppErrorBoundary>
   </StrictMode>,
 );

@@ -19,8 +19,19 @@ const CONVEX_SITE = ((import.meta as { env?: Record<string, string> }).env?.VITE
 );
 const thumbUrl = (storageId: string) => `${CONVEX_SITE}/api/thumb/${storageId}`;
 
-/** Swap in the Convex catalog once the query resolves; subscribers re-render. */
-export function setThumbCatalog(map: Record<string, string>): void {
+/** Swap in the Convex catalog once the query resolves; subscribers re-render.
+ *  Defensive: entries whose key violates Convex field-name rules are skipped —
+ *  they can never be looked up anyway, and one poisoned row must never break
+ *  the rest of the catalog. */
+export function setThumbCatalog(
+  entries: { key: string; storageId: string }[],
+): void {
+  const map: Record<string, string> = {};
+  for (const e of entries) {
+    if (e && typeof e.key === "string" && e.key && e.storageId) {
+      map[e.key] = e.storageId; // keys are unique by carKeyIndex
+    }
+  }
   catalog = map;
   catalogVersion++;
   for (const fn of catalogListeners) fn();
