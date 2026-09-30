@@ -4,12 +4,14 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
-import { useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { applyCarOverrides } from "@/data/cars";
+import { setThumbCatalog } from "@/data/enrich";
 import type { CurrencyCode } from "@/lib/types";
 
 interface AppContextValue {
@@ -59,6 +61,49 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     applyCarOverrides(carOverrides);
   }, [carOverrides]);
+
+  // ── Convex-served car thumbnails ──
+  // The seeder resolves every photo-less car's real thumbnail server-side
+  // into Convex file storage, so photos come from the app's own backend
+  // (immutable-cached) instead of each visitor's browser reaching Wikimedia.
+  const thumbCatalog = useQuery(api.thumbs.catalog);
+  useEffect(() => {
+    if (thumbCatalog) setThumbCatalog(thumbCatalog);
+  }, [thumbCatalog]);
+
+  // Idempotent kickoff: make sure the catalog covers the current car set.
+  const kickoffSeeds = useMutation(api.thumbs.kickoff);
+  useEffect(() => {
+    kickoffSeeds({}).catch(() => {
+      // seeding is best-effort — the wiki fallback tier still applies
+    });
+  }, [kickoffSeeds]);
+
+  // Self-draining seed loop: while rows are pending, run one bounded chunk;
+  // each chunk's writes recompute `progress`, which re-arms this effect until
+  // pending hits 0. Idempotent and first-writer-wins, so overlapping visitors
+  // are safe. A full seed is ~90 chunks once ever; afterwards this no-ops.
+  // Pacing: 2s between chunks normally, 30s after an all-failure chunk (a
+  // rate-limited upstream shouldn't be retried in a tight loop).
+  const seedChunk = useAction(api.thumbs.seedChunk);
+  const seedProgress = useQuery(api.thumbs.progress);
+  const lastAllFailed = useRef(false);
+  useEffect(() => {
+    if (!seedProgress || seedProgress.pending === 0) return;
+    const t = setTimeout(
+      () => {
+        seedChunk({ batchSize: 20 })
+          .then((r) => {
+            lastAllFailed.current = r.stored + r.missed === 0 && r.failed > 0;
+          })
+          .catch(() => {
+            // transient failure — progress stays pending and re-arms this effect
+          });
+      },
+      lastAllFailed.current ? 30000 : 2000,
+    );
+    return () => clearTimeout(t);
+  }, [seedProgress, seedChunk]);
 
   useEffect(() => {
     try {

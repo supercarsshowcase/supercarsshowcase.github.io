@@ -3,6 +3,50 @@ import { useEffect, useState } from "react";
 import type { Car } from "../lib/types";
 import { getCarImage, getBrandImage } from "./images";
 import { CARS } from "./cars";
+import { carKey } from "../lib/wikiTitles";
+
+/** Directory of car thumbnails seeded into Convex storage by the admin
+ *  seeder. Populated once per session from the app's own backend — the
+ *  deterministic, no-external-host tier of the image chain. */
+let catalog: Record<string, string> | null = null;
+let catalogVersion = 0;
+const catalogListeners = new Set<() => void>();
+
+// Convex HTTP actions are served from the site host, not the websocket host.
+const CONVEX_SITE = ((import.meta as { env?: Record<string, string> }).env?.VITE_CONVEX_URL ?? "").replace(
+  "convex.cloud",
+  "convex.site",
+);
+const thumbUrl = (storageId: string) => `${CONVEX_SITE}/api/thumb/${storageId}`;
+
+/** Swap in the Convex catalog once the query resolves; subscribers re-render. */
+export function setThumbCatalog(map: Record<string, string>): void {
+  catalog = map;
+  catalogVersion++;
+  for (const fn of catalogListeners) fn();
+}
+
+/** Convex-served thumbnail for a car, if the seeder has resolved one. */
+export function catalogCarImage(car: Car): string {
+  if (!catalog) return "";
+  const id = catalog[carKey(car)];
+  return id ? thumbUrl(id) : "";
+}
+
+/** Convex-served image for any catalog key (cars, brand marques). */
+export function catalogImageFor(key: string): string {
+  if (!catalog || !key) return "";
+  const id = catalog[key];
+  return id ? thumbUrl(id) : "";
+}
+
+/** Subscribe to catalog swaps (used by hooks). */
+function subscribeCatalog(fn: () => void): () => void {
+  catalogListeners.add(fn);
+  return () => {
+    catalogListeners.delete(fn);
+  };
+}
 
 /**
  * Runtime photo enrichment for the archive.
@@ -23,37 +67,10 @@ import { CARS } from "./cars";
  *   designed fallback, never a broken image.
  */
 
-// ── Title prediction (mirrors carWikiTitle in images.ts) ─────────────────────
+// ── Title prediction (shared with the Convex seeding action) ─────────────────
 
-export function wikiTitle(brand: string, model: string): string {
-  if (brand === "BMW M") return `BMW ${model}`;
-  if (brand === "Audi Sport") return `Audi ${model}`;
-  if (brand === "Mercedes-AMG") {
-    return `Mercedes-AMG ${model.replace(/^AMG\s+/i, "")}`;
-  }
-  return `${brand} ${model}`;
-}
-
-/** Candidate article titles for one car: the full title, then progressively
- *  trimmed base-model variants ("Toyota Chaser Tourer V" → "Toyota Chaser
- *  Tourer" → "Toyota Chaser") — variant/trim-level articles often don't
- *  exist, but the base-model article's lead photo is the right car. Capped
- *  at 3 to keep batches small. */
-export function titleCandidates(brand: string, model: string): string[] {
-  const full = wikiTitle(brand, model);
-  const tokens = full.split(/\s+/);
-  const out = [full];
-  while (tokens.length > 2 && out.length < 3) {
-    tokens.pop();
-    out.push(tokens.join(" "));
-  }
-  return out;
-}
-
-/** Wikipedia titles use underscores; disambiguation parens never match. */
-export function wikiSlug(title: string): string {
-  return title.replace(/\s*\([^)]*\)\s*/g, "").trim().replace(/\s+/g, "_");
-}
+import { titleCandidates, wikiSlug } from "../lib/wikiTitles";
+export { wikiTitle, titleCandidates, wikiSlug } from "../lib/wikiTitles";
 
 // ── Cache ─────────────────────────────────────────────────────────────────────
 
@@ -102,10 +119,10 @@ export function cachedEnriched(car: Car): string {
   return "";
 }
 
-/** Best image for a car right now: verified static photo, else any
- *  previously-enriched thumbnail ("" = still unknown, scene stays up). */
+/** Best image for a car right now: verified static photo → Convex catalog →
+ *  any previously-enriched thumbnail ("" = still unknown, scene stays up). */
 export function cachedCarImage(car: Car): string {
-  return getCarImage(car) || cachedEnriched(car);
+  return getCarImage(car) || catalogCarImage(car) || cachedEnriched(car);
 }
 
 // ── Subscriptions (hooks re-render when their car resolves) ───────────────────
@@ -143,7 +160,7 @@ export function ensureThumbs(cars: Car[]): void {
   loadStorage();
   const wanted: string[] = [];
   for (const car of cars) {
-    if (getCarImage(car)) continue; // static photo — no lookup needed
+    if (getCarImage(car) || catalogCarImage(car)) continue; // already served
     for (const title of titleCandidates(car.brand, car.model)) {
       wanted.push(wikiSlug(title));
     }
@@ -298,10 +315,13 @@ async function fetchBatch(slugs: string[]): Promise<void> {
  *  path. */
 export function warmupThumbs(): void {
   loadStorage();
-  ensureThumbs(CARS);
+  const needsWiki = CARS.filter(
+    (c) => !getCarImage(c) && !catalogCarImage(c),
+  );
+  ensureThumbs(needsWiki);
   queueSlugs(
     [...new Set(CARS.map((c) => c.brand))]
-      .filter((b) => !getBrandImage(b))
+      .filter((b) => !getBrandImage(b) && !catalogImageFor(wikiSlug(b)))
       .map((b) => wikiSlug(b)),
   );
 }
@@ -312,20 +332,24 @@ export function warmupThumbs(): void {
  *  yields "" without queuing anything. */
 export function useCarImage(car: Car | undefined): string {
   const staticImg = car ? getCarImage(car) : "";
+  // Re-render when the Convex catalog lands (module state → version counter).
+  const [, setCatV] = useState(catalogVersion);
+  useEffect(() => subscribeCatalog(() => setCatV(catalogVersion)), []);
+  const hasCatalog = !!(car && catalogCarImage(car));
   const [enriched, setEnriched] = useState(() =>
-    car && !staticImg ? cachedEnriched(car) : "",
+    car && !staticImg && !hasCatalog ? cachedEnriched(car) : "",
   );
 
   useEffect(() => {
-    if (!car || staticImg) return;
+    if (!car || staticImg || hasCatalog) return;
     setEnriched(cachedEnriched(car));
     ensureThumbs([car]);
     const keys = titleCandidates(car.brand, car.model).map(wikiSlug);
     const unsubs = keys.map((k) => subscribe(k, () => setEnriched(cachedEnriched(car))));
     return () => unsubs.forEach((u) => u());
-  }, [car, staticImg]);
+  }, [car, staticImg, hasCatalog]);
 
-  return staticImg || enriched;
+  return staticImg || (car ? catalogCarImage(car) : "") || enriched;
 }
 
 /** Enriched brand-header image: hand-verified photo → Wikipedia thumbnail →
@@ -333,10 +357,15 @@ export function useCarImage(car: Car | undefined): string {
  *  headers resolve a car-thumbnail or article image at runtime. */
 export function useBrandImage(name: string): string {
   const staticImg = getBrandImage(name);
+  // Re-render when the Convex catalog lands (module state → version counter).
+  const [, setCatV] = useState(catalogVersion);
+  useEffect(() => subscribeCatalog(() => setCatV(catalogVersion)), []);
+  const key = name ? wikiSlug(name) : "";
+  const catalogHit = catalogImageFor(key);
   const [enriched, setEnriched] = useState(staticImg);
 
   useEffect(() => {
-    if (staticImg) return;
+    if (staticImg || catalogHit) return;
     setEnriched("");
     if (!name) return; // brand still resolving (deep link) — nothing to look up
     loadStorage();
@@ -351,7 +380,7 @@ export function useBrandImage(name: string): string {
     return () => {
       unsub();
     };
-  }, [name, staticImg]);
+  }, [name, staticImg, catalogHit]);
 
-  return staticImg || enriched;
+  return staticImg || catalogHit || enriched;
 }

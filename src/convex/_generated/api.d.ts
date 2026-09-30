@@ -25,6 +25,7 @@ import type * as pages from "../pages.js";
 import type * as presence from "../presence.js";
 import type * as profile from "../profile.js";
 import type * as site from "../site.js";
+import type * as thumbs from "../thumbs.js";
 import type * as users from "../users.js";
 
 import type {
@@ -51,6 +52,7 @@ declare const fullApi: ApiFromModules<{
   presence: typeof presence;
   profile: typeof profile;
   site: typeof site;
+  thumbs: typeof thumbs;
   users: typeof users;
 }>;
 

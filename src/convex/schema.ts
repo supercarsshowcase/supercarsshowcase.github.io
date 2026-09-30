@@ -97,6 +97,22 @@ const schema = defineSchema(
       updatedAt: v.number(),
     }).index("by_slug", ["slug"]),
 
+    // Car-thumbnail catalog: one row per photo-less archive car (and per
+    // photo-less brand marque), seeded server-side from Wikipedia's
+    // pageimages API by the thumbs seeder. `storageId` points at the image
+    // bytes in Convex file storage (served via /api/thumb/<storageId>);
+    // missing storageId + seeded=true = lookup found nothing (definitive).
+    carThumbs: defineTable({
+      key: v.string(), // shared wiki-slug cache key (lib/wikiTitles)
+      slug: v.string(), // archive car slug ("" for brand rows)
+      storageId: v.optional(v.id("_storage")),
+      seeded: v.boolean(), // false = queued for a future seeding chunk
+      source: v.optional(v.string()), // "pageimages" | "search"
+      updatedAt: v.number(),
+    })
+      .index("by_key", ["key"])
+      .index("by_seeded", ["seeded"]),
+
     // Visitor feedback, ideas and suggestions, reviewed in the admin panel.
     feedback: defineTable({
       userId: v.id("users"),
