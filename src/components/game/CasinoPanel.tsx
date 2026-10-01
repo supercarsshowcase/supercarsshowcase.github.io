@@ -130,26 +130,30 @@ function CoinIcon({ side, size = "md" }: { side: "heads" | "tails" | "unknown"; 
 
 function CarChip({ label, value, type }: { label: string; value: number; type: "cash" | "car" }) {
   return (
-    <div className={cn("flex items-center justify-between rounded-xl px-4 py-2.5 text-sm font-bold border",
-      type === "car" ? "bg-purple-500/20 text-purple-400 border-purple-500/30" : "bg-white/5 text-white/60 border-white/10"
+    <div className={cn("flex items-center justify-between gap-3 rounded-xl border px-4 py-2.5 text-sm font-bold",
+      type === "car" ? "border-purple-500/30 bg-purple-500/10 text-purple-300" : "border-emerald-500/20 bg-emerald-500/[0.07] text-emerald-300/90"
     )}>
-      <span className="flex items-center gap-2">
-        {type === "car" ? <Car className="size-4 text-purple-400" /> : <DollarSign className="size-4 text-green-400" />}
-        {label}
+      <span className="flex min-w-0 items-center gap-2">
+        {type === "car" ? <Car className="size-4 shrink-0 text-purple-400" /> : <DollarSign className="size-4 shrink-0 text-emerald-400" />}
+        <span className="truncate">{label}</span>
       </span>
-      <span>${value.toLocaleString()}</span>
+      <span className="shrink-0 tabular-nums">${value.toLocaleString()}</span>
     </div>
   );
 }
 
 function ResultBadge({ won, children }: { won: boolean; children: React.ReactNode }) {
   return (
-    <motion.div initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-      className={cn("flex items-center gap-3 rounded-2xl px-10 py-5 font-display text-2xl font-black border-2",
-        won ? "bg-green-500/15 text-green-400 border-green-500/30 shadow-[0_0_40px_rgba(34,197,94,0.3)]" : "bg-red-500/15 text-red-400 border-red-500/30 shadow-[0_0_40px_rgba(239,68,68,0.3)]"
+    <motion.div
+      initial={{ scale: 0.6, opacity: 0, y: 10 }}
+      animate={{ scale: 1, opacity: 1, y: 0 }}
+      transition={{ type: "spring", stiffness: 380, damping: 22 }}
+      className={cn("relative flex items-center gap-3 overflow-hidden rounded-2xl border px-7 py-4 text-center font-display text-lg font-black tracking-wide sm:px-10 sm:py-5 sm:text-2xl",
+        won ? "border-emerald-400/40 bg-emerald-500/10 text-emerald-300 shadow-[0_0_50px_-12px_rgba(16,185,129,0.7)]" : "border-red-500/40 bg-red-500/10 text-red-300 shadow-[0_0_50px_-12px_rgba(239,68,68,0.7)]"
       )}>
-      {won ? <Trophy className="size-8 shrink-0" /> : <XCircle className="size-8 shrink-0" />}
-      {children}
+      <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/50 to-transparent" />
+      {won ? <Trophy className="size-7 shrink-0 sm:size-8" /> : <XCircle className="size-7 shrink-0 sm:size-8" />}
+      <span>{children}</span>
     </motion.div>
   );
 }
@@ -158,8 +162,8 @@ function ResultBadge({ won, children }: { won: boolean; children: React.ReactNod
 function PlayAgainButton({ onClick, disabled, label = "Play Again" }: { onClick: () => void; disabled?: boolean; label?: string }) {
   return (
     <button type="button" onClick={onClick} disabled={disabled}
-      className="inline-flex cursor-pointer items-center gap-2 rounded-2xl border-2 border-amber-500/60 bg-amber-500/10 px-8 py-4 font-display text-base font-black uppercase tracking-wider text-amber-300 shadow-[0_0_24px_rgba(245,158,11,0.2)] transition-all hover:bg-amber-500/20 hover:shadow-[0_0_36px_rgba(245,158,11,0.35)] hover:scale-105 active:scale-105 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100">
-      <RotateCcw className="size-5" />{label}
+      className="group inline-flex cursor-pointer items-center gap-2.5 rounded-full border border-amber-400/50 bg-gradient-to-b from-amber-400/15 to-amber-500/5 px-8 py-3.5 font-display text-sm font-black uppercase tracking-[0.18em] text-amber-300 transition-all hover:border-amber-300 hover:bg-amber-400/20 hover:shadow-[0_0_30px_-6px_rgba(251,191,36,0.65)] active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:shadow-none">
+      <RotateCcw className="size-4 transition-transform duration-300 group-hover:-rotate-180" />{label}
     </button>
   );
 }
@@ -196,80 +200,92 @@ export function CasinoPanel({ state, dispatch }: { state: GameState; dispatch: R
 }
 
 /* ── Casino Lobby ──────────────────────────────────────────────────────── */
+/** One selectable table card — gold sweep accent, medallion, badges. */
+function LobbyCard({ g, onSelect }: { g: GameDef; onSelect: (g: GameId) => void }) {
+  return (
+    <button key={g.id} type="button" onClick={() => onSelect(g.id)}
+      className="group relative flex w-full items-center gap-4 overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-[#141417] to-[#0e0e11] p-4 text-left transition-all duration-300 hover:-translate-y-1 hover:border-amber-400/50 hover:shadow-[0_18px_44px_-18px_rgba(251,191,36,0.35)]">
+      <span aria-hidden="true" className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-apex-red via-amber-500 to-apex-red opacity-70 transition-all duration-300 group-hover:w-full group-hover:opacity-[0.06]" />
+      <div className="relative flex size-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-white/10 to-white/[0.02] ring-1 ring-white/10 transition-all duration-300 group-hover:scale-110 group-hover:from-amber-400/20 group-hover:to-amber-500/5 group-hover:ring-amber-400/40">{g.icon}</div>
+      <div className="relative min-w-0 flex-1">
+        <p className="truncate font-display text-sm font-bold text-white transition-colors group-hover:text-amber-300">
+          {g.name}
+          {g.id === "online-jackpot" && <span className="ml-2 rounded bg-apex-red px-2 py-0.5 text-[11px] font-bold uppercase text-white">NEW!</span>}
+          {g.id === "online-coinflip" && <span className="ml-2 inline-flex items-center gap-1 rounded bg-emerald-500/20 px-2 py-0.5 text-[11px] font-bold uppercase text-emerald-400"><span className="inline-block size-1.5 animate-pulse rounded-full bg-emerald-400" />Live</span>}
+        </p>
+        <p className="mt-0.5 truncate text-xs text-white/40">{g.desc}</p>
+      </div>
+      <ChevronRight className="relative size-4 shrink-0 text-white/20 transition-all duration-300 group-hover:translate-x-1 group-hover:text-amber-300" />
+    </button>
+  );
+}
+
 function CasinoLobby({ state, dispatch, onSelect }: { state: GameState; dispatch: React.Dispatch<Action>; onSelect: (g: GameId) => void }) {
   const offline = GAMES.filter((g) => g.category === "game");
   const online = GAMES.filter((g) => g.category === "online");
+  void dispatch;
 
   return (
-    <div>
-      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="font-display text-[11px] font-semibold uppercase tracking-[0.3em] text-apex-red">
-            Apex Casino
-          </p>
-          <h2 className="mt-1 font-display text-4xl font-black text-white tracking-tight">
-            Pick Your Table
-          </h2>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/5 px-4 py-2">
-            <DollarSign className="size-4 text-green-400" />
-            <div>
-              <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/40">Balance</p>
-              <p className="font-display text-sm font-black tabular-nums text-white">
-                ${state.cash.toLocaleString()}
-              </p>
-            </div>
+    <div className="space-y-7">
+      {/* Hero header */}
+      <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-[#171114] via-[#101013] to-[#0c0c0f] p-6 sm:p-8">
+        <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-400/50 to-transparent" />
+        <span aria-hidden="true" className="pointer-events-none absolute -top-24 right-0 h-56 w-72 rounded-full bg-apex-red/10 blur-3xl" />
+        <span aria-hidden="true" className="pointer-events-none absolute -bottom-8 right-6 hidden font-display text-8xl font-black tracking-tighter text-white/[0.03] sm:block">CASINO</span>
+        <div className="relative flex flex-wrap items-end justify-between gap-5">
+          <div>
+            <p className="flex items-center gap-2.5 font-display text-[11px] font-semibold uppercase tracking-[0.3em] text-amber-400/80">
+              <span className="h-px w-6 bg-amber-400/60" /> Apex Casino
+            </p>
+            <h2 className="mt-1.5 font-display text-4xl font-black tracking-tight text-white sm:text-5xl">
+              Pick Your Table
+            </h2>
+            <p className="mt-2 max-w-md text-sm leading-relaxed text-white/40">
+              House odds, real stakes — five tables below, live heads-up play on the right.
+            </p>
           </div>
-          <div className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/5 px-4 py-2">
-            <Car className="size-4 text-apex-red" />
-            <div>
-              <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/40">Cars</p>
-              <p className="font-display text-sm font-black tabular-nums text-white">
-                {Object.keys(state.ownedCars).length}
-              </p>
+          <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2.5 rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.07] px-4 py-2.5">
+              <DollarSign className="size-4 text-emerald-400" />
+              <div>
+                <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/40">Balance</p>
+                <p className="font-display text-sm font-black tabular-nums text-white">
+                  ${state.cash.toLocaleString()}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2.5 rounded-2xl border border-apex-red/25 bg-apex-red/[0.07] px-4 py-2.5">
+              <Car className="size-4 text-apex-red" />
+              <div>
+                <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/40">Cars</p>
+                <p className="font-display text-sm font-black tabular-nums text-white">
+                  {Object.keys(state.ownedCars).length}
+                </p>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div>
-          <p className="mb-3 flex items-center gap-2 font-display text-xs font-bold uppercase tracking-[0.25em] text-white/40"><span className="h-3 w-1 rounded-full bg-apex-red" />Games</p>
-          <div className="space-y-2">
-            {offline.map((g) => (
-              <button key={g.id} type="button" onClick={() => onSelect(g.id)}
-                className="group flex w-full items-center gap-4 rounded-2xl border border-white/10 bg-gradient-to-b from-[#141417] to-[#0f0f12] p-4 text-left transition-all duration-300 hover:-translate-y-0.5 hover:border-apex-red/60 hover:shadow-[0_16px_40px_-16px_rgba(255,46,0,0.35)]">
-                <div className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-white/10 to-white/[0.02] ring-1 ring-white/10 transition-all duration-300 group-hover:scale-110 group-hover:from-apex-red/25 group-hover:to-apex-red/5 group-hover:ring-apex-red/40">{g.icon}</div>
-                <div className="flex-1">
-                  <p className="font-display text-sm font-bold text-white group-hover:text-apex-red transition-colors">{g.name}</p>
-                  <p className="text-xs text-white/35 mt-0.5">{g.desc}</p>
-                </div>
-                <ChevronRight className="size-4 shrink-0 text-white/20 transition-all duration-300 group-hover:translate-x-1 group-hover:text-apex-red" />
-              </button>
-            ))}
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+        <section>
+          <p className="mb-3 flex items-center justify-between font-display text-xs font-bold uppercase tracking-[0.25em] text-white/45">
+            <span className="flex items-center gap-2"><span className="h-3 w-1 rounded-full bg-apex-red" />Games</span>
+            <span className="text-white/25 tabular-nums">{offline.length} tables</span>
+          </p>
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+            {offline.map((g) => <LobbyCard key={g.id} g={g} onSelect={onSelect} />)}
           </div>
-        </div>
-        <div>
-          <p className="mb-3 flex items-center gap-2 font-display text-xs font-bold uppercase tracking-[0.25em] text-white/40"><span className="h-3 w-1 rounded-full bg-apex-red" />Online Games</p>
-          <div className="space-y-2">
-            {online.map((g) => (
-              <button key={g.id} type="button" onClick={() => onSelect(g.id)}
-                className="group flex w-full items-center gap-4 rounded-2xl border border-white/10 bg-gradient-to-b from-[#141417] to-[#0f0f12] p-4 text-left transition-all duration-300 hover:-translate-y-0.5 hover:border-apex-red/60 hover:shadow-[0_16px_40px_-16px_rgba(255,46,0,0.35)]">
-                <div className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-white/10 to-white/[0.02] ring-1 ring-white/10 transition-all duration-300 group-hover:scale-110 group-hover:from-apex-red/25 group-hover:to-apex-red/5 group-hover:ring-apex-red/40">{g.icon}</div>
-                <div className="flex-1">
-                  <p className="font-display text-sm font-bold text-white group-hover:text-apex-red transition-colors">
-                    {g.name}
-                    {g.id === "online-jackpot" && <span className="ml-2 rounded bg-apex-red px-2 py-0.5 text-[11px] font-bold uppercase text-white">NEW!</span>}
-                    {g.id === "online-coinflip" && <span className="ml-2 inline-flex items-center gap-1 rounded bg-emerald-500/20 px-2 py-0.5 text-[11px] font-bold uppercase text-emerald-400"><span className="inline-block size-1.5 animate-pulse rounded-full bg-emerald-400" />Live</span>}
-                  </p>
-                  <p className="text-xs text-white/35 mt-0.5">{g.desc}</p>
-                </div>
-                <ChevronRight className="size-4 shrink-0 text-white/20 transition-all duration-300 group-hover:translate-x-1 group-hover:text-apex-red" />
-              </button>
-            ))}
+        </section>
+        <section>
+          <p className="mb-3 flex items-center justify-between font-display text-xs font-bold uppercase tracking-[0.25em] text-white/45">
+            <span className="flex items-center gap-2"><span className="h-3 w-1 rounded-full bg-blue-500" />Online Games</span>
+            <span className="text-white/25 tabular-nums">{online.length} tables</span>
+          </p>
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+            {online.map((g) => <LobbyCard key={g.id} g={g} onSelect={onSelect} />)}
           </div>
-        </div>
+        </section>
       </div>
     </div>
   );
@@ -297,10 +313,14 @@ function TradeCarsPanel({ state, dispatch }: { state: GameState; dispatch: React
   };
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-[#111114] p-6">
-      <div className="flex items-center gap-3 mb-2">
-        <Car className="size-6 text-apex-red" />
-        <h3 className="font-display text-xl font-black text-white">Trade Cars for Cash</h3>
+    <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-[#111114] p-6">
+      <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-400/50 to-transparent" />
+      <div className="mb-2 flex items-center gap-3">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-amber-400/30 bg-amber-400/10"><Car className="size-5 text-amber-300" /></span>
+        <div>
+          <p className="font-display text-[9px] font-semibold uppercase tracking-[0.3em] text-amber-400/70">Apex Casino</p>
+          <h3 className="font-display text-xl font-black text-white">Trade Cars for Cash</h3>
+        </div>
       </div>
       <p className="mb-4 text-xs text-white/40">Sell your cars at 70% market value to fund your casino games.</p>
       {ownedCars.length === 0 ? (
@@ -330,30 +350,44 @@ function TradeCarsPanel({ state, dispatch }: { state: GameState; dispatch: React
 function BetInput({ value, onChange, max }: { value: number; onChange: (v: number) => void; max: number }) {
   const presets = [1000, 10000, 100000, 1000000, 10000000];
   return (
-    <div className="space-y-3 w-full max-w-lg">
-      <div className="flex items-center gap-3">
-        <button type="button" onClick={() => onChange(Math.max(1, Math.floor(value / 2)))}
-          className="flex items-center gap-1 rounded-lg bg-white/5 px-5 py-3 text-sm font-bold text-white/50 hover:bg-white/10 transition-colors">
-          <ChevronLeft className="size-4" /> ½
-        </button>
-        <input type="number" value={value} max={max}
-          onChange={(e) => onChange(Math.max(1, Math.min(max, Number(e.target.value) || 1)))}
-          onBlur={() => onChange(Math.max(1, Math.min(max, value)))}
-          className="flex-1 rounded-xl border-2 border-white/15 bg-[#0a0a0c] px-5 py-3.5 text-xl font-bold text-white text-center outline-none focus:border-apex-red transition-colors" />
-        <button type="button" onClick={() => onChange(Math.min(max, value * 2))}
-          className="flex items-center gap-1 rounded-lg bg-white/5 px-5 py-3 text-sm font-bold text-white/50 hover:bg-white/10 transition-colors">
-          2× <ChevronRight className="size-4" />
-        </button>
-      </div>
-      <p className="text-right text-xs font-bold text-white/30">Max: ${max.toLocaleString()}</p>
-      <div className="flex gap-2">
-        {presets.filter((p) => p <= max).slice(0, 5).map((p) => (
-          <button key={p} type="button" onClick={() => onChange(p)}
-            className={cn("rounded-lg px-4 py-2 text-sm font-bold transition-colors",
-              value === p ? "bg-apex-red text-white" : "bg-white/5 text-white/40 hover:bg-white/10")}>
-            {p >= 1000000 ? `${(p / 1000000).toFixed(0)}M` : p >= 1000 ? `${(p / 1000).toFixed(0)}K` : p}
+    <div className="w-full max-w-lg space-y-3">
+      <div className="rounded-2xl border border-white/10 bg-black/40 p-3">
+        <div className="mb-2 flex items-center justify-between px-1.5">
+          <span className="flex items-center gap-1.5 font-display text-[10px] font-bold uppercase tracking-[0.28em] text-white/40">
+            <DollarSign className="size-3 text-emerald-400" /> Wager
+          </span>
+          <span className="font-display text-[10px] font-bold uppercase tracking-widest text-white/30 tabular-nums">
+            Max ${max.toLocaleString()}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={() => onChange(Math.max(1, Math.floor(value / 2)))}
+            className="flex shrink-0 cursor-pointer items-center gap-1 rounded-full border border-white/12 bg-white/[0.06] px-4 py-2.5 font-display text-xs font-black text-white/50 transition-colors hover:border-white/30 hover:text-white">
+            <ChevronLeft className="size-3.5" /> ½
           </button>
-        ))}
+          <div className="relative flex-1">
+            <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 font-display text-lg font-black text-emerald-400/70">$</span>
+            <input type="number" value={value} max={max}
+              onChange={(e) => onChange(Math.max(1, Math.min(max, Number(e.target.value) || 1)))}
+              onBlur={() => onChange(Math.max(1, Math.min(max, value)))}
+              className="w-full rounded-xl border border-white/15 bg-[#070708] py-3 pl-8 pr-4 text-right font-display text-lg font-black tabular-nums text-white outline-none transition-colors focus:border-amber-400/70" />
+          </div>
+          <button type="button" onClick={() => onChange(Math.min(max, value * 2))}
+            className="flex shrink-0 cursor-pointer items-center gap-1 rounded-full border border-white/12 bg-white/[0.06] px-4 py-2.5 font-display text-xs font-black text-white/50 transition-colors hover:border-white/30 hover:text-white">
+            2× <ChevronRight className="size-3.5" />
+          </button>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {presets.filter((p) => p <= max).slice(0, 5).map((p) => (
+            <button key={p} type="button" onClick={() => onChange(p)}
+              className={cn("cursor-pointer rounded-full border px-3.5 py-1.5 font-display text-[11px] font-black uppercase tabular-nums transition-all",
+                value === p
+                  ? "border-amber-400 bg-amber-400/15 text-amber-300 shadow-[0_0_16px_-4px_rgba(251,191,36,0.6)]"
+                  : "border-white/10 bg-white/[0.05] text-white/45 hover:border-white/30 hover:text-white/80")}>
+              {p >= 1000000 ? `${(p / 1000000).toFixed(0)}M` : p >= 1000 ? `${(p / 1000).toFixed(0)}K` : p}
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -362,15 +396,22 @@ function BetInput({ value, onChange, max }: { value: number; onChange: (v: numbe
 /* ── Helper: GameLayout ────────────────────────────────────────────────── */
 function GameLayout({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-gradient-to-b from-[#131316] to-[#0e0e11] p-4 sm:p-8 lg:p-10">
-      <div className="mb-6 flex items-center gap-3 sm:mb-8 sm:gap-4">
-        <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-apex-red/10 ring-1 ring-apex-red/30 sm:size-14">{icon}</div>
-        <div className="min-w-0">
-          <p className="mb-0.5 font-display text-[9px] font-semibold uppercase tracking-[0.3em] text-apex-red/80">Apex Casino</p>
-          <h3 className="truncate font-display text-2xl font-black text-white sm:text-3xl">{title}</h3>
+    <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-[#0d0d10]">
+      <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-400/60 to-transparent" />
+      <span aria-hidden="true" className="pointer-events-none absolute -top-44 left-1/2 h-72 w-[34rem] -translate-x-1/2 rounded-full bg-apex-red/10 blur-3xl" />
+      <div className="relative p-4 sm:p-7 lg:p-9">
+        <div className="mb-6 flex items-center gap-3 sm:mb-8 sm:gap-4">
+          <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-amber-400/30 bg-gradient-to-b from-amber-400/15 to-transparent ring-1 ring-amber-400/10 sm:size-14">{icon}</div>
+          <div className="min-w-0 flex-1">
+            <p className="mb-0.5 font-display text-[9px] font-semibold uppercase tracking-[0.3em] text-amber-400/70">Apex Casino</p>
+            <h3 className="truncate font-display text-2xl font-black tracking-tight text-white sm:text-3xl">{title}</h3>
+          </div>
+          <span className="hidden items-center gap-2 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3.5 py-1.5 font-display text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-400 sm:inline-flex">
+            <span className="inline-block size-1.5 animate-pulse rounded-full bg-emerald-400" /> Table open
+          </span>
         </div>
+        {children}
       </div>
-      {children}
     </div>
   );
 }
@@ -393,6 +434,7 @@ function CoinflipGame({ state, dispatch }: { state: GameState; dispatch: React.D
   const [selectedCar, setSelectedCar] = useState<string | null>(null);
   const [wonCar, setWonCar] = useState<string | null>(null);
   const [lostCar, setLostCar] = useState<string | null>(null);
+  const [history, setHistory] = useState<("heads" | "tails")[]>([]);
   // After the 3D wobble settles, swap in a STATIC flat face — the 3D coin's
   // final frame can render edge-on (gold edge instead of the silver tails
   // face). The static face is unmistakable; the payout still happens at
@@ -425,7 +467,7 @@ function CoinflipGame({ state, dispatch }: { state: GameState; dispatch: React.D
     if (settleTimer.current) clearTimeout(settleTimer.current);
     flipTimer.current = setTimeout(() => {
       sfx.land();
-      setResult(r); const wonGame = r === pick;      setWon(wonGame);
+      setResult(r); setHistory((h) => [r, ...h].slice(0, 12)); const wonGame = r === pick;      setWon(wonGame);
       if (wonGame) sfx.win(); else sfx.lose();
       if (mode === "cash") {
         if (wonGame) {
@@ -465,18 +507,31 @@ function CoinflipGame({ state, dispatch }: { state: GameState; dispatch: React.D
   }, [mode, bet, pick, selectedCar, state.cash, state.ownedCars, dispatch]);
 
   return (
-    <GameLayout title="Coinflip" icon={<CircleDot className="size-7 text-amber-400" />}>
-      <div className="flex flex-col items-center gap-8">
-        <div className="flex gap-3">
-          {(["cash", "car"] as const).map((m) => (
-            <button key={m} type="button" onClick={() => setMode(m)}
-              className={cn("inline-flex items-center gap-2 rounded-xl border-2 px-8 py-3 font-display text-base font-bold uppercase tracking-wider transition-all",
-                mode === m ? "border-amber-500 bg-amber-500/20 text-amber-400" : "border-white/15 text-white/50 hover:border-white/30")}>
-              {m === "cash" ? <DollarSign className="size-5" /> : <Car className="size-5" />}
-              {m === "cash" ? "Cash" : "Gamble Car"}
-            </button>
-          ))}
-        </div>
+    <GameLayout title="Heads or Tails" icon={<CircleDot className="size-7 text-amber-400" />}>
+      <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
+        {/* ── Left: the felt & the toss ── */}
+        <div className="relative flex flex-col items-center justify-center gap-5 overflow-hidden rounded-3xl border border-white/10 bg-[radial-gradient(ellipse_at_top,rgba(255,46,0,0.08),transparent_55%),#08080a] px-4 py-8">
+          <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-400/40 to-transparent" />
+          {/* Recent outcomes rail — the table remembers */}
+          <div className="flex min-h-7 flex-wrap items-center justify-center gap-1.5">
+            {history.length === 0 ? (
+              <span className="font-display text-[10px] font-bold uppercase tracking-[0.25em] text-white/20">
+                No flips yet — the table remembers
+              </span>
+            ) : (
+              <>
+                <span className="mr-1 font-display text-[10px] font-bold uppercase tracking-[0.2em] text-white/30">Last</span>
+                {history.map((h, i) => (
+                  <span key={`${i}-${h}`} title={h}
+                    className={cn("flex size-6 items-center justify-center rounded-full font-display text-[10px] font-black shadow-sm",
+                      h === "heads" ? "bg-gradient-to-b from-amber-300 to-amber-500 text-amber-950" : "bg-gradient-to-b from-gray-200 to-gray-400 text-gray-800",
+                      i > 5 && "opacity-40")}>
+                    {h === "heads" ? "H" : "T"}
+                  </span>
+                ))}
+              </>
+            )}
+          </div>
 
         {/* The real 3D two-faced coin — launched into the air, spinning ~9
             turns for 3s, landing (squash + wobble + sheen) on the true face,
@@ -514,18 +569,45 @@ function CoinflipGame({ state, dispatch }: { state: GameState; dispatch: React.D
           {spinning ? "The coin is in the air…" : result ? `Landed on ${result}!` : "Call it — heads or tails"}
         </p>
 
-        <div className="flex gap-6">
-          {(["heads", "tails"] as const).map((s) => (
-            <button key={s} type="button" onClick={() => setPick(s)} className={cn(
-              "rounded-2xl border-2 px-12 py-5 font-display text-xl font-black uppercase tracking-wider transition-all transform hover:scale-105",
-              pick === s ? "border-apex-red bg-apex-red/20 text-white shadow-lg shadow-apex-red/20" : "border-white/20 text-white/50 hover:border-white/40 hover:text-white/70")}>
-              <div className="flex flex-col items-center gap-1">
-                <Crown className={cn("size-10", s === "heads" ? "text-amber-400" : "text-white/30")} />
-                {s}
-              </div>
-            </button>
-          ))}
-        </div>
+        </div>{/* end left column */}
+
+        {/* ── Right: the control desk ── */}
+        <div className="flex flex-col gap-5 rounded-3xl border border-white/10 bg-black/40 p-5 sm:p-6">
+          {/* Cash / Car segmented toggle */}
+          <div className="grid grid-cols-2 gap-1 rounded-2xl border border-white/10 bg-black/50 p-1">
+            {(["cash", "car"] as const).map((m) => (
+              <button key={m} type="button" onClick={() => setMode(m)}
+                className={cn("flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 font-display text-sm font-black uppercase tracking-wider transition-all",
+                  mode === m ? "bg-gradient-to-b from-amber-400/20 to-amber-500/10 text-amber-300 shadow-[inset_0_0_0_1px_rgba(251,191,36,0.4)]" : "text-white/40 hover:text-white/70")}>
+                {m === "cash" ? <DollarSign className="size-4" /> : <Car className="size-4" />}
+                {m === "cash" ? "Cash" : "Gamble Car"}
+              </button>
+            ))}
+          </div>
+
+          {/* Call it — heads or tails */}
+          <div className="grid grid-cols-2 gap-3">
+            {(["heads", "tails"] as const).map((s) => (
+              <button key={s} type="button" onClick={() => setPick(s)}
+                className={cn("group relative flex flex-col items-center gap-2 overflow-hidden rounded-2xl border-2 px-4 py-5 transition-all active:scale-[0.98]",
+                  pick === s
+                    ? s === "heads"
+                      ? "border-amber-400 bg-amber-400/10 shadow-[0_0_28px_-8px_rgba(251,191,36,0.7)]"
+                      : "border-gray-300 bg-gray-300/10 shadow-[0_0_28px_-8px_rgba(209,213,219,0.55)]"
+                    : "border-white/15 bg-white/[0.03] hover:border-white/35")}>
+                <span className={cn("flex size-14 items-center justify-center rounded-full border-2 transition-colors",
+                  s === "heads"
+                    ? pick === s ? "border-amber-300 bg-gradient-to-br from-amber-300 to-amber-500" : "border-amber-500/40 bg-gradient-to-br from-amber-500/20 to-amber-600/10"
+                    : pick === s ? "border-gray-200 bg-gradient-to-br from-gray-200 to-gray-400" : "border-gray-400/40 bg-gradient-to-br from-gray-400/20 to-gray-500/10")}>
+                  {s === "heads"
+                    ? <Crown className={cn("size-7", pick === s ? "text-amber-950" : "text-amber-300")} />
+                    : <Star className={cn("size-7", pick === s ? "text-gray-800" : "text-gray-300")} />}
+                </span>
+                <span className={cn("font-display text-sm font-black uppercase tracking-[0.2em]", pick === s ? "text-white" : "text-white/45")}>{s}</span>
+                <span className="font-display text-[9px] font-bold uppercase tracking-widest text-white/30">your call</span>
+              </button>
+            ))}
+          </div>
 
         {mode === "cash" ? <BetInput value={bet} onChange={setBet} max={state.cash} /> : (
           <div className="w-full max-w-lg space-y-3">
@@ -549,9 +631,11 @@ function CoinflipGame({ state, dispatch }: { state: GameState; dispatch: React.D
         )}
 
         <button type="button" onClick={play} disabled={spinning || (mode === "cash" ? state.cash < bet : !selectedCar)}
-          className="inline-flex items-center gap-3 rounded-2xl bg-apex-red px-10 py-4 font-display text-lg font-black uppercase tracking-wider text-white transition-all hover:bg-apex-red/80 hover:scale-105 active:scale-105 disabled:opacity-40 disabled:hover:scale-100 shadow-lg shadow-apex-red/30 sm:px-16 sm:py-5 sm:text-xl">
-          {spinning ? <CircleDot className="size-6 animate-spin" /> : <CircleDot className="size-6" />}
-          {spinning ? "Flipping..." : mode === "cash" ? `Flip — $${bet.toLocaleString()}` : "Flip for a Car!"}
+          className="relative w-full overflow-hidden rounded-2xl bg-apex-red px-6 py-4 font-display text-lg font-black uppercase tracking-[0.12em] text-white shadow-[0_16px_40px_-12px_rgba(255,46,0,0.75)] transition-all hover:bg-apex-red-bright active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none sm:py-5 sm:text-xl">
+          <span className="flex items-center justify-center gap-3">
+            {spinning ? <CircleDot className="size-6 animate-spin" /> : <CircleDot className="size-6" />}
+            {spinning ? "Flipping..." : mode === "cash" ? `Flip — $${bet.toLocaleString()}` : "Flip for a Car!"}
+          </span>
         </button>
 
         {won !== null && !spinning && (
@@ -588,6 +672,7 @@ function CoinflipGame({ state, dispatch }: { state: GameState; dispatch: React.D
             <p className="mt-1 font-display text-2xl font-black text-white">{carPrize}</p></div>
           </motion.div>
         )}
+        </div>{/* end control desk */}
       </div>
     </GameLayout>
   );
@@ -649,7 +734,8 @@ function RouletteGame({ state, dispatch }: { state: GameState; dispatch: React.D
               <div key={i} className={cn("flex size-14 items-center justify-center rounded-full text-sm font-bold text-white", numColor(n))}>{n}</div>
             ))}
           </motion.div>
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1 h-full bg-white z-10" />
+          <div className="pointer-events-none absolute left-1/2 top-0 z-10 h-full w-1 -translate-x-1/2 bg-amber-300 shadow-[0_0_12px_rgba(251,191,36,0.8)]" />
+          <div className="pointer-events-none absolute left-1/2 top-0 z-10 -translate-x-1/2 border-x-8 border-t-[10px] border-x-transparent border-t-amber-300" />
         </div>
         {landing !== null && !spinning && (
           <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}
@@ -693,10 +779,17 @@ function RouletteGame({ state, dispatch }: { state: GameState; dispatch: React.D
             ))}
           </div>
         </div>
-        {currentBet && <p className="text-base text-white/50 font-bold">Bet: ${bet.toLocaleString()} on {JSON.stringify(currentBet.value)}</p>}
+        {currentBet && (
+          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 rounded-full border border-amber-400/30 bg-amber-400/10 px-6 py-2.5">
+            <span className="font-display text-[10px] font-bold uppercase tracking-[0.2em] text-amber-400/70">Bet slip</span>
+            <span className="font-display text-sm font-black text-white tabular-nums">${bet.toLocaleString()}</span>
+            <span className="text-xs text-white/30">on</span>
+            <span className="font-display text-sm font-black uppercase text-amber-300">{String(currentBet.value)}</span>
+          </div>
+        )}
         <button type="button" onClick={spin} disabled={spinning || !currentBet || state.cash < bet}
-          className="w-full max-w-lg rounded-2xl bg-apex-red py-5 font-display text-xl font-black uppercase tracking-wider text-white transition-all hover:bg-apex-red/80 hover:scale-105 disabled:opacity-40 shadow-lg shadow-apex-red/30">
-          {spinning ? "Spinning..." : "Bet"}
+          className="w-full max-w-lg rounded-2xl bg-apex-red py-5 font-display text-xl font-black uppercase tracking-[0.15em] text-white shadow-[0_16px_40px_-12px_rgba(255,46,0,0.75)] transition-all hover:bg-apex-red-bright active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none">
+          {spinning ? "Spinning..." : currentBet ? `Spin — $${bet.toLocaleString()}` : "Place a bet first"}
         </button>
         {won !== null && !spinning && <ResultBadge won={won}>{won ? `+$${winAmount.toLocaleString()}!` : `-$${bet.toLocaleString()}!`}</ResultBadge>}
         {won !== null && !spinning && (
@@ -861,7 +954,10 @@ function CrashGame({ state, dispatch }: { state: GameState; dispatch: React.Disp
 
       <div className="flex flex-col gap-4 lg:flex-row">
         {/* Sidebar — bet controls, like the reference layout */}
-        <div className="w-full shrink-0 space-y-2 lg:w-56">
+        <div className="w-full shrink-0 space-y-3 rounded-2xl border border-white/10 bg-black/40 p-4 lg:w-60">
+          <p className="flex items-center gap-2 font-display text-[10px] font-bold uppercase tracking-[0.22em] text-white/45">
+            <DollarSign className="size-3.5 text-emerald-400" /> Stake
+          </p>
           <label className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40">
             Enter the amount of money you want to bet
           </label>
@@ -872,13 +968,13 @@ function CrashGame({ state, dispatch }: { state: GameState; dispatch: React.Disp
               inputMode="numeric"
               value={bet}
               onChange={(e) => setBet(Math.max(1, Math.floor(Number(e.target.value) || 0)))}
-              className="min-h-[38px] min-w-0 flex-1 rounded-md border border-white/15 bg-[#0b0b0c] px-2.5 font-mono text-sm font-bold text-white outline-none focus:border-apex-red"
+              className="min-h-[38px] min-w-0 flex-1 rounded-md border border-white/15 bg-[#0b0b0c] px-2.5 font-mono text-sm font-bold text-white outline-none focus:border-amber-400/70"
             />
             <button
               type="button"
               onClick={() => setBet(Math.max(1, Math.floor(state.cash)))}
               disabled={playing}
-              className="min-h-[38px] shrink-0 rounded-md border border-white/15 bg-white/[0.06] px-3 text-[11px] font-bold text-white transition-colors hover:border-apex-red disabled:opacity-40"
+              className="min-h-[38px] shrink-0 rounded-md border border-white/15 bg-white/[0.06] px-3 text-[11px] font-bold text-white transition-colors hover:border-amber-400/60 hover:text-amber-300 disabled:opacity-40"
             >
               All-in
             </button>
@@ -887,7 +983,7 @@ function CrashGame({ state, dispatch }: { state: GameState; dispatch: React.Disp
             type="button"
             onClick={cashOut}
             disabled={!playing}
-            className="min-h-[38px] w-full rounded-md border border-white/15 bg-white/[0.06] text-xs font-bold uppercase tracking-[0.1em] text-white transition-colors hover:border-green-500 disabled:opacity-40"
+            className="min-h-[38px] w-full rounded-md border border-white/15 bg-white/[0.06] text-xs font-bold uppercase tracking-[0.1em] text-white transition-colors hover:border-emerald-500/70 hover:text-emerald-300 disabled:opacity-40"
           >
             Cash Out
           </button>
@@ -952,12 +1048,12 @@ function CrashGame({ state, dispatch }: { state: GameState; dispatch: React.Disp
 
       {playing ? (
         <button type="button" onClick={cashOut}
-          className="mt-4 inline-flex items-center gap-3 rounded-2xl bg-green-600 px-16 py-6 font-display text-2xl font-black uppercase tracking-wider text-white transition-all hover:bg-green-700 hover:scale-105 animate-pulse shadow-lg shadow-green-600/30">
+          className="mt-4 inline-flex items-center gap-3 rounded-2xl bg-emerald-500 px-10 py-6 font-display text-xl font-black uppercase tracking-wider text-emerald-950 shadow-[0_0_44px_-8px_rgba(16,185,129,0.9)] transition-all hover:bg-emerald-400 active:scale-[0.98] animate-pulse sm:px-16 sm:text-2xl">
           <TrendingUp className="size-6" />CASH OUT — ${(bet * multiplier).toFixed(0)}
         </button>
       ) : (
         <button type="button" onClick={start} disabled={state.cash < bet || cooldown > 0}
-          className="mt-4 inline-flex items-center gap-3 rounded-2xl bg-apex-red px-16 py-5 font-display text-xl font-black uppercase tracking-wider text-white transition-all hover:bg-apex-red/80 hover:scale-105 disabled:cursor-not-allowed disabled:opacity-40 shadow-lg shadow-apex-red/30">
+          className="mt-4 inline-flex items-center gap-3 rounded-2xl bg-apex-red px-8 py-5 font-display text-lg font-black uppercase tracking-wider text-white shadow-[0_16px_40px_-12px_rgba(255,46,0,0.75)] transition-all hover:bg-apex-red-bright active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none sm:px-16 sm:text-xl">
           <TrendingUp className="size-6" />
           {cooldown > 0
             ? `Next round in ${cooldown}s`
@@ -1014,11 +1110,14 @@ function MinesGame({ state, dispatch }: { state: GameState; dispatch: React.Disp
     <GameLayout title="Mines" icon={<Crosshair className="size-7 text-white/70" />}>
       <div className="flex flex-col items-center gap-6">
         <div className="w-full max-w-lg"><BetInput value={bet} onChange={setBet} max={state.cash} /></div>
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-bold text-white/50">Mines:</span>
+        <div className="flex flex-wrap items-center justify-center gap-2 rounded-2xl border border-white/10 bg-black/40 px-4 py-3">
+          <span className="mr-1 flex items-center gap-1.5 font-display text-[10px] font-bold uppercase tracking-[0.2em] text-white/40">
+            <Bomb className="size-3.5 text-red-400" /> Mines
+          </span>
           {[3, 5, 7, 10].map((n) => (
             <button key={n} type="button" onClick={() => !playing && setMineCount(n)} disabled={playing}
-              className={cn("rounded-lg px-5 py-2 text-sm font-bold transition-colors", mineCount === n ? "bg-apex-red text-white" : "bg-white/5 text-white/40 hover:bg-white/10")}>{n}</button>
+              className={cn("cursor-pointer rounded-full border px-4 py-1.5 font-display text-xs font-black tabular-nums transition-all disabled:cursor-not-allowed",
+                mineCount === n ? "border-apex-red bg-apex-red/20 text-white shadow-[0_0_16px_-6px_rgba(255,46,0,0.8)]" : "border-white/10 bg-white/[0.05] text-white/45 hover:border-white/30 hover:text-white")}>{n}</button>
           ))}
         </div>
         {/* Full-width tiles on phones (72px fixed tiles overflow 375px
@@ -1028,9 +1127,9 @@ function MinesGame({ state, dispatch }: { state: GameState; dispatch: React.Disp
             const isRevealed = revealed.has(i); const isMine = mines.has(i); const isGameOverMine = gameOver && isMine;
             return (
               <button key={i} type="button" onClick={() => reveal(i)} disabled={!playing || isRevealed || gameOver}
-                className={cn("flex aspect-square items-center justify-center rounded-xl border-2 text-lg font-bold transition-all active:scale-105 sm:aspect-auto sm:size-18 sm:rounded-2xl sm:text-xl sm:hover:scale-105",
-                  isRevealed ? isMine ? "border-red-500 bg-red-500/20 text-red-400" : "border-green-500 bg-green-500/20 text-green-400"
-                  : isGameOverMine ? "border-red-500/50 bg-red-500/10 text-red-400" : "border-white/15 bg-[#0a0a0c] sm:hover:border-white/30")}>
+                className={cn("flex aspect-square items-center justify-center rounded-xl border-2 text-lg font-bold transition-all active:scale-95 sm:aspect-auto sm:size-18 sm:rounded-2xl sm:text-xl sm:hover:scale-105",
+                  isRevealed ? isMine ? "border-red-500 bg-red-500/20 text-red-400 shadow-[0_0_20px_-6px_rgba(239,68,68,0.8)]" : "border-emerald-500/70 bg-emerald-500/15 text-emerald-400 shadow-[0_0_20px_-8px_rgba(16,185,129,0.8)]"
+                  : isGameOverMine ? "border-red-500/50 bg-red-500/10 text-red-400" : "border-white/10 bg-gradient-to-b from-white/[0.06] to-white/[0.02] sm:hover:border-amber-400/50 sm:hover:from-amber-400/10")}>
                 {isRevealed ? (isMine ? <Bomb className="size-5 sm:size-7" /> : <Diamond className="size-5 text-green-400 sm:size-7" />)
                 : isGameOverMine ? <Bomb className="size-5 sm:size-7" /> : null}
               </button>
@@ -1039,13 +1138,13 @@ function MinesGame({ state, dispatch }: { state: GameState; dispatch: React.Disp
         </div>
         {playing && revealed.size > 0 && (
           <button type="button" onClick={cashOut}
-            className="inline-flex items-center gap-3 rounded-2xl bg-green-600 px-12 py-5 font-display text-xl font-black uppercase tracking-wider text-white transition-all hover:bg-green-700 hover:scale-105 shadow-lg shadow-green-600/30">
+            className="inline-flex items-center gap-3 rounded-2xl bg-emerald-600 px-8 py-5 font-display text-lg font-black uppercase tracking-wider text-white shadow-[0_16px_40px_-12px_rgba(5,150,105,0.8)] transition-all hover:bg-emerald-500 active:scale-[0.98] sm:px-12 sm:text-xl">
             <TrendingUp className="size-5" />CASH OUT — ${Math.floor(bet * currentMult).toLocaleString()} ({currentMult.toFixed(2)}×)
           </button>
         )}
         {!playing && !gameOver && (
           <button type="button" onClick={start} disabled={state.cash < bet}
-            className="inline-flex items-center gap-3 rounded-2xl bg-apex-red px-8 py-4 font-display text-lg font-black uppercase tracking-wider text-white transition-all hover:bg-apex-red/80 hover:scale-105 active:scale-105 disabled:opacity-40 shadow-lg shadow-apex-red/30 sm:px-16 sm:py-5 sm:text-xl">
+            className="inline-flex items-center gap-3 rounded-2xl bg-apex-red px-8 py-4 font-display text-lg font-black uppercase tracking-wider text-white shadow-[0_16px_40px_-12px_rgba(255,46,0,0.75)] transition-all hover:bg-apex-red-bright active:scale-[0.98] disabled:opacity-40 disabled:shadow-none sm:px-16 sm:py-5 sm:text-xl">
             <Crosshair className="size-5" />START — ${bet.toLocaleString()}
           </button>
         )}
@@ -1105,12 +1204,15 @@ function JackpotGame({ state, dispatch }: { state: GameState; dispatch: React.Di
   return (
     <GameLayout title="Jackpot" icon={<Zap className="size-7 text-amber-400" />}>
       <div className="flex flex-col items-center gap-6">
-        <div className="w-full max-w-lg rounded-3xl border-2 border-amber-500/50 bg-amber-500/10 p-8 shadow-2xl shadow-amber-500/10">
-          <div className="text-center mb-6">
-            <p className="text-sm font-bold uppercase tracking-wider text-amber-400/60">Prize Pool</p>
-            <p className="font-mono text-6xl font-black text-amber-400 mt-2">${totalPool.toLocaleString()}</p>
+        <div className="relative w-full max-w-lg overflow-hidden rounded-3xl border border-amber-400/40 bg-gradient-to-b from-amber-500/[0.12] to-amber-500/[0.03] p-8 shadow-[0_0_60px_-20px_rgba(251,191,36,0.5)]">
+          <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-300/70 to-transparent" />
+          <span aria-hidden="true" className="pointer-events-none absolute -top-20 left-1/2 h-40 w-64 -translate-x-1/2 rounded-full bg-amber-400/15 blur-3xl" />
+          <div className="relative mb-6 text-center">
+            <p className="flex items-center justify-center gap-2 font-display text-xs font-bold uppercase tracking-[0.3em] text-amber-400/70"><Zap className="size-3.5" /> Prize Pool</p>
+            <p className="mt-2 font-display text-5xl font-black tabular-nums tracking-tight text-amber-300 drop-shadow-[0_0_30px_rgba(251,191,36,0.45)] sm:text-6xl">${totalPool.toLocaleString()}</p>
+            <p className="mt-1.5 text-xs text-white/35 tabular-nums">{pool.length} {pool.length === 1 ? "entry" : "entries"} in the pool</p>
           </div>
-          {pool.length > 0 && <div className="space-y-2 max-h-40 overflow-y-auto">{pool.map((p, i) => <CarChip key={i} label={p.label} value={p.value} type={p.type} />)}</div>}
+          {pool.length > 0 && <div className="relative max-h-40 space-y-2 overflow-y-auto pr-1">{pool.map((p, i) => <CarChip key={i} label={p.label} value={p.value} type={p.type} />)}</div>}
         </div>
         {spinning && (
           <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }}
@@ -1119,19 +1221,19 @@ function JackpotGame({ state, dispatch }: { state: GameState; dispatch: React.Di
           </motion.div>
         )}
         <div className="w-full max-w-lg"><BetInput value={bet} onChange={setBet} max={state.cash} /></div>
-        <div className="flex gap-4">
+        <div className="flex flex-wrap items-center justify-center gap-3">
           <button type="button" onClick={addCash} disabled={spinning || state.cash < bet}
-            className="inline-flex items-center gap-2 rounded-2xl border-2 border-white/20 bg-white/5 px-8 py-4 font-display text-base font-bold uppercase tracking-wider text-white/70 transition-all hover:bg-white/10 hover:scale-105 disabled:opacity-40">
-            <DollarSign className="size-5" />Add Cash
+            className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-7 py-3.5 font-display text-sm font-black uppercase tracking-wider text-emerald-300 transition-all hover:border-emerald-400 hover:bg-emerald-500/20 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40">
+            <DollarSign className="size-4" />Add Cash
           </button>
           <button type="button" onClick={() => setShowCarPicker(!showCarPicker)} disabled={spinning || gambleCars.length === 0}
-            className={cn("inline-flex items-center gap-2 rounded-2xl border-2 px-8 py-4 font-display text-base font-bold uppercase tracking-wider transition-all hover:scale-105 disabled:opacity-40",
-              showCarPicker ? "border-purple-500 bg-purple-500/20 text-purple-300" : "border-purple-500/30 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20")}>
-            <Car className="size-5" />Gamble Car {gambleCars.length > 0 && <span className="ml-1 text-xs opacity-60">({gambleCars.length})</span>}
+            className={cn("inline-flex cursor-pointer items-center gap-2 rounded-full border px-7 py-3.5 font-display text-sm font-black uppercase tracking-wider transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-40",
+              showCarPicker ? "border-purple-400 bg-purple-500/25 text-purple-200" : "border-purple-500/40 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20")}>
+            <Car className="size-4" />Gamble Car {gambleCars.length > 0 && <span className="ml-1 text-xs opacity-60 tabular-nums">({gambleCars.length})</span>}
           </button>
           <button type="button" onClick={draw} disabled={spinning || pool.length === 0}
-            className="inline-flex items-center gap-2 rounded-2xl bg-apex-red px-10 py-4 font-display text-base font-bold uppercase tracking-wider text-white transition-all hover:bg-apex-red/80 hover:scale-105 disabled:opacity-40 shadow-lg shadow-apex-red/30">
-            <Zap className="size-5" />Draw Winner
+            className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-apex-red px-9 py-3.5 font-display text-sm font-black uppercase tracking-wider text-white shadow-[0_14px_34px_-12px_rgba(255,46,0,0.8)] transition-all hover:bg-apex-red-bright active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none">
+            <Zap className="size-4" />Draw Winner
           </button>
         </div>
         {showCarPicker && (
@@ -1252,12 +1354,12 @@ function OnlineJackpot({ state, dispatch }: { state: GameState; dispatch: React.
       <div className="flex flex-col items-center gap-6">
         {round ? (
           <>
-            <p className="font-display text-xs font-bold uppercase tracking-wider text-white/40">Players in pool</p>
+            <p className="font-display text-xs font-bold uppercase tracking-[0.2em] text-white/40">Players in pool</p>
             <div className="flex flex-wrap justify-center gap-2">
               {players.map((p, i) => (
-                <div key={`${p.name}-${i}`} className={cn("inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold",
-                  p.name === "YOU" ? "border-apex-red bg-apex-red/20 text-apex-red" : "border-white/15 bg-white/5 text-white/50")}>
-                  {p.name === "YOU" ? <Crown className="size-3" /> : <Circle className="size-3" />}{p.name} — ${p.amount.toLocaleString()}
+                <div key={`${p.name}-${i}`} className={cn("inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-bold tabular-nums",
+                  p.name === "YOU" ? "border-amber-400/60 bg-amber-400/15 text-amber-300 shadow-[0_0_20px_-8px_rgba(251,191,36,0.7)]" : "border-white/12 bg-white/[0.05] text-white/55")}>
+                  {p.name === "YOU" ? <Crown className="size-3" /> : <Circle className="size-3 text-white/30" />}{p.name} — ${p.amount.toLocaleString()}
                 </div>
               ))}
             </div>
@@ -1270,7 +1372,7 @@ function OnlineJackpot({ state, dispatch }: { state: GameState; dispatch: React.
           <>
             <div className="w-full max-w-xs"><BetInput value={bet} onChange={setBet} max={state.cash} /></div>
             <button type="button" onClick={join} disabled={state.cash < bet}
-              className="inline-flex items-center gap-2 rounded-xl bg-purple-600 px-10 py-3 font-display text-sm font-bold uppercase tracking-wider text-white transition-all hover:bg-purple-700 disabled:opacity-40">
+              className="inline-flex cursor-pointer items-center gap-2 rounded-2xl bg-purple-600 px-10 py-4 font-display text-base font-black uppercase tracking-wider text-white shadow-[0_14px_34px_-12px_rgba(147,51,234,0.8)] transition-all hover:bg-purple-500 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none">
               <Star className="size-4" />Join Jackpot
             </button>
           </>

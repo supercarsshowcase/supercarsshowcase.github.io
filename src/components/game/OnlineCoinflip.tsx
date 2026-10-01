@@ -332,22 +332,26 @@ export function OnlineCoinflip({ state, dispatch }: { state: GameState; dispatch
   const winRate = stats && stats.flips > 0 ? Math.round((stats.wins / stats.flips) * 100) : null;
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-[#111114] p-4 sm:p-8 lg:p-10">
+    <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-[#0d0d10]">
+      <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-400/60 to-transparent" />
+      <span aria-hidden="true" className="pointer-events-none absolute -top-44 left-1/2 h-72 w-[34rem] -translate-x-1/2 rounded-full bg-blue-600/10 blur-3xl" />
+      <div className="relative p-4 sm:p-7 lg:p-9">
       <div className="mb-6 flex items-center justify-between gap-3 sm:mb-8">
         <div className="flex items-center gap-3 sm:gap-4">
-          <div className="flex size-11 items-center justify-center rounded-xl bg-white/5 sm:size-14">
+          <div className="flex size-12 items-center justify-center rounded-2xl border border-blue-400/30 bg-gradient-to-b from-blue-400/15 to-transparent ring-1 ring-blue-400/10 sm:size-14">
             <Swords className="size-7 text-blue-400" />
           </div>
           <div>
-            <h3 className="font-display text-2xl font-black text-white sm:text-3xl">Online Coinflip 1v1</h3>
-            <p className="flex items-center gap-1.5 text-xs text-white/40">
+            <p className="mb-0.5 font-display text-[9px] font-semibold uppercase tracking-[0.3em] text-amber-400/70">Apex Casino</p>
+            <h3 className="font-display text-2xl font-black tracking-tight text-white sm:text-3xl">Online Coinflip 1v1</h3>
+            <p className="mt-1 flex items-center gap-1.5 text-xs text-white/40">
               <span className="inline-block size-1.5 animate-pulse rounded-full bg-emerald-400" />
               {online ?? "—"} player{(online ?? 0) === 1 ? "" : "s"} online · real-time PvP
             </p>
           </div>
         </div>
         <button type="button" onClick={toggleMute} title={isMuted ? "Unmute sounds" : "Mute sounds"}
-          className="cursor-pointer rounded-lg border border-white/10 p-2 text-white/50 transition-colors hover:border-white/25 hover:text-white">
+          className="cursor-pointer rounded-full border border-white/10 bg-white/[0.04] p-2.5 text-white/50 transition-colors hover:border-amber-400/50 hover:text-amber-300">
           {isMuted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
         </button>
       </div>
@@ -542,6 +546,7 @@ export function OnlineCoinflip({ state, dispatch }: { state: GameState; dispatch
             )}
           </div>
         )}
+      </div>
       </div>
     </div>
   );
