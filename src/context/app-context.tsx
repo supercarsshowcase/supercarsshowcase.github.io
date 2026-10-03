@@ -83,15 +83,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   }, [kickoffSeeds]);
 
-  // Self-draining seed loop: while rows are pending, run one bounded chunk;
-  // each chunk's writes recompute `progress`, which re-arms this effect until
-  // pending hits 0. Idempotent and first-writer-wins, so overlapping visitors
-  // are safe. A full seed is ~90 chunks once ever; afterwards this no-ops.
-  // Pacing: 2s between chunks normally, 30s after an all-failure chunk (a
-  // rate-limited upstream shouldn't be retried in a tight loop).
+  // Self-draining seed loop: while rows are pending, run one bounded chunk
+  // every couple of seconds until pending hits 0. Idempotent and
+  // first-writer-wins, so overlapping visitors are safe. A full seed is ~45
+  // chunks once ever; afterwards this no-ops.
+  //
+  // Re-arming used to depend on `progress` changing, but a chunk that fails
+  // outright (Wikimedia rate-limit) writes nothing — the query result stayed
+  // identical, this effect never re-ran, and seeding silently died mid-way,
+  // leaving most cars photo-less forever. A tick counter now re-arms after
+  // every attempt, success or not. Pacing: 2s between chunks normally, 30s
+  // after a failed chunk (a rate-limited upstream shouldn't be retried tight).
   const seedChunk = useAction(api.thumbs.seedChunk);
   const seedProgress = useQuery(api.thumbs.progress);
   const lastAllFailed = useRef(false);
+  const [seedTick, setSeedTick] = useState(0);
   useEffect(() => {
     if (!seedProgress || seedProgress.pending === 0) return;
     const t = setTimeout(
@@ -101,13 +107,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
             lastAllFailed.current = r.stored + r.missed === 0 && r.failed > 0;
           })
           .catch(() => {
-            // transient failure — progress stays pending and re-arms this effect
-          });
+            // transient failure — back off and retry via the tick below
+            lastAllFailed.current = true;
+          })
+          .finally(() => setSeedTick((n) => n + 1));
       },
       lastAllFailed.current ? 30000 : 2000,
     );
     return () => clearTimeout(t);
-  }, [seedProgress, seedChunk]);
+  }, [seedProgress, seedChunk, seedTick]);
 
   useEffect(() => {
     try {

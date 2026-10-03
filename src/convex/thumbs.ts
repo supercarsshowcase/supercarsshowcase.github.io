@@ -225,6 +225,7 @@ export const seedChunk = action({
     // candidates. All titles that still need a verdict go in one API call.
     const urlByKey = new Map<string, string>();
     const openKeys = new Set(plans.map((p) => p.key));
+    let lookupFailed = false;
     for (let round = 0; round < 3 && openKeys.size > 0; round++) {
       const byTitle = new Map<string, string[]>();
       for (const plan of plans) {
@@ -260,6 +261,7 @@ export const seedChunk = action({
           }
         }
       } catch {
+        lookupFailed = true;
         break; // batched lookup failed this round — rows stay pending
       }
     }
@@ -290,28 +292,37 @@ export const seedChunk = action({
     // Search fallback for the rest: trim-level names that aren't article
     // titles get the closest matching article's lead thumbnail. A confirmed
     // empty search marks the row done; a thrown request stays retryable.
-    for (const key of [...openKeys]) {
-      try {
-        const hit = await wikiSearch(key.replace(/_/g, " "));
-        if (hit) {
-          const res = await fetch(hit);
-          if (!res.ok) throw new Error(`image ${res.status}`);
-          const blob = await res.blob();
-          const storageId = await ctx.storage.store(blob);
-          await ctx.runMutation(internal.thumbs.storeThumb, {
-            key,
-            slug: plans.find((p) => p.key === key)?.slug ?? "",
-            storageId,
-          });
-          stored++;
-        } else {
-          await ctx.runMutation(internal.thumbs.markSeeded, { key });
-          missed++;
+    //
+    // Skipped entirely when the batched lookup itself failed: firing N
+    // individual search requests right after a rate-limit response amplifies
+    // the 429s, and a degraded upstream would mark rows "no photo" on error
+    // bodies. Rows stay pending for the next (paced) chunk instead.
+    if (!lookupFailed) {
+      for (const key of [...openKeys]) {
+        try {
+          const hit = await wikiSearch(key.replace(/_/g, " "));
+          if (hit) {
+            const res = await fetch(hit);
+            if (!res.ok) throw new Error(`image ${res.status}`);
+            const blob = await res.blob();
+            const storageId = await ctx.storage.store(blob);
+            await ctx.runMutation(internal.thumbs.storeThumb, {
+              key,
+              slug: plans.find((p) => p.key === key)?.slug ?? "",
+              storageId,
+            });
+            stored++;
+          } else {
+            await ctx.runMutation(internal.thumbs.markSeeded, { key });
+            missed++;
+          }
+          openKeys.delete(key);
+        } catch {
+          failed++; // stays pending — a later chunk retries it
         }
-        openKeys.delete(key);
-      } catch {
-        failed++; // stays pending — a later chunk retries it
       }
+    } else {
+      failed += openKeys.size; // batched lookup failed — all open rows retry later
     }
 
     return { processed: rows.length, stored, missed, failed };
@@ -331,16 +342,23 @@ async function wikiPageImages(titles: string[]): Promise<{
   const res = await fetch(url);
   if (!res.ok) throw new Error(`wiki ${res.status}`);
   const data = (await res.json()) as {
+    error?: { code?: string };
     query?: {
       normalized?: { from: string; to: string }[];
       redirects?: { from: string; to: string }[];
       pages?: Record<string, { title: string; thumbnail?: { source: string } }>;
     };
   };
+  // Wikimedia answers 200 WITH an error body when it's unhappy (rate limit,
+  // toomanyvalues, …). An empty pages map would silently resolve every key in
+  // the round as "no photo" — throw so rows stay pending and retry later.
+  if (data.error || !data.query) {
+    throw new Error(`wiki ${data.error?.code ?? "no query"}`);
+  }
   return {
-    normalized: data.query?.normalized,
-    redirects: data.query?.redirects,
-    pages: data.query?.pages,
+    normalized: data.query.normalized,
+    redirects: data.query.redirects,
+    pages: data.query.pages,
   };
 }
 
@@ -353,8 +371,12 @@ async function wikiSearch(title: string): Promise<string> {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`wiki search ${res.status}`);
   const data = (await res.json()) as {
+    error?: { code?: string };
     query?: { pages?: Record<string, { thumbnail?: { source: string } }> };
   };
+  // Same 200-with-error trap as above: an error body must NOT read as
+  // "search found nothing", or the row gets a permanent no-photo verdict.
+  if (data.error) throw new Error(`wiki search ${data.error.code ?? "error"}`);
   const hit = Object.values(data.query?.pages ?? {}).find(
     (p) => p.thumbnail?.source,
   );

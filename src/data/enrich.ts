@@ -198,6 +198,17 @@ function queueSlugs(slugs: string[]): void {
   }, 150);
 }
 
+/** Arm (or re-arm) a delayed flush. Used for failure cooldowns so a
+ *  rate-limited upstream isn't hammered, and so queueSlugs' short timer can't
+ *  overwrite a longer cooldown with a 150ms one. */
+function armRetry(delayMs: number): void {
+  if (flushTimer) clearTimeout(flushTimer);
+  flushTimer = setTimeout(() => {
+    flushTimer = null;
+    void flush();
+  }, delayMs);
+}
+
 async function flush(): Promise<void> {
   // Drain in waves: slugs queued while a flush runs join the next wave, so a
   // second timer firing mid-flush neither double-fetches in-flight slugs nor
@@ -205,6 +216,7 @@ async function flush(): Promise<void> {
   while (inflight.size > 0) {
     const queued = [...inflight];
     const misses: string[] = [];
+    let directFailed = false;
     for (let i = 0; i < queued.length; i += BATCH_TITLES) {
       const batch = queued.slice(i, i + BATCH_TITLES);
       // Consume exactly this batch before fetching, so a remount during the
@@ -213,7 +225,14 @@ async function flush(): Promise<void> {
       try {
         await fetchBatch(batch);
       } catch {
-        // network hiccup — leave memory untouched so a later mount retries
+        // Network hiccup or rate limit. The batch used to be dropped here:
+        // slugs were neither in memory nor in flight, so nothing ever retried
+        // them — after one 429 burst the whole warmup queue was stranded and
+        // those cars stayed on their generated scene until a remount.
+        // Requeue them and stop hammering the upstream this wave instead.
+        for (const slug of batch) if (!memory.has(slug)) inflight.add(slug);
+        directFailed = true;
+        break;
       }
       notify(batch);
       misses.push(...batch.filter((s) => memory.get(s) === ""));
@@ -221,12 +240,20 @@ async function flush(): Promise<void> {
     // One search pass per wave (not per batch): the direct pass resolves most
     // titles in bulk; misses are far fewer, so this stays out of the way of
     // the next direct batch instead of head-of-line blocking it.
+    let searchFailed = false;
     try {
       await runSearchFallback(misses);
     } catch {
-      // search is best-effort — the generated scene stays the fallback
+      // Search was cut short — runSearchFallback requeued its pending slugs.
+      searchFailed = true;
     }
-    if (inflight.size > 0) continue; // requeued slugs join the next wave
+    if (directFailed || searchFailed) {
+      // Failure cooldown: retry the still-queued slugs later instead of
+      // spinning in a tight fetch→429→requeue loop (the old `continue` path).
+      if (inflight.size > 0) armRetry(30000);
+      return;
+    }
+    if (inflight.size > 0) continue; // requeued slugs / late arrivals join the next wave
     if (flushTimer) {
       clearTimeout(flushTimer);
       flushTimer = null; // fully drained; rearm on the next enqueue
@@ -262,8 +289,12 @@ async function searchThumb(slug: string): Promise<void> {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`wiki search ${res.status}`);
   const data = (await res.json()) as {
+    error?: { code?: string };
     query?: { pages?: Record<string, WikiPage> };
   };
+  // Wikimedia can answer 200 WITH an error body (e.g. toomanyvalues). Treating
+  // that as "no photo" would cache a permanent false verdict for this slug.
+  if (data.error) throw new Error(`wiki search ${data.error.code ?? "error"}`);
   const page = Object.values(data.query?.pages ?? {}).find(
     (p) => p.thumbnail?.source,
   );
@@ -288,12 +319,19 @@ async function fetchBatch(slugs: string[]): Promise<void> {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`wiki ${res.status}`);
   const data = (await res.json()) as {
+    error?: { code?: string };
     query?: {
       normalized?: { from: string; to: string }[];
       redirects?: { from: string; to: string }[];
       pages?: Record<string, WikiPage>;
     };
   };
+  // A 200 with an error body carries no pages. Writing "" for the whole batch
+  // would permanently mark up to 40 real cars as "confirmed no photo" in
+  // localStorage — throw so the wave retries instead of poisoning the cache.
+  if (data.error || !data.query) {
+    throw new Error(`wiki ${data.error?.code ?? "no query"}`);
+  }
 
   const thumbByCanonical = new Map<string, string>();
   for (const page of Object.values(data.query?.pages ?? {})) {
